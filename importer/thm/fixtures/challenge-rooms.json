@@ -1,0 +1,20 @@
+{
+  "status": "success",
+  "data": {
+    "docs": [
+      { "code": "relevant", "title": "Relevant", "difficulty": "medium", "type": "challenge", "freeToUse": false, "published": "2020-07-24T13:30:00.000Z", "technologyTags": ["Windows", "Web"], "tags": ["Red", "SMB"] },
+      { "code": "dailybugle", "title": "Daily Bugle", "difficulty": "hard", "type": "challenge", "freeToUse": false, "tagDocs": [{ "label": "linux" }, { "label": "joomla" }] },
+      { "code": "rrootme", "title": "RootMe", "difficulty": "easy", "type": "challenge", "freeToUse": true, "published": "not a date", "technologyTags": ["Web"], "tags": ["linux"] },
+      { "code": "fixtureinsane", "title": "Fixture Insane", "difficulty": "insane", "type": "challenge", "freeToUse": false, "tagDocs": null },
+      { "code": "FixtureMixed", "title": "  Fixture Mixed ", "difficulty": "easy", "type": "challenge", "freeToUse": true, "tagDocs": [null, { "label": "linux" }] },
+      { "title": "Fixture no code", "difficulty": "easy", "type": "challenge" },
+      null,
+      { "code": "fixtureinfo", "title": "Fixture Info", "difficulty": "info", "type": "challenge", "freeToUse": true, "tagDocs": [] }
+    ],
+    "totalDocs": 8,
+    "limit": 50,
+    "page": 1,
+    "totalPages": 1,
+    "hasNextPage": false
+  }
+}

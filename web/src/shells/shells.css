@@ -1,0 +1,51 @@
+/* Reverse shells generator: context line, filters, chip grid, detail panel, listener row */
+.sg-ctx { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; background: var(--rail); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 16px; color: var(--muted); }
+.sg-ctx b { font: 500 13px var(--mono); color: var(--text); }
+.sg-hint { margin-left: auto; font-size: 13px; }
+.sg-find { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.sg-find .lib-find { width: 280px; margin: 0; font-family: var(--mono); font-size: 13px; }
+
+.sg-opt { display: flex; gap: 2px; border: 1px solid var(--border); border-radius: 6px; padding: 3px; }
+.sg-opt button { background: none; border: 0; border-radius: 4px; padding: 4px 8px; font: 12px var(--mono); color: var(--muted); cursor: pointer; }
+.sg-opt button:hover:not(:disabled) { color: var(--text); }
+.sg-opt button[aria-pressed='true'] { background: var(--hover); color: var(--text); }
+.sg-opt button:disabled { opacity: 0.35; cursor: not-allowed; }
+.sg-find .sg-opt button { font-family: var(--sans); font-size: 13px; }
+
+.sg-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.sg-tag { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.sg-tag:hover { color: var(--text); }
+.sg-tag[aria-pressed='true'] { background: var(--accent-fill); border-color: var(--accent-border); color: var(--accent); }
+
+.sg-grid { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; max-height: 172px; overflow-y: auto; background: var(--rail); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+.sg-chip { background: var(--raised); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+.sg-chip:hover { background: var(--hover); }
+.sg-chip[aria-checked='true'] { background: var(--accent-fill); border-color: var(--accent); }
+.sg-chip small { margin-left: 6px; font: 11px var(--mono); color: var(--muted); }
+.sg-none { align-items: center; gap: 12px; color: var(--muted); }
+
+.sg-panel { background: var(--rail); border: 1px solid var(--border); border-radius: 8px; }
+.sg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.sg-head h2 { font: 600 20px/1.1 var(--cond); }
+.sg-pill { border: 1px solid var(--border); border-radius: 4px; padding: 1px 7px; font-size: 12px; color: var(--muted); }
+.sg-sp { flex: 1; }
+.sg-lbl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.sg-lbl select { padding: 3px 6px; font: 12px var(--mono); color: var(--text); }
+.sg-lbl input[type=text] { width: 120px; font: 12px var(--mono) }
+.sg-lbl input[type=number] { width: 64px }
+.sg-lbl input[aria-invalid='true'] { border-color: var(--danger) }
+.sg-code { max-height: 420px; overflow: auto; padding: 14px; font: 13px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.sg-code mark, .sg-lis-cmd mark { background: var(--accent-fill); color: var(--accent); border-radius: 3px; padding: 0 2px; }
+.sg-code mark.warn, .sg-lis-cmd mark.warn { background: var(--raised); color: var(--medium); outline: 1px dashed var(--medium); }
+
+.sg-lis { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.sg-lis .sg-tag { font-family: var(--mono); font-size: 12px; }
+.sg-lis-cmd { display: flex; align-items: center; gap: 8px; flex: 1 1 100%; background: var(--ground); border: 1px solid var(--border); border-radius: 6px; padding: 7px 8px 7px 12px; }
+.sg-lis-cmd code { flex: 1; min-width: 0; font: 13px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.sg-stab { margin-top: 18px; }
+.sg-stab ol { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 10px; }
+.sg-stab li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
+.sg-stab li b { font-weight: 600; }
+.sg-stab .sg-note { color: var(--muted); }
+.sg-stab .sg-lis-cmd code { white-space: pre; }
+.sg-stab .sg-tag { font-family: var(--mono); font-size: 12px; }
