@@ -199,3 +199,23 @@ test('searching lists every matching command flat, without groups or the fold', 
     [1, 10, 11, 12, 13, 14].map((i) => `Edit command c${i}`))
   expect(screen.queryByRole('group', { name: 'Intents for nmap' })).toBeNull()
 })
+
+test('Add tool posts the tool, reloads and jumps to it', async () => {
+  const added: ToolListItem = { id: 3, shortId: 'TL-003', name: 'feroxbuster', description: 'Content discovery', commands: [], techniques: [] }
+  let list = tools
+  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url === '/api/context') return json(200, { target: '', lhost: '', lport: '', activeBoxId: null })
+    if (url === '/api/tools' && init?.method === 'POST') { list = [...tools, added]; return json(201, added) }
+    return json(200, url === '/api/tools' ? list : {})
+  })
+  const { user } = setup()
+  await user.type(await screen.findByLabelText('Name of a new tool'), 'feroxbuster')
+  await user.type(screen.getByLabelText('Description of the new tool'), 'Content discovery')
+  await user.click(screen.getByRole('button', { name: 'Add tool' }))
+  await waitFor(() => expect(location.hash).toBe('#/tools?tool=3'))
+  expect(JSON.parse(calls('/api/tools', 'POST')[0][1].body)).toEqual({ name: 'feroxbuster', description: 'Content discovery' })
+  expect(screen.getByRole('heading', { name: 'feroxbuster' })).toBeTruthy()
+  expect((screen.getByLabelText('Name of a new tool') as HTMLInputElement).value).toBe('')
+  location.hash = ''
+})
+

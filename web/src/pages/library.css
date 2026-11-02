@@ -28,6 +28,9 @@
 .tb-cmd.edit textarea, .cmd-add textarea { font: 12.5px/1.5 var(--mono); min-height: 34px; }
 .tb-cmd.edit .acts, .cmd-add .acts { display: flex; gap: 6px; }
 .cmd-add { margin-top: 8px; padding: 6px; border: 1px dashed var(--border); border-radius: 8px; }
+.lib-add { margin: 0 0 20px; max-width: 760px; }
+.lib-add.tq-add { grid-template-columns: 3fr minmax(140px, 1fr) auto; }
+.tq-tool { display: inline-flex; align-items: center; gap: 2px; }
 .cmd-add input, .tb-cmd.edit input { padding: 6px 8px; min-width: 0; }
 .cmd-add .tb-btn, .tb-cmd.edit .tb-btn { padding: 6px 10px; }
 .tb-cmd .tb-btn.bad:hover { color: var(--danger); }

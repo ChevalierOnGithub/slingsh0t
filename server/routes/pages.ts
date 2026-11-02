@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import type Database from 'better-sqlite3'
 import { fail, isId, isStr } from '../validate'
 import { STEP_FILLED } from '../report'
+import { nextShortId } from '../ids'
 import { cmd, shelf, shelfInput } from './library'
 import { APPLIES, INTENTS, PHASES } from '../../shared/types'
 import type { ReferencePage, TechniqueListItem, ToolListItem, UnsortedItem, WriteupListItem } from '../../shared/types'
@@ -24,9 +25,10 @@ export const pagesRoutes: FastifyPluginAsync<{ db: Database.Database }> = async 
       FROM technique_uses u JOIN steps s ON s.id = u.step_id LEFT JOIN boxes b ON b.id = s.box_id LEFT JOIN hosts h ON h.id = s.host_id
       ORDER BY owner_name, s.position`).all() as any[]
     const cmds = db.prepare('SELECT * FROM commands WHERE technique_id = ? AND tool_id IS NULL ORDER BY position IS NULL, position, id')
+    const tools = db.prepare('SELECT t.id, t.name FROM technique_tools tt JOIN tools t ON t.id = tt.tool_id WHERE tt.technique_id = ? ORDER BY t.name COLLATE NOCASE')
     return (db.prepare(`SELECT * FROM techniques ${where} ORDER BY phase, position, name COLLATE NOCASE`).all(...params) as any[]).map((t): TechniqueListItem => ({
       id: t.id, shortId: t.short_id, name: t.name, phase: t.phase, description: t.description, position: t.position, applies: t.applies, ...shelf(t),
-      commands: cmds.all(t.id).map(cmd),
+      commands: cmds.all(t.id).map(cmd), tools: tools.all(t.id) as { id: number; name: string }[],
       uses: uses.filter(u => u.technique_id === t.id)
         .map(u => ({ boxId: u.box_id, hostId: u.host_id, ownerName: u.owner_name, stepId: u.step_id, phase: u.phase, ordinal: u.ordinal, dead: !!u.dead })),
     }))
@@ -82,14 +84,42 @@ export const pagesRoutes: FastifyPluginAsync<{ db: Database.Database }> = async 
     }))
   })
 
-  app.post('/api/tools/:id/commands', async (req, reply) => {
-    const id = idOf(req)
-    const { purpose, template, intent } = (req.body ?? {}) as any
-    if (!isId(id)) return bad(reply, 'invalid id')
-    if (!isStr(purpose) || !nonEmpty(template)) return bad(reply, 'purpose and template required')
-    if (intent !== undefined && !isIntent(intent)) return bad(reply, 'invalid intent')
-    if (!db.prepare('SELECT 1 FROM tools WHERE id = ?').get(id)) return gone(reply, 'tool')
-    return reply.code(201).send(cmd(db.prepare('INSERT INTO commands (tool_id, purpose, template, intent) VALUES (?, ?, ?, ?) RETURNING *').get(id, purpose, template, intent ?? '')))
+  app.post('/api/tools', async (req, reply) => {
+    const { name, description } = (req.body ?? {}) as any
+    if (!nonEmpty(name)) return bad(reply, 'name required')
+    if (description !== undefined && !isStr(description)) return bad(reply, 'description must be a string')
+    if (db.prepare('SELECT 1 FROM tools WHERE name = ?').get(name.trim())) return reply.code(409).send({ error: `a tool named ${name.trim()} already exists` })
+    const r = db.prepare('INSERT INTO tools (short_id, name, description) VALUES (?, ?, ?) RETURNING *').get(nextShortId(db, 'TL'), name.trim(), description?.trim() ?? '') as any
+    const tool: ToolListItem = { id: r.id, shortId: r.short_id, name: r.name, description: r.description, commands: [], techniques: [] }
+    return reply.code(201).send(tool)
+  })
+
+  // A tool's commands, or a technique's own (tool-less) commands.
+  for (const [owner, col] of [['tool', 'tool_id'], ['technique', 'technique_id']] as const)
+    app.post(`/api/${owner}s/:id/commands`, async (req, reply) => {
+      const id = idOf(req)
+      const { purpose, template, intent } = (req.body ?? {}) as any
+      if (!isId(id)) return bad(reply, 'invalid id')
+      if (!isStr(purpose) || !nonEmpty(template)) return bad(reply, 'purpose and template required')
+      if (intent !== undefined && !isIntent(intent)) return bad(reply, 'invalid intent')
+      if (!db.prepare(`SELECT 1 FROM ${owner}s WHERE id = ?`).get(id)) return gone(reply, owner)
+      return reply.code(201).send(cmd(db.prepare(`INSERT INTO commands (${col}, purpose, template, intent) VALUES (?, ?, ?, ?) RETURNING *`).get(id, purpose, template, intent ?? '')))
+    })
+
+  // Linking a tool puts its commands under the technique in every box's toolbox.
+  app.put('/api/techniques/:id/tools/:toolId', async (req, reply) => {
+    const id = idOf(req), toolId = Number((req.params as any).toolId)
+    if (!isId(id) || !isId(toolId)) return bad(reply, 'invalid id')
+    if (!db.prepare('SELECT 1 FROM techniques WHERE id = ?').get(id)) return gone(reply, 'technique')
+    if (!db.prepare('SELECT 1 FROM tools WHERE id = ?').get(toolId)) return gone(reply, 'tool')
+    db.prepare('INSERT INTO technique_tools (technique_id, tool_id) VALUES (?, ?) ON CONFLICT DO NOTHING').run(id, toolId)
+    return reply.code(204).send()
+  })
+  app.delete('/api/techniques/:id/tools/:toolId', async (req, reply) => {
+    const id = idOf(req), toolId = Number((req.params as any).toolId)
+    if (!isId(id) || !isId(toolId)) return bad(reply, 'invalid id')
+    db.prepare('DELETE FROM technique_tools WHERE technique_id = ? AND tool_id = ?').run(id, toolId)
+    return reply.code(204).send()
   })
 
   app.patch('/api/commands/:id', async (req, reply) => {

@@ -8,11 +8,11 @@ import { TechniquesPage } from './TechniquesPage'
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status })
 const techniques: TechniqueListItem[] = [
-  { id: 4, shortId: 'TQ-004', name: 'SeBackupPrivilege abuse', phase: 'PrivEsc', description: 'Read any file', position: 1, applies: 'any', service: 'any', needs: [], yields: [], commands: [], uses: [
+  { id: 4, shortId: 'TQ-004', name: 'SeBackupPrivilege abuse', phase: 'PrivEsc', description: 'Read any file', position: 1, applies: 'any', service: 'any', needs: [], yields: [], commands: [], tools: [], uses: [
     { boxId: 3, hostId: null, ownerName: 'Cicada', stepId: 9, phase: 'PrivEsc', ordinal: 2, dead: false },
     { boxId: null, hostId: 5, ownerName: 'WEB01', stepId: 11, phase: 'PrivEsc', ordinal: 1, dead: false },
   ] },
-  { id: 1, shortId: 'TQ-001', name: 'Port scanning', phase: 'Recon', description: '', position: 1, applies: 'any', service: 'any', needs: [], yields: [], uses: [], commands: [
+  { id: 1, shortId: 'TQ-001', name: 'Port scanning', phase: 'Recon', description: '', position: 1, applies: 'any', service: 'any', needs: [], yields: [], tools: [], uses: [], commands: [
     { id: 7, purpose: 'Sweep', template: 'ping {{TARGET}}', procedureKey: null, position: null, intent: '' },
   ] },
 ]
@@ -20,7 +20,7 @@ let fetchMock: ReturnType<typeof vi.fn>
 beforeEach(() => {
   location.hash = '#/techniques'
   fetchMock = vi.fn(async (url: string, init?: RequestInit) =>
-    init?.method === 'PATCH' ? json(200, { ...techniques[0], ...JSON.parse(init.body as string) }) : json(200, url === '/api/techniques' ? techniques : url === '/api/context' ? { target: '10.10.11.35', lhost: '', lport: '', activeBoxId: null } : {}))
+    init?.method === 'PATCH' ? json(200, { ...techniques[0], ...JSON.parse(init.body as string) }) : json(200, url === '/api/techniques' ? techniques : url === '/api/tools' ? [] : url === '/api/context' ? { target: '10.10.11.35', lhost: '', lport: '', activeBoxId: null } : {}))
   vi.stubGlobal('fetch', fetchMock)
 })
 
@@ -112,11 +112,11 @@ test('applies select PATCHes', async () => {
 
 test('move down PUTs the phase order and reorders the list', async () => {
   const user = userEvent.setup()
-  const second: TechniqueListItem = { id: 8, shortId: 'TQ-008', name: 'Banner grabbing', phase: 'Recon', description: '', position: 2, applies: 'any', service: 'any', needs: [], yields: [], uses: [], commands: [] }
+  const second: TechniqueListItem = { id: 8, shortId: 'TQ-008', name: 'Banner grabbing', phase: 'Recon', description: '', position: 2, applies: 'any', service: 'any', needs: [], yields: [], uses: [], commands: [], tools: [] }
   const recon = [techniques[1], second]
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
     init?.method === 'PUT' ? json(200, [second, { ...techniques[1], position: 2 }])
-      : json(200, url === '/api/techniques' ? [...recon, techniques[0]] : url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null } : {}))
+      : json(200, url === '/api/techniques' ? [...recon, techniques[0]] : url === '/api/tools' ? [] : url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null } : {}))
   render(<ContextProvider><TechniquesPage /></ContextProvider>)
   const first = await screen.findByRole('button', { name: 'Move Port scanning down' })
   expect(screen.getByRole('button', { name: 'Move Port scanning up' })).toHaveProperty('disabled', true)
@@ -129,19 +129,19 @@ test('move down PUTs the phase order and reorders the list', async () => {
 
 test('a failed reorder shows the error', async () => {
   const user = userEvent.setup()
-  const second: TechniqueListItem = { id: 8, shortId: 'TQ-008', name: 'Banner grabbing', phase: 'Recon', description: '', position: 2, applies: 'any', service: 'any', needs: [], yields: [], uses: [], commands: [] }
+  const second: TechniqueListItem = { id: 8, shortId: 'TQ-008', name: 'Banner grabbing', phase: 'Recon', description: '', position: 2, applies: 'any', service: 'any', needs: [], yields: [], uses: [], commands: [], tools: [] }
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
-    init?.method === 'PUT' ? json(500, { error: 'nope' }) : json(200, url === '/api/techniques' ? [techniques[1], second] : url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null } : {}))
+    init?.method === 'PUT' ? json(500, { error: 'nope' }) : json(200, url === '/api/techniques' ? [techniques[1], second] : url === '/api/tools' ? [] : url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null } : {}))
   render(<ContextProvider><TechniquesPage /></ContextProvider>)
   await user.click(await screen.findByRole('button', { name: 'Move Port scanning down' }))
   expect((await screen.findByRole('alert')).textContent).toContain('nope')
 })
 
-const smb: TechniqueListItem = { id: 9, shortId: 'TQ-009', name: 'Null session', phase: 'Recon', description: '', position: 2, applies: 'any', service: 'smb', needs: [], yields: [], uses: [], commands: [] }
+const smb: TechniqueListItem = { id: 9, shortId: 'TQ-009', name: 'Null session', phase: 'Recon', description: '', position: 2, applies: 'any', service: 'smb', needs: [], yields: [], uses: [], commands: [], tools: [] }
 const renderWith = (list: TechniqueListItem[]) => {
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
     init?.method === 'PATCH' ? json(200, { ...list.find((x) => url.endsWith(`/${x.id}`))!, ...JSON.parse(init.body as string) })
-      : json(200, url === '/api/techniques' ? list : url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null } : {}))
+      : json(200, url === '/api/techniques' ? list : url === '/api/tools' ? [] : url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null } : {}))
   render(<ContextProvider><TechniquesPage /></ContextProvider>)
 }
 
@@ -226,3 +226,37 @@ test('a service outside the list shows as its own selected option', async () => 
   renderWith([{ ...techniques[1], service: 'zzz' }])
   expect((await screen.findByLabelText('Service for Port scanning') as HTMLSelectElement).value).toBe('zzz')
 })
+
+test('Add technique posts name and phase; a card links and unlinks tools and adds its own commands', async () => {
+  const user = userEvent.setup()
+  const linked = { ...techniques[1], tools: [{ id: 2, name: 'nmap' }] }
+  let list: TechniqueListItem[] = [techniques[1]]
+  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url === '/api/context') return json(200, { target: '', lhost: '', lport: '', activeBoxId: null })
+    if (url === '/api/tools') return json(200, [{ id: 2, name: 'nmap' }, { id: 3, name: 'masscan' }])
+    if (url === '/api/techniques' && init?.method === 'POST') { list = [...list, { ...techniques[1], id: 5, name: 'Banner grabbing', position: 2 }]; return json(201, { id: 5 }) }
+    if (url === '/api/techniques/1/tools/2') { list = [init?.method === 'PUT' ? linked : techniques[1], ...list.slice(1)]; return new Response(null, { status: 204 }) }
+    if (init?.method === 'POST') return json(201, { id: 9, procedureKey: null, position: null, ...JSON.parse(init.body as string) })
+    return json(200, url === '/api/techniques' ? list : {})
+  })
+  render(<ContextProvider><TechniquesPage /></ContextProvider>)
+  await user.type(await screen.findByLabelText('Name of a new technique'), 'Banner grabbing')
+  await user.selectOptions(screen.getByLabelText('Phase of the new technique'), 'Recon')
+  await user.click(screen.getByRole('button', { name: 'Add technique' }))
+  await waitFor(() => expect(location.hash).toBe('#/techniques?t=5'))
+  const post = fetchMock.mock.calls.find(([u, i]) => u === '/api/techniques' && i?.method === 'POST')!
+  expect(JSON.parse(post[1].body)).toEqual({ name: 'Banner grabbing', phase: 'Recon' })
+  expect(screen.getByRole('heading', { name: 'Banner grabbing' })).toBeTruthy()
+
+  await user.selectOptions(screen.getByLabelText('Link a tool to Port scanning'), 'nmap')
+  expect(await screen.findByRole('link', { name: 'nmap' })).toBeTruthy()
+  expect(fetchMock.mock.calls.some(([u, i]) => u === '/api/techniques/1/tools/2' && i?.method === 'PUT')).toBe(true)
+  await user.click(screen.getByRole('button', { name: 'Unlink nmap from Port scanning' }))
+  await waitFor(() => expect(screen.queryByRole('link', { name: 'nmap' })).toBeNull())
+
+  await user.type(screen.getByLabelText('New Port scanning command'), 'nmap -sV')
+  await user.click(screen.getByRole('button', { name: 'Add command to Port scanning' }))
+  await waitFor(() => expect(fetchMock.mock.calls.some(([u, i]) => u === '/api/techniques/1/commands' && i?.method === 'POST')).toBe(true))
+  location.hash = ''
+})
+

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import type { Vars } from '../../../shared/placeholders'
-import { APPLIES, HAVES, PHASES, SERVICES, type Applies, type Have, type TechniqueListItem } from '../../../shared/types'
+import { APPLIES, HAVES, PHASES, SERVICES, type Applies, type Have, type TechniqueListItem, type ToolListItem } from '../../../shared/types'
 import { api } from '../api'
-import { CommandRow } from '../library/CommandRow'
+import { Commands } from '../library/Commands'
 import { useAutosave } from '../autosave'
 import { useFlash } from '../library/useFlash'
 import { useRoute } from '../router'
@@ -15,8 +15,23 @@ export function TechniquesPage() {
   const { ctx } = useTargetContext()
   const vars: Vars = { TARGET: ctx.target, LHOST: ctx.lhost, LPORT: ctx.lport }
   const route = useRoute().query, t = route.get('t'), cmd = route.get('cmd')
-  useEffect(() => { api<TechniqueListItem[]>('GET', '/api/techniques').then(setList, (e) => setError(e.message)) }, [])
   const fail = (e: Error) => setError(e.message)
+  const load = useCallback(() => api<TechniqueListItem[]>('GET', '/api/techniques').then(setList, fail), [])
+  useEffect(() => { load() }, [load])
+  // every tool, for the link picker on each card
+  const [tools, setTools] = useState<{ id: number; name: string }[]>([])
+  useEffect(() => { api<ToolListItem[]>('GET', '/api/tools').then((l) => setTools(l.map(({ id, name }) => ({ id, name }))), fail) }, [])
+  const add = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.currentTarget, data = new FormData(form)
+    api<{ id: number }>('POST', '/api/techniques', { name: String(data.get('name')).trim(), phase: data.get('phase') }).then((r) => {
+      setError(null); form.reset(); setFilter('all')
+      dispatchEvent(new Event('slingsh0t:stats'))
+      return load().then(() => { location.hash = `#/techniques?t=${r.id}` }) // scrolls to and flashes the new technique
+    }, fail)
+  }
+  const link = (x: TechniqueListItem, toolId: number, on: boolean) =>
+    api(on ? 'PUT' : 'DELETE', `/api/techniques/${x.id}/tools/${toolId}`).then(() => { setError(null); return load() }, fail)
   const [filter, setFilter] = useState('all') // 'all' | 'svc:<slug>' | 'phase:<name>'
   // the response, not the request, sets state: the pressed pills follow what the server kept
   const patch = (x: TechniqueListItem, body: Partial<Pick<TechniqueListItem, 'applies' | 'service' | 'needs' | 'yields'>>) =>
@@ -43,8 +58,15 @@ export function TechniquesPage() {
   return (
     <section className="lib">
       <h1>Techniques</h1>
+      <form className="cmd-add lib-add tq-add" onSubmit={add}>
+        <input type="text" name="name" aria-label="Name of a new technique" placeholder="New technique: the goal, e.g. Port and service scanning" required />
+        <select name="phase" aria-label="Phase of the new technique" defaultValue="Recon">
+          {PHASES.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <div className="acts"><button type="submit" className="tb-btn">Add technique</button></div>
+      </form>
       {error && <p className="err" role="alert">{error}</p>}
-      {list && !list.length && <p className="empty">No techniques yet. Add them from a box's toolbox.</p>}
+      {list && !list.length && <p className="empty">No techniques yet.</p>}
       {list && list.length > 0 && (
         <div className="filters" role="group" aria-label="Filter">
           {chips.map(([v, label]) => <button key={v} type="button" aria-pressed={filter === v} onClick={() => setFilter(v)}>{label}</button>)}
@@ -56,7 +78,7 @@ export function TechniquesPage() {
           <section key={phase} className="lib-phase">
             <h2>{phase}</h2>
             {here.map((x, i) => (
-              <Technique key={x.id} t={x} vars={vars} onPatch={(b) => patch(x, b)}
+              <Technique key={x.id} t={x} vars={vars} tools={tools} focusCmd={cmd} onChanged={load} onLink={(id, on) => link(x, id, on)} onPatch={(b) => patch(x, b)}
                 onMove={(dir) => (reorderable && here[i + dir] ? () => move(here, i, dir) : null)} />
             ))}
           </section>
@@ -68,7 +90,10 @@ export function TechniquesPage() {
 
 const APPLIES_LABEL: Record<Applies, string> = { any: 'Any', linux: 'Linux', windows: 'Windows', ad: 'Active Directory' }
 
-function Technique({ t, vars, onMove, onPatch }: { t: TechniqueListItem; vars: Vars; onMove: (dir: -1 | 1) => (() => void) | null; onPatch: (b: Partial<Pick<TechniqueListItem, 'applies' | 'service' | 'needs' | 'yields'>>) => Promise<boolean> }) {
+function Technique({ t, vars, tools, focusCmd, onChanged, onLink, onMove, onPatch }: {
+  t: TechniqueListItem; vars: Vars; tools: { id: number; name: string }[]; focusCmd: string | null; onChanged(): void; onLink(toolId: number, on: boolean): void
+  onMove: (dir: -1 | 1) => (() => void) | null; onPatch: (b: Partial<Pick<TechniqueListItem, 'applies' | 'service' | 'needs' | 'yields'>>) => Promise<boolean>
+}) {
   const up = onMove(-1), down = onMove(1)
   const desc = useAutosave(t.description, async (description) => {
     await api('PATCH', `/api/techniques/${t.id}`, { description })
@@ -119,7 +144,20 @@ function Technique({ t, vars, onMove, onPatch }: { t: TechniqueListItem; vars: V
         <textarea aria-label={`Description of ${t.name}`} rows={Math.max(1, desc.value.split('\n').length)} value={desc.value} placeholder="Add a description" onChange={(e) => desc.onChange(e.target.value)} onBlur={desc.flush} />
         </div>
         {desc.error && <p className="err" role="alert">Description not saved: {desc.error}</p>}
-        {t.commands.length > 0 && <ul className="tb-cmds">{t.commands.map((c) => <CommandRow key={c.id} cmd={c} vars={vars} id={`cmd-${c.id}`} />)}</ul>}
+        <Commands addPath={`/api/techniques/${t.id}/commands`} owner={t.name} commands={t.commands} focusCmd={focusCmd} vars={vars} searching={false} onChanged={onChanged} />
+        <p className="uses">
+          {t.tools.length ? 'Tools' : 'No tools linked'}
+          {t.tools.map((x) => (
+            <span key={x.id} className="tq-tool">
+              <a href={`#/tools?tool=${x.id}`}>{x.name}</a>
+              <button type="button" className="ghost" aria-label={`Unlink ${x.name} from ${t.name}`} onClick={() => onLink(x.id, false)}>×</button>
+            </span>
+          ))}
+          <select aria-label={`Link a tool to ${t.name}`} value="" onChange={(e) => e.target.value && onLink(Number(e.target.value), true)}>
+            <option value="">link a tool…</option>
+            {tools.filter((x) => !t.tools.some((y) => y.id === x.id)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+          </select>
+        </p>
         <p className="uses">
           {t.uses.length ? 'Used on' : 'Not used on a box yet'}
           {t.uses.map((u) => (

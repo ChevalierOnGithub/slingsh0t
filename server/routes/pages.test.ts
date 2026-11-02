@@ -186,4 +186,30 @@ describe('technique position and applies', () => {
     for (const ids of [[a], [a, p], [a, 999], [a, a], [], 'x'])
       expect((await call('PUT', '/api/techniques/order', { ids })).statusCode).toBe(400)
   })
+
+  it('adds a tool, a technique command, and links the tool to the technique', async () => {
+    const tool = await call('POST', '/api/tools', { name: ' feroxbuster ', description: 'Content discovery' })
+    expect(tool.statusCode).toBe(201)
+    expect(tool.json()).toEqual({ id: 1, shortId: 'TL-001', name: 'feroxbuster', description: 'Content discovery', commands: [], techniques: [] })
+    expect((await call('POST', '/api/tools', { name: 'feroxbuster' })).statusCode).toBe(409)
+    expect((await call('POST', '/api/tools', { name: ' ' })).statusCode).toBe(400)
+
+    db.prepare("INSERT INTO techniques (short_id, name, phase) VALUES ('TQ-001', 'Content discovery', 'Recon')").run()
+    const c = await call('POST', '/api/techniques/1/commands', { purpose: 'Check robots', template: 'curl http://{{TARGET}}/robots.txt', intent: 'enumerate' })
+    expect(c.statusCode).toBe(201)
+    expect(db.prepare('SELECT tool_id, technique_id FROM commands WHERE id = ?').get(c.json().id)).toEqual({ tool_id: null, technique_id: 1 })
+    expect((await call('POST', '/api/techniques/9/commands', { purpose: '', template: 'x' })).statusCode).toBe(404)
+    expect((await call('POST', '/api/techniques/1/commands', { purpose: '', template: ' ' })).statusCode).toBe(400)
+
+    expect((await call('PUT', '/api/techniques/1/tools/1')).statusCode).toBe(204)
+    expect((await call('PUT', '/api/techniques/1/tools/1')).statusCode).toBe(204) // already linked
+    expect((await call('PUT', '/api/techniques/1/tools/9')).statusCode).toBe(404)
+    expect((await call('PUT', '/api/techniques/9/tools/1')).statusCode).toBe(404)
+    const tq = (await call('GET', '/api/techniques')).json<any[]>()[0]
+    expect(tq.tools).toEqual([{ id: 1, name: 'feroxbuster' }])
+    expect(tq.commands.map((x: any) => x.template)).toEqual(['curl http://{{TARGET}}/robots.txt'])
+    expect((await call('GET', '/api/tools')).json<any[]>()[0].techniques).toEqual([{ id: 1, name: 'Content discovery' }])
+    expect((await call('DELETE', '/api/techniques/1/tools/1')).statusCode).toBe(204)
+    expect((await call('GET', '/api/techniques')).json<any[]>()[0].tools).toEqual([])
+  })
 })

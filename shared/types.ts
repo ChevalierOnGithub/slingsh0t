@@ -69,7 +69,7 @@ export interface TechniqueListItem {
   id: number; shortId: string; name: string; phase: Phase; description: string; position: number; applies: Applies
   service: string; needs: Have[]; yields: Have[]
   /** Commands of the technique itself (no tool). */
-  commands: Command[]
+  commands: Command[]; tools: { id: number; name: string }[]
   uses: { boxId: number | null; hostId: number | null; ownerName: string; stepId: number; phase: Phase; ordinal: number; dead: boolean }[]
 }
 export interface ToolListItem {
