@@ -1,0 +1,53 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "files": [
+          ".impeccable/mocks/decision/canon.html"
+        ],
+        "createdAt": "2026-10-31T23:55:39.237Z",
+        "reason": "agent: canon card deliberately reproduces the category standard (HTB/ZeroBox use Inter)"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/canon.html"
+        ],
+        "createdAt": "2026-10-31T23:55:48.124Z",
+        "reason": "agent: remaining hits are input-group label addons that sit flush with the field border by design"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/model-pick.html"
+        ],
+        "createdAt": "2026-11-01T00:06:17.735Z",
+        "reason": "agent: rejected direction sketch from a closed decision round (user chose Night Topo); throwaway, will not be built"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/challenger-wayfinding.html"
+        ],
+        "createdAt": "2026-11-01T00:06:17.849Z",
+        "reason": "agent: rejected direction sketch from a closed decision round (user chose Night Topo); throwaway, will not be built"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/model-pick.html"
+        ],
+        "createdAt": "2026-11-01T00:06:17.964Z",
+        "reason": "agent: rejected direction sketch from a closed decision round (user chose Night Topo); throwaway, will not be built"
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "status": "success",
+  "data": {
+    "docs": [
+      { "code": "dailybugle", "title": "Daily Bugle", "difficulty": "hard", "type": "challenge" },
+      { "code": "tutorial", "title": "Tutorial", "difficulty": "info", "type": "walkthrough" }
+    ],
+    "totalDocs": 2,
+    "limit": 16,
+    "page": 1,
+    "totalPages": 1,
+    "hasNextPage": false
+  }
+}

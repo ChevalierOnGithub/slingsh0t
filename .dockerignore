@@ -1,0 +1,16 @@
+node_modules
+dist
+data
+data-*
+.env
+.git
+.superpowers
+.claude
+.impeccable
+docs
+.vitest
+backups
+*.db*
+install-token
+wiki-snapshot
+.env.*

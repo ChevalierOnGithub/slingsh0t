@@ -1,0 +1,93 @@
+.toolbox { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.toolbox textarea { font: inherit; color: inherit; }
+
+.toolbox .tb-threads { display: flex; flex-direction: column; gap: 4px; background: var(--accent-fill); border: 1px solid var(--accent-border); border-radius: 8px; padding: 10px 12px; }
+.toolbox .tb-threads span { color: var(--accent); font-weight: 600; }
+.toolbox .tb-threads textarea { background: none; border: 0; resize: vertical; min-height: 2.9em; }
+.toolbox .tb-threads textarea:focus-visible { outline: none; }
+.toolbox .tb-threads:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.toolbox .tb-find { display: flex; align-items: center; gap: 8px; background: var(--ground); border: 1px solid var(--border); border-radius: 7px; padding: 0 12px; }
+.toolbox .tb-find:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.toolbox .tb-find input { flex: 1; min-width: 0; background: none; border: 0; padding: 9px 0; }
+.toolbox .tb-find input:focus-visible { outline: none; }
+.toolbox .tb-find kbd { font: 12px var(--mono); color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; }
+.toolbox .tb-scope { display: flex; gap: 4px; margin-top: 8px; }
+.toolbox .tb-scope button { background: none; border: 1px solid var(--border); border-radius: 12px; padding: 3px 11px; color: var(--muted); font-size: 12px; cursor: pointer; }
+.toolbox .tb-scope button[aria-pressed='true'] { border-color: var(--accent-border); background: var(--accent-fill); color: var(--accent); }
+
+.toolbox summary { list-style: none; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.toolbox summary::-webkit-details-marker { display: none; }
+/* Disclosure chevron: points right when closed, down when open. */
+.toolbox summary::before { content: ''; flex: none; border-left: 5px solid var(--muted); border-block: 4px solid transparent; transition: transform .15s; }
+.toolbox details[open] > summary::before { transform: rotate(90deg); }
+.toolbox summary > span { margin-left: auto; font-size: 12px; color: var(--muted); text-align: right; }
+
+.toolbox .tb-tree { display: flex; flex-direction: column; }
+.toolbox .tb-shelf > summary { padding: 9px 4px; border-bottom: 1px solid var(--border); }
+.toolbox .tb-shelf > summary b { font: 600 17px var(--cond); }
+.toolbox .tb-shelf > summary small { font: 12px var(--mono); color: var(--muted); }
+
+.toolbox .tb-svc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.toolbox .tb-svc ul { display: contents; list-style: none; }
+.toolbox .tb-svc li { display: flex; align-items: center; gap: 2px; font: 12px var(--mono); border: 1px solid var(--accent-border); background: var(--accent-fill); color: var(--accent); border-radius: 10px; padding: 1px 4px 1px 9px; }
+.toolbox .tb-svc li button { background: none; border: 0; color: inherit; cursor: pointer; padding: 0 3px; opacity: 0; }
+.toolbox .tb-svc li:hover button, .toolbox .tb-svc li button:focus-visible { opacity: 1; }
+.toolbox .tb-svc li button:hover { color: var(--danger); }
+.toolbox .tb-svc .tb-add { margin-top: 0; padding: 3px; }
+.toolbox .tb-svc .tb-add input[type='number'] { flex: 0 0 6em; }
+.toolbox .tb-from { font-size: 12px; color: var(--muted); }
+.toolbox .tb-from .tb-link { margin-left: 6px; }
+.toolbox .tb-from .tb-link:hover { color: var(--accent); }
+
+.toolbox .tb-have { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.toolbox .tb-have span { margin-right: 4px; }
+.toolbox .tb-have button { background: none; border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px; color: var(--muted); font-size: 12px; cursor: pointer; }
+.toolbox .tb-have button[aria-pressed='true'] { border-color: var(--accent-border); background: var(--accent-fill); color: var(--accent); }
+.toolbox .tb-have button:disabled { cursor: default; opacity: .75; }
+
+.toolbox .tb-next { display: flex; flex-direction: column; border: 1px solid color-mix(in srgb, var(--easy) 55%, transparent); border-radius: 8px; padding: 8px 12px; }
+.toolbox .tb-next h3 { font: 600 15px var(--cond); color: var(--easy); margin: 0 0 4px; }
+.toolbox .tb-hint { font-size: 12px; color: var(--muted); }
+.toolbox .tb-inner { display: flex; flex-direction: column; padding: 6px 0 12px 14px; }
+
+.toolbox .tb-addbtn { flex: none; background: none; border: 1px dashed var(--border); border-radius: 10px; padding: 0 8px; color: var(--muted); font-size: 12px; cursor: pointer; }
+.toolbox .tb-addbtn:hover { color: var(--accent); border-color: var(--accent-border); }
+.toolbox .tb-saw { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.toolbox .tb-hidden { color: var(--muted); font-size: 12px; padding-top: 8px; }
+
+.toolbox .tb-row { border-top: 1px solid var(--border); padding: 6px 4px; }
+.toolbox .tb-row:first-child { border-top: 0; }
+.toolbox .tb-row.open { background: var(--raised); border-radius: 6px; margin: 2px -4px; padding: 6px 8px; }
+.toolbox .tb-head { display: flex; align-items: center; gap: 8px; }
+.toolbox .tb-head > button:first-child { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 2px 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.toolbox .tb-head > button:first-child:hover b { color: var(--accent); }
+.toolbox .tb-head i { flex: none; border-left: 5px solid var(--muted); border-block: 4px solid transparent; transition: transform .15s; }
+.toolbox .tb-head [aria-expanded='true'] i { transform: rotate(90deg); }
+.toolbox .tb-head b { font-weight: 600; }
+.toolbox .tb-head .tools { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.toolbox .pill { flex: none; font-size: 12px; border-radius: 10px; padding: 1px 8px; }
+.toolbox .pill.used { color: var(--accent); background: var(--accent-fill); }
+.toolbox .pill.dead { color: color-mix(in srgb, var(--danger) 70%, var(--muted)); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.toolbox .pill.lock { color: var(--muted); border: 1px dashed var(--border); }
+.toolbox .tb-row > .tb-cmds { padding: 4px 0 0 13px; }
+.toolbox .tb-desc { color: var(--muted); font-size: 13px; padding: 4px 0 6px 13px; }
+
+.toolbox .tb-tool { padding: 2px 12px 2px 24px; }
+.toolbox .tb-tool > summary { font-size: 13px; font-weight: 500; color: var(--muted); padding: 4px 0; }
+.toolbox .tb-tool > summary:hover { color: var(--text); }
+
+.toolbox .tb-tool .tb-cmds { padding: 2px 0 4px; }
+
+.toolbox .tb-link { background: none; border: 0; color: var(--muted); font-size: 12px; text-decoration: underline; cursor: pointer; margin-left: 8px; }
+.toolbox .tb-link:hover { color: var(--danger); }
+.toolbox .tb-show:hover { color: var(--text); }
+
+.toolbox .tb-uses { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 6px 12px 0; font-size: 13px; color: var(--muted); }
+.toolbox .tb-uses form { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.toolbox .tb-uses select { padding: 3px 6px; font-size: 12px; }
+
+.toolbox .tb-add { display: flex; margin-top: 8px; gap: 6px; border: 1px dashed var(--border); border-radius: 8px; padding: 6px; }
+.toolbox .tb-add input { flex: 1; min-width: 0; padding: 4px 8px; }
+.toolbox .tb-dead { font-size: 12px; color: var(--muted); }
+.toolbox .tb-dead a { display: block; color: color-mix(in srgb, var(--danger) 70%, var(--muted)); }

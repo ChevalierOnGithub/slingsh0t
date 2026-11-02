@@ -1,0 +1,67 @@
+/* Library pages: Techniques, Tools and commands, Reverse shells, Writeups, Reference */
+.lib textarea { font: inherit; color: inherit; background: var(--ground); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; resize: vertical; }
+.lib-find { width: min(420px, 100%); margin-bottom: 20px; background: var(--ground); border: 1px solid var(--border); border-radius: 7px; padding: 8px 12px; }
+
+/* Techniques: phase heading, then a row per technique with its ID in a narrow left column */
+.lib-phase { margin-bottom: 28px; }
+.lib-phase h2 { font: 600 24px/1 var(--cond); padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.tq { display: grid; grid-template-columns: 76px 1fr; gap: 4px 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.tq > .mono { padding-top: 3px; }
+.tq h3 { font: 600 19px/1.2 var(--cond); }
+.tq-acts { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+.tq-acts select { font-size: 13px; padding: 2px 6px; }
+.tq textarea { display: block; field-sizing: content; min-height: 2.3em; width: 100%; max-width: 74ch; margin: 6px 0; background: none; border-color: transparent; padding: 4px 8px; margin-left: -8px; color: var(--muted); }
+.tq textarea:hover { border-color: var(--border); }
+.tq textarea:focus { color: var(--text); background: var(--ground); border-color: var(--accent-border); }
+.uses { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 13px; color: var(--muted); }
+.uses a { color: var(--accent); background: var(--accent-fill); border: 1px solid var(--accent-border); border-radius: 10px; padding: 0 8px; }
+.uses a:hover { background: var(--hover); }
+
+/* Tools: one block per tool, its commands reuse the toolbox row */
+.tool { padding: 16px 0 18px; border-top: 1px solid var(--border); }
+.tool > header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.tool h2 { font: 600 22px/1.1 var(--cond); }
+.tool > p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.lib .tb-cmds { padding: 8px 0 0; }
+.tool .uses { margin-top: 8px; }
+.tb-cmds .tb-cmd.edit form, .cmd-add { display: grid; grid-template-columns: minmax(140px, 1fr) 3fr auto; align-items: start; gap: 6px; }
+.tb-cmd.edit textarea, .cmd-add textarea { font: 12.5px/1.5 var(--mono); min-height: 34px; }
+.tb-cmd.edit .acts, .cmd-add .acts { display: flex; gap: 6px; }
+.cmd-add { margin-top: 8px; padding: 6px; border: 1px dashed var(--border); border-radius: 8px; }
+.cmd-add input, .tb-cmd.edit input { padding: 6px 8px; min-width: 0; }
+.cmd-add .tb-btn, .tb-cmd.edit .tb-btn { padding: 6px 10px; }
+.tb-cmd .tb-btn.bad:hover { color: var(--danger); }
+.lib .listener { margin-bottom: 20px; padding: 0; }
+.listener .tb-cmd > div { border-color: var(--accent-border); }
+@media (max-width: 720px) {
+  .tb-cmds .tb-cmd.edit form, .cmd-add { grid-template-columns: 1fr; }
+  .tq { grid-template-columns: 1fr; }
+}
+
+/* Reference: page list beside the open page */
+.ref { display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: start; }
+.ref nav { display: flex; flex-direction: column; gap: 1px; position: sticky; top: 0; }
+.ref nav a { padding: 6px 10px; border-radius: 6px; color: var(--muted); }
+.ref nav a:hover { background: var(--hover); color: var(--text); }
+.ref nav a[aria-current='page'] { background: var(--raised); color: var(--text); }
+.ref article > header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.ref article > header h2 { font: 600 26px/1.1 var(--cond); margin-right: auto; }
+.ref article > header input { flex: 1; font: 600 20px var(--cond); }
+@media (max-width: 720px) { .ref { grid-template-columns: 1fr; } .ref nav { position: static; } }
+.lib .notice { font: 12px/1.5 var(--mono); color: var(--muted); white-space: pre-wrap; margin: 6px 0 14px }
+
+.lib .intents { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.lib .intents button { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.lib .intents button:hover { color: var(--text); }
+.lib .intents button[aria-pressed='true'] { background: var(--accent-fill); border-color: var(--accent-border); color: var(--accent); }
+
+.tq-card h3 { margin: 0; }
+.tq-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+.tq-pills span { border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; font-size: 12px; color: var(--muted); }
+.tq-meta { display: grid; grid-template-columns: 64px 1fr; gap: 6px 10px; align-items: start; margin-top: 6px; font-size: 13px; color: var(--muted); }
+.tq-meta .tq-pills { margin: 0; }
+.tq-meta .tq-pills button, .lib .filters button { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.tq-meta .tq-pills button:hover, .lib .filters button:hover { color: var(--text); }
+.tq-meta .tq-pills button[aria-pressed='true'], .lib .filters button[aria-pressed='true'] { background: var(--accent-fill); border-color: var(--accent-border); color: var(--accent); }
+.tq-meta input { margin-left: 6px; font-size: 13px; padding: 2px 6px; width: 12ch; }
+.lib .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 12px; }

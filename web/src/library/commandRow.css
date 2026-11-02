@@ -1,0 +1,8 @@
+.tb-cmds { list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 2px 12px 4px; }
+.tb-cmd small { display: block; font-size: 12px; color: var(--muted); margin: 2px 0; }
+.tb-cmd > div { display: flex; align-items: flex-start; gap: 8px; background: var(--ground); border: 1px solid var(--border); border-radius: 6px; padding: 7px 8px 7px 10px; }
+.tb-cmd code { flex: 1; min-width: 0; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.tb-cmd mark { background: var(--accent-fill); color: var(--accent); border-radius: 3px; padding: 0 3px; }
+.tb-cmd .pos { flex: none; font: 500 12px/1.55 var(--mono); color: var(--muted); min-width: 1.4em; }
+.tb-btn { flex: none; background: var(--raised); border: 1px solid var(--border); border-radius: 5px; padding: 2px 8px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.tb-btn:hover { background: var(--hover); color: var(--text); }

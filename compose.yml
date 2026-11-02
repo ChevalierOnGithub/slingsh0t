@@ -1,0 +1,28 @@
+services:
+  slingsh0t:
+    build: .
+    image: slingsh0t
+    init: true
+    restart: unless-stopped
+    # Only /app/data (volume) and /tmp (tsx and npm caches) are writable.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      SLINGSH0T_HOST: 0.0.0.0
+    # Compose reads .env for interpolation; only these two reach the container.
+      HTB_APP_TOKEN: ${HTB_APP_TOKEN:-}
+      THM_USERNAME: ${THM_USERNAME:-}
+    # Loopback only, and host port must stay 4317: the server rejects any other Host header.
+    ports:
+      - 127.0.0.1:4317:4317
+    volumes:
+      - slingsh0t-data:/app/data
+
+# A named volume, not ./data: SQLite WAL locking is unreliable on Docker Desktop bind mounts.
+volumes:
+  slingsh0t-data:

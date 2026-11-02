@@ -1,0 +1,12 @@
+.report { display: flex; flex-direction: column; gap: 14px; }
+.report .summary { display: flex; flex-wrap: wrap; gap: 12px; }
+.report .summary > div { flex: 1 1 200px; display: flex; flex-direction: column; gap: 4px; }
+.report .summary label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.report .summary input { color: var(--text); font-size: 14px; }
+.report .acts { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.report .panes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .report .panes { grid-template-columns: minmax(0, 1fr); } }
+.report .raw { display: flex; flex-direction: column; gap: 4px; }
+.report textarea { font: 13px/1.6 var(--mono); min-height: 60vh; width: 100%; background: var(--rail); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; color: var(--text); resize: vertical; }
+.report textarea:focus-visible { outline: none; border-color: var(--accent); }
+.report small { font-size: 12px; color: var(--muted); }

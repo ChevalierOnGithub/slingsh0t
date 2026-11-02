@@ -1,0 +1,44 @@
+/* Credentials and flags tables. Palette and fonts come from theme.css. */
+/* minmax(0, …): a wide table scrolls inside .tablescroll instead of widening the panel (and its form) past the page. */
+.loot { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.tablescroll { overflow-x: auto; position: relative; } /* relative: keeps .vh header text inside the scroller */
+.loot .filters { margin-bottom: 0; }
+.seg { display: flex; background: var(--rail); border: 1px solid var(--border); border-radius: 6px; padding: 2px; }
+.seg button { background: none; border: 0; border-radius: 4px; padding: 4px 10px; color: var(--muted); font-size: 13px; cursor: pointer; }
+.seg button[aria-pressed='true'] { background: var(--raised); color: var(--text); }
+
+.loottable { width: 100%; border-collapse: collapse; }
+.loottable th { text-align: left; font: 500 12px var(--sans); color: var(--muted); padding: 6px 10px; }
+.loottable td { padding: 8px 10px; border-top: 1px solid var(--border); vertical-align: middle; }
+.loottable tr:hover td { background: var(--rail); }
+.loottable .user { font: 500 13px var(--mono); }
+.loottable .none { color: var(--muted); }
+.loottable .rowacts { white-space: nowrap; text-align: right; }
+
+.secret { display: inline-flex; align-items: center; gap: 2px; }
+.secret code { font: 12.5px var(--mono); margin-right: 6px; overflow-wrap: anywhere; max-width: 32ch; }
+.secret code.masked { color: var(--muted); letter-spacing: 1px; white-space: nowrap; }
+
+.works { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.res { font-size: 12px; border: 1px solid var(--border); border-radius: 4px; padding: 1px 7px; background: none; color: var(--muted); }
+button.res { cursor: pointer; }
+button.res:hover { color: var(--text); }
+.res.untested { border-style: dashed; }
+.res.works { background: var(--accent-fill); border-color: var(--accent-border); color: var(--accent); }
+.res.failed { background: var(--raised); text-decoration: line-through; }
+.untested-n { font: 11px var(--mono); color: var(--muted); }
+
+.lootform input[type='text'] { flex: 1 1 140px; min-width: 0; }
+
+/* Compact list for the network page panel (~430px): user, kind, secret and actions on one line, chips under, found-on last. */
+.credlist { list-style: none; display: grid; }
+.credlist > li { display: grid; gap: 6px; padding: 10px 2px; border-top: 1px solid var(--border); }
+.credlist > li.none { color: var(--muted); }
+.cred-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.cred-line .user { font: 500 13px var(--mono); overflow-wrap: anywhere; }
+.cred-line .kind { font-size: 12px; color: var(--muted); }
+.cred-line .rowacts { margin-left: auto; white-space: nowrap; }
+.cred-found { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.lootform input[name='secret'], .lootform input[name='value'] { font-family: var(--mono); }
+/* Works on inside the add/edit form: its own full-width line under the fields */
+.works-edit { flex-basis: 100%; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }

