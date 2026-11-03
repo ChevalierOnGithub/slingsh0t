@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { UnsortedItem } from '../../../shared/types'
 import { api } from '../api'
+import { apiDownload } from '../download'
 import './import.css'
 
 type Result = Record<string, number | string[]>
@@ -62,6 +63,34 @@ function Panel({ title, note, children }: { title: string; note?: ReactNode; chi
           </>
         )}
       </div>
+    </section>
+  )
+}
+
+function BackupPanel() {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const download = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      await apiDownload('POST', '/api/backup')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <section className="ipanel" aria-label="Backup">
+      <h2>Backup</h2>
+      <p className="hint">Downloads a copy of the database: boxes, writeups, screenshots, loot. Credentials are stored in plain text, so keep the file private. A copy also stays in the data folder under backups.</p>
+      <div className="irow">
+        <button className="btn primary" disabled={busy} onClick={download}>
+          Download backup
+        </button>
+      </div>
+      {error && <p className="err" role="alert">{error}</p>}
     </section>
   )
 }
@@ -134,8 +163,9 @@ export function ImportPage() {
 
   return (
     <section>
-      <h1>Import</h1>
+      <h1>Import / Backup</h1>
       <div className="ipanels">
+        <BackupPanel />
         <Panel title="HTB catalog and progress">
           {(run, busy) => button(run, busy, 'Import from HTB', '/api/import/htb')}
         </Panel>

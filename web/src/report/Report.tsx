@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { WorkItem } from '../../../shared/types'
 import { api } from '../api'
 import { useAutosave } from '../autosave'
+import { saveBlob } from '../download'
 import { jump, md } from '../box/StepSection'
 import { exportHtml } from './exportHtml'
 import './report.css'
@@ -9,14 +10,6 @@ import './report.css'
 type Doc = { frontmatter: string; markdown: string }
 
 export const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-
-const download = (name: string, text: string, type: string) => {
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(new Blob([text], { type }))
-  a.download = name
-  a.click()
-  URL.revokeObjectURL(a.href)
-}
 
 type Item = Pick<WorkItem, 'id' | 'shortId' | 'name'> & Partial<Pick<WorkItem, 'foothold' | 'privesc' | 'rating'>>
 
@@ -63,9 +56,9 @@ export function Report({ item, ownerPath, active, summary = true }: { item: Item
       )}
       <div className="acts">
         <button className="btn" disabled={!doc} onClick={copy}>Copy raw</button>
-        <button className="btn" disabled={!doc} onClick={() => download(`${file}.md`, fenced, 'text/markdown')}>Export .md</button>
+        <button className="btn" disabled={!doc} onClick={() => saveBlob(`${file}.md`, new Blob([fenced], { type: 'text/markdown' }))}>Export .md</button>
         {/* shortcut: image links stay /api/files/…, which resolve only while the app runs; inline them as data: URIs if exports are read offline. */}
-        <button className="btn" disabled={!doc} onClick={() => download(`${file}.html`, exportHtml(item.name, md.render(markdown, { plain: true })), 'text/html')}>Export HTML</button>
+        <button className="btn" disabled={!doc} onClick={() => saveBlob(`${file}.html`, new Blob([exportHtml(item.name, md.render(markdown, { plain: true }))], { type: 'text/html' }))}>Export HTML</button>
         {copied && <span className="save" role="status">Copied</span>}
       </div>
       {error && <p className="err" role="alert">{error}</p>}

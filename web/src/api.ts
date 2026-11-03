@@ -5,7 +5,7 @@ export class ApiError extends Error {
 }
 
 let token: string | undefined
-const getToken = () =>
+export const getToken = () =>
   (token ??= document.querySelector<HTMLMetaElement>('meta[name="slingsh0t-token"]')?.content ?? '')
 
 export async function api<T>(method: string, path: string, body?: unknown): Promise<T> {

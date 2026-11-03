@@ -137,3 +137,17 @@ test('result keys read as words', async () => {
   fireEvent.click(screen.getByText('Import from HTB'))
   await screen.findByText('Inserted 2, updated 0, skipped 1, unknown difficulty 3')
 })
+
+test('Download backup posts to /api/backup', async () => {
+  URL.createObjectURL = vi.fn(() => 'blob:x')
+  URL.revokeObjectURL = vi.fn()
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  fetchMock.mockImplementation(async (_url: string, i: RequestInit) =>
+    i.method === 'GET' ? reply([]) : new Response('db', { headers: { 'content-disposition': 'attachment; filename="b.db"' } }),
+  )
+  render(<ImportPage />)
+  fireEvent.click(screen.getByText('Download backup'))
+  await waitFor(() => expect(posts()).toHaveLength(1))
+  expect(posts()[0][0]).toBe('/api/backup')
+  expect(posts()[0][1].method).toBe('POST')
+})

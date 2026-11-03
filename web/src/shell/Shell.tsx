@@ -24,7 +24,7 @@ type Count = 'boxes' | 'networks' | 'loot' | 'techniques' | 'tools' | 'writeups'
 const NAV: [string, string, Count | null][] = [
   ['boxes', 'Boxes', 'boxes'], ['networks', 'Networks', 'networks'], ['loot', 'Loot', 'loot'], ['techniques', 'Techniques', 'techniques'], ['tools', 'Tools and commands', 'tools'],
   ['shells', 'Reverse shells', null], ['writeups', 'Writeups', 'writeups'], ['reference', 'Reference', 'reference'],
-  ['import', 'Import', null],
+  ['import', 'Import / Backup', null],
 ]
 const VIEWS = [['table', 'Table'], ['board', 'Board'], ['pyramid', 'Pyramid']]
 const PAGES = { boxes: BoxesPage, networks: NetworksPage, loot: LootPage, techniques: TechniquesPage, tools: ToolsPage, shells: ShellsPage, writeups: WriteupsPage, import: ImportPage, credits: CreditsPage }
