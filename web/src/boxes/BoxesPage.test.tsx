@@ -4,6 +4,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BoxesPage } from './BoxesPage'
 
+vi.mock('../shell/TargetBar', () => ({ useTargetContext: () => ({ ctx: { activeBoxId: null }, update: vi.fn(), error: null }) }))
+
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status })
 
 test('empty list shows empty state; submitting form posts the box and navigates', async () => {

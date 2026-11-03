@@ -7,6 +7,7 @@ import { BoxesBoard } from './BoxesBoard'
 import { STATUSES } from '../status'
 import { BoxesTable, DIFFICULTIES } from './BoxesTable'
 import { Pyramid } from './Pyramid'
+import { Continue } from './Continue'
 
 const NO_FILTER = { q: '', platform: '', difficulty: '', os: '', status: '' }
 // The table hides rooted boxes until asked; the board keeps its Rooted column to drop boxes into.
@@ -74,6 +75,7 @@ export function BoxesPage() {
       {boxes?.length === 0 && <p className="empty">No boxes yet. Add the box you're working on.</p>}
       {!!boxes?.length && (view === 'pyramid' ? <Pyramid boxes={boxes} /> : (
         <>
+          <Continue boxes={all} />
           <div className="filters">
             <input type="text" aria-label="Filter by name or ID" placeholder="Name or ID" value={filter.q} onChange={set('q')} />
             <select aria-label="Filter by platform" value={filter.platform} onChange={set('platform')}>

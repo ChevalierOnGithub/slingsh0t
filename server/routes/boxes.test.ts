@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance } from 'fastify'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { openDb } from '../db'
 import { boxRoutes } from './boxes'
-import type { BoxDetail, Step } from '../../shared/types'
+import type { BoxDetail, BoxSummary, Step } from '../../shared/types'
 
 let t = 0
 let app: FastifyInstance
@@ -91,6 +91,13 @@ describe('boxes', () => {
     // a PATCH without them leaves them alone
     expect((await call('PATCH', url, { notes: 'x' })).statusCode).toBe(200)
     expect((await call('GET', url)).json<BoxDetail>()).toMatchObject({ notes: 'x', services: [{ name: 'http', port: 80 }, { name: 'smb', port: null }], haves: ['creds'] })
+  })
+
+  it('the list carries startedAt, set when status first leaves not_started', async () => {
+    const b = await mk()
+    expect((await call('GET', '/api/boxes')).json<BoxSummary[]>()[0].startedAt).toBeNull()
+    await call('PATCH', `/api/boxes/${b.id}`, { status: 'in_progress' })
+    expect((await call('GET', '/api/boxes')).json<BoxSummary[]>()[0].startedAt).toBeTruthy()
   })
 
   it('PATCH validates fields and 404s an unknown box', async () => {

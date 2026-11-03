@@ -94,6 +94,11 @@ select, input[type='text'] { background: var(--ground); border: 1px solid var(--
 
 /* Boxes: filters, sortable table, pager */
 .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.continue { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.continue h2 { font-size: 13px; color: var(--muted); margin: 0 4px 0 0; }
+.continue a { display: flex; align-items: center; gap: 8px; background: var(--rail); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; }
+.continue a:hover { border-color: var(--accent); }
+.continue a span:not(.sid) { color: var(--muted); font-size: 13px; }
 .filters input[type='text'] { width: 220px; }
 .filters .count { margin-left: auto; color: var(--muted); font-size: 13px; }
 .boxes th button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }

@@ -25,7 +25,7 @@ export interface Context {
 export interface BoxSummary {
   id: number; shortId: string; platform: Platform; name: string; os: string
   difficulty: Difficulty; status: BoxStatus; targetIp: string | null; totalSeconds: number
-  releaseDate: string | null; dns: string; url: string
+  releaseDate: string | null; dns: string; url: string; startedAt: string | null
 }
 
 /** timerStartedAt is epoch seconds */

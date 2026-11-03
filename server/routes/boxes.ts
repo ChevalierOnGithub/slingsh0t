@@ -18,7 +18,7 @@ const isPhase = (v: unknown): v is Phase => (PHASES as readonly unknown[]).inclu
 type Row = Record<string, any>
 type Db = Database.Database
 const toStep = (r: Row): Step => ({ id: r.id, boxId: r.box_id, hostId: r.host_id, phase: r.phase, position: r.position, body: r.body, seconds: r.seconds, timerStartedAt: r.timer_started_at, done: r.done === 1, saw: r.saw, think: r.think, tried: r.tried, got: r.got, dead: r.dead === 1 })
-const toSummary = (r: Row): BoxSummary => ({ id: r.id, shortId: r.short_id, platform: r.platform, name: r.name, os: r.os, difficulty: r.difficulty, status: r.status, targetIp: r.target_ip, totalSeconds: r.total_seconds, releaseDate: r.release_date, dns: r.dns, url: r.url })
+const toSummary = (r: Row): BoxSummary => ({ id: r.id, shortId: r.short_id, platform: r.platform, name: r.name, os: r.os, difficulty: r.difficulty, status: r.status, targetIp: r.target_ip, totalSeconds: r.total_seconds, releaseDate: r.release_date, dns: r.dns, url: r.url, startedAt: r.started_at })
 
 /** A step belongs to exactly one box or one host. */
 export type Owner = { col: 'box_id' | 'host_id'; id: number }
@@ -150,7 +150,10 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
         set.rooted_at = cur.rooted_at ?? iso()
         set.started_at = cur.started_at ?? iso()
         markRooted(db, box(boxId), now())
-      } else if (b.status !== undefined) set.rooted_at = null
+      } else if (b.status !== undefined) {
+        set.rooted_at = null
+        if (b.status !== 'not_started') set.started_at = cur.started_at ?? iso()
+      }
       updateRow(db, 'boxes', boxId, set)
       return detail(boxId)
     })
