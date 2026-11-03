@@ -19,3 +19,14 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
   if (!res.ok) throw new ApiError(res.status, data?.message ?? data?.error ?? res.statusText)
   return data as T
 }
+
+export async function upload<T>(path: string, file: Blob, name: string): Promise<T> {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'content-type': file.type, 'x-file-name': encodeURIComponent(name), 'x-slingsh0t-token': getToken() },
+    body: file,
+  })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new ApiError(res.status, data?.message ?? data?.error ?? res.statusText)
+  return data as T
+}

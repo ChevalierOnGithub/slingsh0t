@@ -1,9 +1,9 @@
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import MarkdownIt from 'markdown-it'
-import type { Step, WorkItem } from '../../../shared/types'
+import type { Attachment, Step, WorkItem } from '../../../shared/types'
 import { substitute } from '../../../shared/placeholders'
 import { slugger } from '../../../shared/slug'
-import { api } from '../api'
+import { api, upload } from '../api'
 import { reportLost, useAutosave } from '../autosave'
 import { useTargetContext } from '../shell/TargetBar'
 import { Editor } from './Editor'
@@ -67,6 +67,8 @@ const LOOP = [
 export const statsChanged = () => dispatchEvent(new Event('slingsh0t:stats'))
 /** API base for a box or host: /api/boxes/1, /api/hosts/3. */
 export const ownerPath = (item: WorkItem) => `/api/${item.kind === 'box' ? 'boxes' : 'hosts'}/${item.id}`
+
+export const imageMarkdown = (a: { key: string; name: string }) => `![${a.name.replace(/[[\]()]/g, '')}](/api/files/${a.key})`
 
 /** Runs a mutation then reloads the box, keeping the last error for display. */
 export function useAct(reload: () => void) {
@@ -169,10 +171,18 @@ export function StepSection({ step, item, mode, ordinal, insert, onInserted, onU
   const preview = (
     <div className="md" onClick={jump} dangerouslySetInnerHTML={{ __html: html || '<p class="blank">Nothing written yet.</p>' }} />
   )
+  const attach = (file: File) => act(async () => {
+    const a = await upload<Attachment>(`/api/steps/${step.id}/attachments`, file, file.name || 'pasted.png')
+    edit(`${bodyRef.current.replace(/\n*$/, '')}\n\n${imageMarkdown(a)}\n`)
+  })
   const editor = <Editor value={body} onChange={edit} label={label} autoFocus={mode === 'live'} />
 
   return (
-    <section className={`sect ${step.done ? 'done' : ''} ${step.dead ? 'dead' : ''}`} id={`step_${step.id}`}>
+    <section className={`sect ${step.done ? 'done' : ''} ${step.dead ? 'dead' : ''}`} id={`step_${step.id}`}
+      onPaste={(e) => {
+        const f = Array.from(e.clipboardData.files).find((f) => f.type.startsWith('image/'))
+        if (f) { e.preventDefault(); attach(f) }
+      }}>
       <header>
         <button type="button" className="phase" aria-expanded={open} aria-label={`${open ? 'Collapse' : 'Expand'} ${step.phase} ${ordinal}`} onClick={() => setOpen((o) => !o)}>
           {step.phase}<span className="chev" aria-hidden="true">{open ? '▾' : '▸'}</span>
@@ -187,6 +197,7 @@ export function StepSection({ step, item, mode, ordinal, insert, onInserted, onU
         </label>
         <span className={`save ${shown === 'Not saved' ? 'bad' : ''}`} role="status">{shown}</span>
         <div className="ctl">
+          <label className="ghost">Attach image<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Attach image" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) attach(f) }} /></label>
           <button className="ghost" onClick={() => act(async () => {
             clearTimeout(timer.current) // the copy must carry the text typed in the last 800 ms
             const err = dirty.current && await save(bodyRef.current, seq.current)

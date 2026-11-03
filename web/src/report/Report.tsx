@@ -64,6 +64,7 @@ export function Report({ item, ownerPath, active, summary = true }: { item: Item
       <div className="acts">
         <button className="btn" disabled={!doc} onClick={copy}>Copy raw</button>
         <button className="btn" disabled={!doc} onClick={() => download(`${file}.md`, fenced, 'text/markdown')}>Export .md</button>
+        {/* shortcut: image links stay /api/files/…, which resolve only while the app runs; inline them as data: URIs if exports are read offline. */}
         <button className="btn" disabled={!doc} onClick={() => download(`${file}.html`, exportHtml(item.name, md.render(markdown, { plain: true })), 'text/html')}>Export HTML</button>
         {copied && <span className="save" role="status">Copied</span>}
       </div>

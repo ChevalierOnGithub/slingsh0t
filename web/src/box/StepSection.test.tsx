@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, expect, onTestFinished, test, vi } from 'vitest'
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { BoxDetail, Step } from '../../../shared/types'
 import { StepSection, type Insert } from './StepSection'
@@ -356,4 +356,44 @@ test('an app link in a step preview reaches the hash router in the same tab', as
   } finally {
     location.hash = ''
   }
+})
+
+const KEY = 'a'.repeat(32)
+const withUpload = (status = 201, body?: unknown) => {
+  const base = fetchMock.getMockImplementation() as (url: string, init?: RequestInit) => Promise<Response>
+  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => (init?.method === 'POST' ? json(status, body ?? { key: KEY, name: decodeURIComponent((init.headers as Record<string, string>)['x-file-name']), mime: 'image/png', size: 24, createdAt: '' }) : base(url, init)))
+}
+const posts = () => fetchMock.mock.calls.filter(([, i]) => i?.method === 'POST')
+const png = (name = 'shot.png') => new File(['x'], name, { type: 'image/png' })
+const savedBody = async () => {
+  await waitFor(() => expect(patches()).toHaveLength(1))
+  return JSON.parse(patches()[0][1].body).body as string
+}
+
+test('pasting an image uploads it and appends a markdown image to the body', async () => {
+  withUpload()
+  const { container } = render(<StepSection step={step} item={box} mode="markdown" ordinal={1} insert={null} onInserted={vi.fn()} onUp={null} onDown={null} reload={vi.fn()} />)
+  fireEvent.paste(container.querySelector('section')!, { clipboardData: { files: [png()], items: [], getData: () => '' } })
+  expect(await savedBody()).toBe(`nmap {{TARGET}}\n\n![shot.png](/api/files/${KEY})\n`)
+  expect(posts()[0][0]).toBe('/api/steps/5/attachments')
+})
+
+test('the Attach image button uploads the chosen file', async () => {
+  withUpload()
+  setup()
+  fireEvent.change(screen.getByLabelText('Attach image'), { target: { files: [png('a[1](2).png')] } })
+  expect(await savedBody()).toBe(`nmap {{TARGET}}\n\n![a12.png](/api/files/${KEY})\n`)
+})
+
+test('pasting text is left to the editor', () => {
+  const { container } = setup()
+  fireEvent.paste(container.querySelector('section')!, { clipboardData: { files: [], items: [], getData: () => 'hi' } })
+  expect(fetchMock).not.toHaveBeenCalled()
+})
+
+test('shows the upload error', async () => {
+  withUpload(400, { error: 'not a png image' })
+  setup()
+  fireEvent.change(screen.getByLabelText('Attach image'), { target: { files: [png()] } })
+  expect((await screen.findByRole('alert')).textContent).toContain('not a png image')
 })
