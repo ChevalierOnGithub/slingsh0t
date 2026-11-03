@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { AD_TAG, HAVES, INTENTS, SERVICES, type BoxService, type Command, type Have, type TechniqueNode, type Toolbox as ToolboxData, type ToolNode, type WorkItem } from '../../../shared/types'
 import type { Vars } from '../../../shared/placeholders'
 import { servicesInText, uniqServices } from '../../../shared/services'
+import { toolOf } from '../../../shared/steps'
 import { api } from '../api'
 import { useAutosave } from '../autosave'
 import { CommandRow, cmdName } from '../library/CommandRow'
@@ -98,6 +99,7 @@ export function Toolbox({ item, currentStepId, onInsert, onChanged }: {
   // A failed follow-up write reloads first (and awaits it, so the reload's success can't clear the error run sets next).
   const reloadAndThrow = async (err: unknown) => { await load(); throw err }
   const appendTried = (stepId: number, name: string) => api('POST', `/api/steps/${stepId}/tried`, { name }).catch(reloadAndThrow)
+  const onCopy = (text: string) => { const n = toolOf(text); if (currentStepId !== null && n) appendTried(currentStepId, n) }
 
   // A shelf add only creates; the new technique turns up in Next up for the owner to mark.
   const addTechnique = (service: string) => (e: FormEvent<HTMLFormElement>) => {
@@ -196,7 +198,7 @@ export function Toolbox({ item, currentStepId, onInsert, onChanged }: {
           <section className="tb-next" aria-label="Next up">
             <h3>Next up</h3>
             {upNext.map((t) => (
-              <TechRow key={t.id} t={t} item={item} vars={vars} currentStepId={currentStepId} stepLabel={stepLabel} toolHit={null} searching={false} onInsert={onInsert} run={run} markUsed={markUsed} />
+              <TechRow key={t.id} t={t} item={item} vars={vars} currentStepId={currentStepId} stepLabel={stepLabel} toolHit={null} searching={false} onInsert={onInsert} onCopy={onCopy} run={run} markUsed={markUsed} />
             ))}
           </section>
         )}
@@ -226,7 +228,7 @@ export function Toolbox({ item, currentStepId, onInsert, onChanged }: {
               </summary>
               <div className="tb-inner">
                 {matched.filter((t) => !hidden.includes(t)).map((t) => (
-                  <TechRow key={t.id} t={t} item={item} vars={vars} currentStepId={currentStepId} stepLabel={stepLabel} toolHit={q ? toolHit : null} searching={!!q} onInsert={onInsert} run={run} markUsed={markUsed} lock={t.uses.length ? undefined : locked(t, have)} />
+                  <TechRow key={t.id} t={t} item={item} vars={vars} currentStepId={currentStepId} stepLabel={stepLabel} toolHit={q ? toolHit : null} searching={!!q} onInsert={onInsert} onCopy={onCopy} run={run} markUsed={markUsed} lock={t.uses.length ? undefined : locked(t, have)} />
                 ))}
                 {hidden.length > 0 && (
                   <p className="tb-hidden">
@@ -319,7 +321,7 @@ function goTo(t: TechniqueNode): Command | undefined {
   return t.commands[0] ?? [...INTENTS, ''].map((i) => cmds.find((c) => c.intent === i)).find(Boolean)
 }
 
-function TechRow({ t, item, vars, currentStepId, stepLabel, toolHit, searching, onInsert, run, markUsed, lock }: {
+function TechRow({ t, item, vars, currentStepId, stepLabel, toolHit, searching, onInsert, onCopy, run, markUsed, lock }: {
   t: TechniqueNode
   item: WorkItem
   vars: Vars
@@ -328,6 +330,7 @@ function TechRow({ t, item, vars, currentStepId, stepLabel, toolHit, searching, 
   toolHit: ((t: ToolNode) => boolean) | null
   searching: boolean
   onInsert(template: string): void
+  onCopy(text: string): void
   run: Run
   markUsed(t: TechniqueNode, stepId: number): void
   lock?: Have
@@ -354,15 +357,15 @@ function TechRow({ t, item, vars, currentStepId, stepLabel, toolHit, searching, 
             <button type="button" className="tb-btn" aria-label={`Mark used: ${t.name}`} onClick={() => markUsed(t, currentStepId ?? item.steps[0].id)}>Mark used</button>
           )}
       </div>
-      {inline && <Commands commands={[inline]} vars={vars} onInsert={onInsert} />}
+      {inline && <Commands commands={[inline]} vars={vars} onInsert={onInsert} onCopy={onCopy} />}
       {open && (
         <>
           {t.description && <p className="tb-desc">{t.description}</p>}
-          <Commands commands={t.commands.slice(1)} vars={vars} onInsert={onInsert} />
+          <Commands commands={t.commands.slice(1)} vars={vars} onInsert={onInsert} onCopy={onCopy} />
           {t.tools.map((tl) => (
             <details key={tl.id} className="tb-tool" open={!toolHit || toolHit(tl)}>
               <summary>{tl.name}</summary>
-              <Commands commands={tl.commands} vars={vars} onInsert={onInsert} />
+              <Commands commands={tl.commands} vars={vars} onInsert={onInsert} onCopy={onCopy} />
             </details>
           ))}
           <div className="tb-uses">
@@ -390,12 +393,12 @@ function TechRow({ t, item, vars, currentStepId, stepLabel, toolHit, searching, 
   )
 }
 
-function Commands({ commands, vars, onInsert }: { commands: Command[]; vars: Vars; onInsert(t: string): void }) {
+function Commands({ commands, vars, onInsert, onCopy }: { commands: Command[]; vars: Vars; onInsert(t: string): void; onCopy(t: string): void }) {
   if (!commands.length) return null
   return (
     <ul className="tb-cmds">
       {commands.map((c) => (
-        <CommandRow key={c.id} cmd={c} vars={vars}>
+        <CommandRow key={c.id} cmd={c} vars={vars} onCopy={onCopy}>
           <button type="button" className="tb-btn" aria-label={`Insert ${cmdName(c)}`} onClick={() => onInsert(c.template)}>Insert</button>
         </CommandRow>
       ))}

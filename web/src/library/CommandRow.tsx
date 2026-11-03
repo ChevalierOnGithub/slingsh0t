@@ -8,7 +8,7 @@ import './commandRow.css'
 export const cmdName = (cmd: Command) => cmd.purpose || (cmd.template.length > 40 ? `${cmd.template.slice(0, 40)}…` : cmd.template)
 
 /** One command: purpose, live-substituted template, Copy; callers add their own buttons and an error. */
-export function CommandRow({ cmd, vars, children, error, id }: { cmd: Command; vars: Vars; children?: ReactNode; error?: string | null; id?: string }) {
+export function CommandRow({ cmd, vars, children, error, id, onCopy }: { cmd: Command; vars: Vars; children?: ReactNode; error?: string | null; id?: string; onCopy?(text: string): void }) {
   const [copy, doCopy] = useCopy()
   return (
     <li className="tb-cmd" id={id}>
@@ -18,7 +18,7 @@ export function CommandRow({ cmd, vars, children, error, id }: { cmd: Command; v
         <code>
           {renderSegments(cmd.template, vars).map((s, i) => (s.sub ? <mark key={i} title={s.sub}>{s.text}</mark> : s.text))}
         </code>
-        <button type="button" className="tb-btn" aria-label={`${copy} ${cmdName(cmd)}`} onClick={() => doCopy(substitute(cmd.template, vars))}>{copy}</button>
+        <button type="button" className="tb-btn" aria-label={`${copy} ${cmdName(cmd)}`} onClick={() => { const text = substitute(cmd.template, vars); doCopy(text); onCopy?.(text) }}>{copy}</button>
         {children}
       </div>
       {error && <p className="err" role="alert">{error}</p>}

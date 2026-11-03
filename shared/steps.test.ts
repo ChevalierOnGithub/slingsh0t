@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentStepId, fmtTime } from './steps'
+import { currentStepId, fmtTime, toolOf } from './steps'
 import type { Step } from './types'
 
 const s = (id: number, position: number, done: boolean, dead = false): Step =>
@@ -29,4 +29,15 @@ describe('fmtTime', () => {
   it('shows <1m for under a minute, 0m for nothing', () => {
     expect([fmtTime(30), fmtTime(59), fmtTime(0), fmtTime(60)]).toEqual(['<1m', '<1m', '0m', '1m'])
   })
+})
+
+describe('toolOf', () => {
+  it.each([
+    ['sudo nmap -sC 10.0.0.1', 'nmap'],
+    ['LHOST=1.2.3.4 msfvenom -p x', 'msfvenom'],
+    ['/usr/bin/nc -lvnp 4444', 'nc'],
+    ['python3 -m http.server 80', 'python3'],
+    ['  ', ''],
+    ['echo x | base64', 'echo'],
+  ])('%s -> %s', (cmd, tool) => { expect(toolOf(cmd)).toBe(tool) })
 })

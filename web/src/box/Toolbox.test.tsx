@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { AD_TAG, type BoxDetail, type Command, type TechniqueNode, type Toolbox as ToolboxData } from '../../../shared/types'
 import { ContextProvider } from '../shell/TargetBar'
 import { Toolbox } from './Toolbox'
+import { CommandRow } from '../library/CommandRow'
 
 const NMAP = 'nmap -p- --min-rate 1400 {{TARGET}}'
 const cmd = (id: number, purpose: string, template: string, intent: Command['intent'] = ''): Command => ({ id, purpose, template, procedureKey: null, position: null, intent })
@@ -541,4 +542,29 @@ test('add from Saw drops a bare name another step gave a port', async () => {
   setup({ item: { ...box, services: [box.services[1]], steps } as BoxDetail })
   expect(await screen.findByRole('button', { name: 'Add http :80' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Add http' })).toBeNull()
+})
+
+test('Copy on a command appends the tool to the current step Tried', async () => {
+  const { user } = setup()
+  const cmd = (await tree().findByText('10.10.11.35', { selector: 'mark' })).closest('li') as HTMLElement
+  await user.click(within(cmd).getByRole('button', { name: 'Copy All TCP ports' }))
+  await waitFor(() => expect(posts('/api/steps/12/tried')).toEqual([{ name: 'nmap' }]))
+})
+
+test('Copy with no steps only copies', async () => {
+  const { user, writeText } = setup({ currentStepId: null, item: { ...box, steps: [] } as unknown as BoxDetail })
+  const cmd = (await tree().findByText('10.10.11.35', { selector: 'mark' })).closest('li') as HTMLElement
+  await user.click(within(cmd).getByRole('button', { name: 'Copy All TCP ports' }))
+  expect(writeText).toHaveBeenCalled()
+  expect(fetchMock.mock.calls.filter(([u]) => u.endsWith('/tried'))).toEqual([])
+})
+
+test('CommandRow without onCopy only copies', async () => {
+  const user = userEvent.setup()
+  const writeText = vi.fn(async () => {})
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  render(<ul><CommandRow cmd={cmd(1, 'Scan', 'nmap x')} vars={{}} /></ul>)
+  await user.click(screen.getByRole('button', { name: 'Copy Scan' }))
+  expect(writeText).toHaveBeenCalledWith('nmap x')
+  expect(fetchMock).not.toHaveBeenCalled()
 })

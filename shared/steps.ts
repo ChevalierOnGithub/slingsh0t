@@ -11,3 +11,10 @@ export const fmtTime = (s: number) => {
   const m = Math.floor(s / 60)
   return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`
 }
+
+/** The tool a pasted command runs: skips sudo and VAR=val prefixes, drops any path. */
+export const toolOf = (cmd: string): string => {
+  const t = cmd.trim().split(/\s+/).filter(Boolean)
+  while (t.length && (t[0] === 'sudo' || /^[A-Za-z_][A-Za-z0-9_]*=/.test(t[0]))) t.shift()
+  return t[0]?.split('/').pop() ?? ''
+}
