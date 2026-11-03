@@ -174,7 +174,7 @@ export const pagesRoutes: FastifyPluginAsync<{ db: Database.Database }> = async 
     const today = localDay(new Date())
     const files = writeupList(db).map((w) => {
       const doc = w.kind === 'box' ? reportOf(db, { col: 'box_id', id: w.id }, today) : networkReportOf(db, w.id, today)
-      return { name: `${w.kind === 'box' ? 'boxes' : 'networks'}/${w.shortId}-${fileSlug(w.name)}.md`, data: `---\n${doc.frontmatter}\n---\n\n${doc.markdown}` }
+      return { name: `${w.kind === 'box' ? 'boxes' : 'networks'}/${w.shortId.replace(/[^A-Za-z0-9-]/g, '')}-${fileSlug(w.name)}.md`, data: `---\n${doc.frontmatter}\n---\n\n${doc.markdown}` }
     })
     return reply.type('application/zip').header('content-disposition', `attachment; filename="slingsh0t-writeups-${today.replaceAll('-', '')}.zip"`).send(zipStore(files))
   })

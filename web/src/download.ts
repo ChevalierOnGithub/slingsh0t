@@ -2,10 +2,11 @@ import { ApiError, getToken } from './api'
 
 export const saveBlob = (name: string, blob: Blob): void => {
   const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
+  const url = URL.createObjectURL(blob)
+  a.href = url
   a.download = name
   a.click()
-  URL.revokeObjectURL(a.href)
+  setTimeout(() => URL.revokeObjectURL(url), 30_000) // some browsers lose the download if revoked at once
 }
 
 /** Fetch a file with the token and hand it to the browser as a download. */

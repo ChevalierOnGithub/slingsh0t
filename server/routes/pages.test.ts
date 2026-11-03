@@ -69,6 +69,16 @@ describe('pages api', () => {
     expect(first.startsWith('---\ntitle: "Room"')).toBe(true)
   })
 
+  it('export entry names cannot escape their folder', async () => {
+    const [, boxId] = box('Evil', ['did it'])
+    db.prepare("UPDATE boxes SET short_id = '../../evil' WHERE id = ?").run(boxId)
+    const z = (await call('GET', '/api/export/writeups.zip')).rawPayload
+    const len = z.readUInt16LE(26)
+    const name = z.toString('utf8', 30, 30 + len)
+    expect(name).toBe('boxes/evil-evil.md')
+    expect(name.replace('boxes/', '')).not.toMatch(/\.\.|\//)
+  })
+
   it('a technique lists its tool-less commands', async () => {
     db.exec(`INSERT INTO tools (id, short_id, name) VALUES (1, 'TL-001', 'nmap');
       INSERT INTO techniques (id, short_id, name, phase) VALUES (1, 'TQ-001', 'Scan', 'Recon');

@@ -110,3 +110,5 @@
 .ips .ghost { padding: 1px 6px; }
 .ipadd { display: flex; gap: 4px; }
 .ipadd input[type='text'] { width: 140px; padding: 3px 8px; font: 12px var(--mono); }
+
+label.ghost:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }

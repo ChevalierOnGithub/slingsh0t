@@ -12,13 +12,18 @@ beforeEach(() => {
 afterEach(() => {
   fetchMock.mockReset()
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 test('saves the response under the disposition filename, sending the token', async () => {
   fetchMock.mockResolvedValue(new Response('db', { headers: { 'content-disposition': 'attachment; filename="x.db"' } }))
   let name = ''
   const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { name = this.download })
+  vi.useFakeTimers()
   await apiDownload('POST', '/api/backup')
+  expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+  vi.advanceTimersByTime(30_000)
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:x')
   expect(name).toBe('x.db')
   expect(click).toHaveBeenCalled()
   expect(fetchMock).toHaveBeenCalledWith('/api/backup', expect.objectContaining({ method: 'POST', headers: { 'x-slingsh0t-token': 'tok' } }))

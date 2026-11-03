@@ -392,6 +392,12 @@ test('pasting text is left to the editor', () => {
   expect(fetchMock).not.toHaveBeenCalled()
 })
 
+test('an image alongside text (Office apps) is not uploaded', () => {
+  const { container } = setup()
+  fireEvent.paste(container.querySelector('section')!, { clipboardData: { files: [png()], items: [], getData: () => 'some text' } })
+  expect(fetchMock).not.toHaveBeenCalled()
+})
+
 test('shows the upload error', async () => {
   withUpload(400, { error: 'not a png image' })
   setup()

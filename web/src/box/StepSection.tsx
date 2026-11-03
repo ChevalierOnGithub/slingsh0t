@@ -181,7 +181,7 @@ export function StepSection({ step, item, mode, ordinal, insert, onInserted, onU
     <section className={`sect ${step.done ? 'done' : ''} ${step.dead ? 'dead' : ''}`} id={`step_${step.id}`}
       onPaste={(e) => {
         const f = Array.from(e.clipboardData.files).find((f) => f.type.startsWith('image/'))
-        if (f) { e.preventDefault(); attach(f) }
+        if (f && !e.clipboardData.getData('text/plain')) { e.preventDefault(); attach(f) }
       }}>
       <header>
         <button type="button" className="phase" aria-expanded={open} aria-label={`${open ? 'Collapse' : 'Expand'} ${step.phase} ${ordinal}`} onClick={() => setOpen((o) => !o)}>
