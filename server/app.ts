@@ -10,6 +10,7 @@ export function buildApp(opts: {
   db: Database
   token: string
   plugins?: FastifyPluginAsync<{ db: Database }>[]
+  open?: FastifyPluginAsync<{ db: Database }>[]
 }): FastifyInstance {
   if (opts.token.length < 32) throw new Error('install token too short')
   const app = Fastify()
@@ -29,5 +30,7 @@ export function buildApp(opts: {
     api.register(contextRoutes, { db: opts.db })
     for (const p of opts.plugins ?? []) api.register(p, { db: opts.db })
   })
+  // Host/Origin hook above still applies; the token hook is scoped to the register block.
+  for (const p of opts.open ?? []) app.register(p, { db: opts.db })
   return app
 }

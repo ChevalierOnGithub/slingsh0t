@@ -8,6 +8,7 @@ import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest 
 import { buildApp } from './app'
 import { dataDir as defaultDataDir } from './dataDir'
 import { openDb } from './db'
+import { attachmentRoutes, fileRoutes } from './routes/attachments'
 import { boxRoutes } from './routes/boxes'
 import { libraryRoutes } from './routes/library'
 import { lootRoutes } from './routes/loot'
@@ -37,7 +38,7 @@ export async function startServer(opts: { dataDir?: string; port?: number; webDi
   if (!opts.env) try { process.loadEnvFile() } catch { /* .env is optional */ }
   const db = openDb(join(dataDir, 'slingsh0t.db'))
   const imports: FastifyPluginAsync<{ db: Database }> = (a, o) => importsRoutes(a, { ...o, env: opts.env ?? process.env })
-  const app = buildApp({ db, token, plugins: [boxRoutes, libraryRoutes, searchRoutes, statsRoutes, pagesRoutes, networksRoutes, lootRoutes, presetsRoutes, imports] })
+  const app = buildApp({ db, token, plugins: [boxRoutes, libraryRoutes, searchRoutes, statsRoutes, pagesRoutes, networksRoutes, lootRoutes, presetsRoutes, imports, attachmentRoutes], open: [fileRoutes] })
   await app.register(fastifyStatic, { root: webDir, index: false, allowedPath: (p) => p !== '/index.html' })
 
   const indexFile = join(webDir, 'index.html')

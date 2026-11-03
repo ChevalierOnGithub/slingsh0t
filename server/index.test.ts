@@ -118,4 +118,18 @@ describe('startServer', () => {
     expect(token).toMatch(/^[0-9a-f]{64}$/)
     expect((await get('/api/boxes')).statusCode).toBe(401)
   })
+
+  it('serves attachment bytes without the token', async () => {
+    const { app, token, get } = await setup()
+    const h = { host: '127.0.0.1:4317', 'x-slingsh0t-token': token }
+    const box = await app.inject({ method: 'POST', url: '/api/boxes', headers: h, payload: { name: 'B', platform: 'THM', difficulty: 'Easy' } })
+    const id = box.json().steps[0].id
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from('x')])
+    const up = await app.inject({ method: 'POST', url: `/api/steps/${id}/attachments`, headers: { ...h, 'content-type': 'image/png' }, payload: png })
+    expect(up.statusCode).toBe(201)
+    const file = await get(`/api/files/${up.json().key}`)
+    expect(file.statusCode).toBe(200)
+    expect(file.headers['content-type']).toMatch(/^image\/png/)
+    expect((await get(`/api/steps/${id}/attachments`)).statusCode).toBe(401)
+  })
 })

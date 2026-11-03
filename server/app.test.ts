@@ -47,4 +47,10 @@ describe('security hook', () => {
     })
     expect(r.statusCode).toBe(403)
   })
+  it('serves open plugins without the token but still checks host', async () => {
+    const pub: FastifyPluginAsync = async (a) => void a.get('/api/files/x', async () => ({ ok: true }))
+    const app = buildApp({ db: openDb(':memory:'), token, open: [pub] })
+    expect((await get(app, {}, '/api/files/x')).statusCode).toBe(200)
+    expect((await get(app, { host: 'evil.example:4317' }, '/api/files/x')).statusCode).toBe(403)
+  })
 })
