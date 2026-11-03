@@ -197,7 +197,7 @@ export function StepSection({ step, item, mode, ordinal, insert, onInserted, onU
         </label>
         <span className={`save ${shown === 'Not saved' ? 'bad' : ''}`} role="status">{shown}</span>
         <div className="ctl">
-          <label className="ghost">Attach image<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Attach image" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) attach(f) }} /></label>
+          <label className="ghost">Attach image<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Attach image" className="vh" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) attach(f) }} /></label>
           <button className="ghost" onClick={() => act(async () => {
             clearTimeout(timer.current) // the copy must carry the text typed in the last 800 ms
             const err = dirty.current && await save(bodyRef.current, seq.current)

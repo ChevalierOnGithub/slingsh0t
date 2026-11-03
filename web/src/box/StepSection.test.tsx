@@ -381,6 +381,7 @@ test('pasting an image uploads it and appends a markdown image to the body', asy
 test('the Attach image button uploads the chosen file', async () => {
   withUpload()
   setup()
+  expect((screen.getByLabelText('Attach image') as HTMLInputElement).hidden).toBe(false) // hidden would drop it from the tab order
   fireEvent.change(screen.getByLabelText('Attach image'), { target: { files: [png('a[1](2).png')] } })
   expect(await savedBody()).toBe(`nmap {{TARGET}}\n\n![a12.png](/api/files/${KEY})\n`)
 })
