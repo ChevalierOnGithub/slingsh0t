@@ -99,7 +99,7 @@ export function Toolbox({ item, currentStepId, onInsert, onChanged }: {
   // A failed follow-up write reloads first (and awaits it, so the reload's success can't clear the error run sets next).
   const reloadAndThrow = async (err: unknown) => { await load(); throw err }
   const appendTried = (stepId: number, name: string) => api('POST', `/api/steps/${stepId}/tried`, { name }).catch(reloadAndThrow)
-  const onCopy = (text: string) => { const n = toolOf(text); if (currentStepId !== null && n) appendTried(currentStepId, n) }
+  const onCopy = (text: string) => { const n = toolOf(text); if (currentStepId !== null && n) run(() => appendTried(currentStepId, n)) }
 
   // A shelf add only creates; the new technique turns up in Next up for the owner to mark.
   const addTechnique = (service: string) => (e: FormEvent<HTMLFormElement>) => {

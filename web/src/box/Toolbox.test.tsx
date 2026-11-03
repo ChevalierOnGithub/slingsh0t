@@ -568,3 +568,13 @@ test('CommandRow without onCopy only copies', async () => {
   expect(writeText).toHaveBeenCalledWith('nmap x')
   expect(fetchMock).not.toHaveBeenCalled()
 })
+
+test('a failed Tried append on Copy still copies and shows the error', async () => {
+  fetchMock.mockImplementation(async (url: string) =>
+    url === '/api/toolbox?boxId=7' ? json(200, fixture) : url === '/api/steps/12/tried' ? json(500, { error: 'boom' }) : json(200, { target: '10.10.11.35', lhost: '', lport: '', activeBoxId: 7 }))
+  const { user, writeText } = setup()
+  const cmd = (await tree().findByText('10.10.11.35', { selector: 'mark' })).closest('li') as HTMLElement
+  await user.click(within(cmd).getByRole('button', { name: 'Copy All TCP ports' }))
+  expect(writeText).toHaveBeenCalled()
+  expect((await screen.findByRole('alert')).textContent).toBe('boom')
+})
