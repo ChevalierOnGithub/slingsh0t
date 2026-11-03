@@ -4,7 +4,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { WorkItem } from '../../../shared/types'
 import { md } from '../box/StepSection'
-import { Report, slug } from './Report'
+import { Report } from './Report'
+import { fileSlug } from '../../../shared/slug'
 
 vi.mock('../box/Editor', () => ({ Editor: () => null }))
 vi.mock('../shell/TargetBar', () => ({
@@ -106,8 +107,8 @@ test('typing in a summary field does not re-render the markdown preview', async 
   expect(spy).not.toHaveBeenCalled()
 })
 
-test('slug', () => {
-  expect(slug('Re: "Lame" 2!')).toBe('re-lame-2')
+test('fileSlug', () => {
+  expect(fileSlug('Re: "Lame" 2!')).toBe('re-lame-2')
 })
 
 test('summary={false} hides the summary fields', async () => {

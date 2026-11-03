@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { fileSlug } from '../../../shared/slug'
 import type { WorkItem } from '../../../shared/types'
 import { api } from '../api'
 import { useAutosave } from '../autosave'
@@ -8,8 +9,6 @@ import { exportHtml } from './exportHtml'
 import './report.css'
 
 type Doc = { frontmatter: string; markdown: string }
-
-export const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
 type Item = Pick<WorkItem, 'id' | 'shortId' | 'name'> & Partial<Pick<WorkItem, 'foothold' | 'privesc' | 'rating'>>
 
@@ -36,7 +35,7 @@ export function Report({ item, ownerPath, active, summary = true }: { item: Item
   const markdown = doc?.markdown ?? ''
   const html = useMemo(() => md.render(markdown), [markdown])
   const fenced = `---\n${doc?.frontmatter ?? ''}\n---\n\n${markdown}`
-  const file = `${item.shortId}-${slug(item.name)}`
+  const file = `${item.shortId}-${fileSlug(item.name)}`
   const copy = () => navigator.clipboard.writeText(fenced).then(() => {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)

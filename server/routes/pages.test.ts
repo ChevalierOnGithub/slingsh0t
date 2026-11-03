@@ -47,6 +47,28 @@ describe('pages api', () => {
     expect((await call('GET', '/api/writeups')).json<any[]>().map(w => w.name)).toEqual(['A', 'B'])
   })
 
+  it('exports one markdown file per writeup', async () => {
+    const [, boxId] = box('Room', ['did it'])
+    db.prepare("UPDATE boxes SET short_id = 'T-0001' WHERE id = ?").run(boxId)
+    db.exec("INSERT INTO networks (short_id, platform, name, notes) VALUES ('N-0001', 'HTB', 'Dante Lab', 'notes here')")
+    const res = await app.inject({ method: 'GET', url: '/api/export/writeups.zip' })
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['content-type']).toBe('application/zip')
+    expect(res.headers['content-disposition']).toMatch(/^attachment; filename="slingsh0t-writeups-\d{8}\.zip"$/)
+    const z = res.rawPayload
+    expect(z.readUInt32LE(0)).toBe(0x04034b50)
+    const names: string[] = []
+    let first = ''
+    for (let o = 0; z.readUInt32LE(o) === 0x04034b50; ) {
+      const len = z.readUInt16LE(o + 26), size = z.readUInt32LE(o + 18), n = z.toString('utf8', o + 30, o + 30 + len)
+      if (!names.length) first = z.toString('utf8', o + 30 + len, o + 30 + len + size)
+      names.push(n)
+      o += 30 + len + size
+    }
+    expect(names).toEqual(['boxes/T-0001-room.md', 'networks/N-0001-dante-lab.md'])
+    expect(first.startsWith('---\ntitle: "Room"')).toBe(true)
+  })
+
   it('a technique lists its tool-less commands', async () => {
     db.exec(`INSERT INTO tools (id, short_id, name) VALUES (1, 'TL-001', 'nmap');
       INSERT INTO techniques (id, short_id, name, phase) VALUES (1, 'TQ-001', 'Scan', 'Recon');

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, expect, test, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { WriteupsPage } from './WriteupsPage'
 
-afterEach(() => { vi.unstubAllGlobals() })
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 const serve = (body: unknown) => vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(body))))
 
 test('lists boxes and networks with written steps; the name and the row open the report', async () => {
@@ -27,4 +27,22 @@ test('says how to get a first writeup when there are none', async () => {
   serve([])
   render(<WriteupsPage />)
   expect(await screen.findByText("No writeups yet. Write a step on any box or network host and it shows up here.")).toBeTruthy()
+})
+
+test('Export all downloads the zip', async () => {
+  const row = { kind: 'box', id: 1, shortId: 'H-1', name: 'A', platform: 'HTB', status: 'rooted', filledSteps: 1, totalSteps: 1, updatedAt: '2026-10-30' }
+  const f = vi.fn(async () => new Response(JSON.stringify([row, { ...row, id: 2, shortId: 'H-2' }])))
+  vi.stubGlobal('fetch', f)
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  vi.stubGlobal('URL',Object.assign(URL, { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} }))
+  render(<WriteupsPage />)
+  ;(await screen.findByRole('button', { name: 'Export all (.zip)' })).click()
+  await waitFor(() => expect(f).toHaveBeenCalledWith('/api/export/writeups.zip', expect.objectContaining({ method: 'GET' })))
+})
+
+test('no Export all button without writeups', async () => {
+  serve([])
+  render(<WriteupsPage />)
+  await screen.findByText(/No writeups yet/)
+  expect(screen.queryByRole('button', { name: 'Export all (.zip)' })).toBeNull()
 })

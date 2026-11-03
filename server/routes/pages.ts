@@ -1,7 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify'
 import type Database from 'better-sqlite3'
 import { fail, isId, isStr } from '../validate'
-import { STEP_FILLED } from '../report'
+import { STEP_FILLED, localDay, networkReportOf, reportOf } from '../report'
+import { zipStore } from '../zip'
+import { fileSlug } from '../../shared/slug'
 import { nextShortId } from '../ids'
 import { cmd, shelf, shelfInput } from './library'
 import { APPLIES, INTENTS, PHASES } from '../../shared/types'
@@ -10,6 +12,30 @@ import type { ReferencePage, TechniqueListItem, ToolListItem, UnsortedItem, Writ
 const nonEmpty = (v: unknown): v is string => isStr(v) && v.trim() !== ''
 const page = (r: any): ReferencePage => ({ id: r.id, title: r.title, body: r.body })
 const isIntent = (v: unknown) => v === '' || (INTENTS as readonly unknown[]).includes(v)
+
+// Boxes need a filled step; networks need a filled host step or notes. Boxes carry no updated_at, so latest of rooted/started/created stands in.
+const writeupList = (db: Database.Database): WriteupListItem[] => {
+  const boxes = db.prepare(`
+    SELECT 'box' AS kind, b.id AS id, b.short_id AS shortId, b.name, b.platform, b.status,
+      SUM(${STEP_FILLED('s')}) AS filledSteps, COUNT(s.id) AS totalSteps,
+      COALESCE(b.rooted_at, b.started_at, b.created_at) AS updatedAt
+    FROM boxes b JOIN steps s ON s.box_id = b.id GROUP BY b.id
+    HAVING filledSteps > 0 ORDER BY datetime(updatedAt) DESC, b.id DESC`).all() as WriteupListItem[]
+  const nets = (db.prepare(`
+    SELECT * FROM (
+      SELECT 'network' AS kind, n.id, n.short_id AS shortId, n.name, n.platform, n.notes,
+        (SELECT COUNT(*) FROM hosts WHERE network_id = n.id) AS hosts,
+        (SELECT COUNT(*) FROM hosts WHERE network_id = n.id AND status = 'rooted') AS owned,
+        (SELECT COUNT(*) FROM steps s JOIN hosts h ON h.id = s.host_id WHERE h.network_id = n.id AND ${STEP_FILLED('s')}) AS filledSteps,
+        (SELECT COUNT(*) FROM steps s JOIN hosts h ON h.id = s.host_id WHERE h.network_id = n.id) AS totalSteps,
+        MAX(datetime(n.created_at),
+            COALESCE((SELECT MAX(datetime(created_at)) FROM hosts WHERE network_id = n.id), ''),
+            COALESCE((SELECT MAX(datetime(captured_at)) FROM flags WHERE network_id = n.id AND value <> ''), '')) AS updatedAt
+      FROM networks n)
+      WHERE filledSteps > 0 OR trim(notes) <> '' ORDER BY datetime(updatedAt) DESC, id DESC`).all() as any[])
+      .map(({ hosts, owned, notes, ...r }): WriteupListItem => ({ ...r, status: `${owned}/${hosts} hosts` }))
+  return [...boxes, ...nets]
+}
 
 export const pagesRoutes: FastifyPluginAsync<{ db: Database.Database }> = async (app, { db }) => {
   const idOf = (req: any) => Number(req.params.id)
@@ -142,28 +168,15 @@ export const pagesRoutes: FastifyPluginAsync<{ db: Database.Database }> = async 
     return reply.code(204).send()
   })
 
-  // Boxes need a filled step; networks need a filled host step or notes. Boxes carry no updated_at, so latest of rooted/started/created stands in.
-  app.get('/api/writeups', async () => {
-    const boxes = db.prepare(`
-      SELECT 'box' AS kind, b.id AS id, b.short_id AS shortId, b.name, b.platform, b.status,
-        SUM(${STEP_FILLED('s')}) AS filledSteps, COUNT(s.id) AS totalSteps,
-        COALESCE(b.rooted_at, b.started_at, b.created_at) AS updatedAt
-      FROM boxes b JOIN steps s ON s.box_id = b.id GROUP BY b.id
-      HAVING filledSteps > 0 ORDER BY datetime(updatedAt) DESC, b.id DESC`).all() as WriteupListItem[]
-    const nets = (db.prepare(`
-      SELECT * FROM (
-        SELECT 'network' AS kind, n.id, n.short_id AS shortId, n.name, n.platform, n.notes,
-          (SELECT COUNT(*) FROM hosts WHERE network_id = n.id) AS hosts,
-          (SELECT COUNT(*) FROM hosts WHERE network_id = n.id AND status = 'rooted') AS owned,
-          (SELECT COUNT(*) FROM steps s JOIN hosts h ON h.id = s.host_id WHERE h.network_id = n.id AND ${STEP_FILLED('s')}) AS filledSteps,
-          (SELECT COUNT(*) FROM steps s JOIN hosts h ON h.id = s.host_id WHERE h.network_id = n.id) AS totalSteps,
-          MAX(datetime(n.created_at),
-              COALESCE((SELECT MAX(datetime(created_at)) FROM hosts WHERE network_id = n.id), ''),
-              COALESCE((SELECT MAX(datetime(captured_at)) FROM flags WHERE network_id = n.id AND value <> ''), '')) AS updatedAt
-        FROM networks n)
-      WHERE filledSteps > 0 OR trim(notes) <> '' ORDER BY datetime(updatedAt) DESC, id DESC`).all() as any[])
-      .map(({ hosts, owned, notes, ...r }): WriteupListItem => ({ ...r, status: `${owned}/${hosts} hosts` }))
-    return [...boxes, ...nets]
+  app.get('/api/writeups', async () => writeupList(db))
+
+  app.get('/api/export/writeups.zip', async (_req, reply) => {
+    const today = localDay(new Date())
+    const files = writeupList(db).map((w) => {
+      const doc = w.kind === 'box' ? reportOf(db, { col: 'box_id', id: w.id }, today) : networkReportOf(db, w.id, today)
+      return { name: `${w.kind === 'box' ? 'boxes' : 'networks'}/${w.shortId}-${fileSlug(w.name)}.md`, data: `---\n${doc.frontmatter}\n---\n\n${doc.markdown}` }
+    })
+    return reply.type('application/zip').header('content-disposition', `attachment; filename="slingsh0t-writeups-${today.replaceAll('-', '')}.zip"`).send(zipStore(files))
   })
 
   app.get('/api/reference', async () => (db.prepare('SELECT * FROM reference_pages ORDER BY title COLLATE NOCASE').all() as any[]).map(page))

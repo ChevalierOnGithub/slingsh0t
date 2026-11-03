@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { WriteupListItem } from '../../../shared/types'
 import { api } from '../api'
+import { apiDownload } from '../download'
 import { navigate } from '../router'
 import { STATUS_LABEL } from '../status'
 import './library.css'
@@ -15,6 +16,11 @@ export function WriteupsPage() {
   return (
     <section className="lib">
       <h1>Writeups</h1>
+      {rows && rows.length > 0 && (
+        <div className="acts">
+          <button className="btn" onClick={() => apiDownload('GET', '/api/export/writeups.zip').catch((e) => setError(e.message))}>Export all (.zip)</button>
+        </div>
+      )}
       {error && <p className="err" role="alert">{error}</p>}
       {rows && !rows.length && <p className="empty">No writeups yet. Write a step on any box or network host and it shows up here.</p>}
       {rows && rows.length > 0 && (

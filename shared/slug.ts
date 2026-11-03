@@ -16,3 +16,6 @@ export const slugger = () => {
     return slug
   }
 }
+
+/** A filename-safe form of a name: lower-case runs of letters and digits joined by `-`. */
+export const fileSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
