@@ -131,3 +131,5 @@ export interface NetworkPreset {
   /** Tags the network starts with (Active Directory for AD labs). */
   tags?: string[]
 }
+
+export interface Attachment { key: string; name: string; mime: string; size: number; createdAt: string }

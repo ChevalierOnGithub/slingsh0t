@@ -251,6 +251,18 @@ ALTER TABLE networks ADD COLUMN url TEXT NOT NULL DEFAULT '';`,
   `CREATE INDEX technique_uses_step ON technique_uses(step_id);
 CREATE INDEX commands_technique ON commands(technique_id);
 CREATE INDEX commands_tool ON commands(tool_id);`,
+  // step screenshots live in the db so a backup is one file
+  `CREATE TABLE attachments (
+  id INTEGER PRIMARY KEY,
+  key TEXT UNIQUE NOT NULL,
+  step_id INTEGER NOT NULL REFERENCES steps(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  data BLOB NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX attachments_step ON attachments(step_id);`,
 ]
 
 export function openDb(file: string): Database.Database {
