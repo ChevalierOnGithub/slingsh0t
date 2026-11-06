@@ -70,6 +70,8 @@ test('working: no steps falls back to started_at; rooted active box yields to th
     INSERT INTO hosts (short_id, network_id, name, status, next_step) VALUES ('HS-1',1,'WEB01','in_progress','dump hashes')`)
   db.prepare('UPDATE context SET active_host_id = 1 WHERE id = 1').run()
   expect((await home()).working).toMatchObject({ kind: 'host', name: 'WEB01', network: 'Wreath', platform: 'THM', difficulty: null, openThreads: 'dump hashes' })
+  db.prepare(`UPDATE hosts SET status = 'rooted' WHERE id = 1`).run()
+  expect((await home()).working).toBeNull()
 })
 
 test('unfinished: boxes and started networks, newest first, nulls last, max 5, working excluded', async () => {
@@ -79,6 +81,7 @@ test('unfinished: boxes and started networks, newest first, nulls last, max 5, w
   const a = box(db, { status: 'user_flag', difficulty: 'Hard', started_at: ago(10) })
   step(db, { box_id: a, phase: 'PrivEsc', updated_at: ago(3) })
   const old = box(db, { status: 'in_progress', started_at: ago(20) })
+  step(db, { box_id: old, phase: 'Persistence', position: 1 })
   box(db, { status: 'not_started' })
   box(db, { status: 'rooted' })
   db.exec(`INSERT INTO networks (short_id, platform, name, hosts_in_scope) VALUES ('N-1','HTB','Dante',13), ('N-2','HTB','Idle',null);
@@ -86,8 +89,9 @@ test('unfinished: boxes and started networks, newest first, nulls last, max 5, w
   step(db, { host_id: 2, updated_at: ago(2) })
   const u = (await home()).unfinished
   expect(u.map((r) => `${r.kind}${r.id}`)).toEqual(['network1', `box${a}`, `box${old}`])
-  expect(u[0]).toMatchObject({ difficulty: null, status: null, currentPhase: null, hosts: { rooted: 1, total: 13 }, lastWorked: ago(2) })
-  expect(u[1]).toMatchObject({ currentPhase: 'PrivEsc', hosts: null, difficulty: 'Hard', status: 'user_flag' })
+  expect(u[0]).toMatchObject({ persistence: false, difficulty: null, status: null, currentPhase: null, hosts: { rooted: 1, total: 13 }, lastWorked: ago(2) })
+  expect(u[2].persistence).toBe(true)
+  expect(u[1]).toMatchObject({ persistence: false, currentPhase: 'PrivEsc', hosts: null, difficulty: 'Hard', status: 'user_flag' })
   for (let i = 0; i < 6; i++) box(db, { status: 'in_progress', started_at: ago(30 + i) })
   expect((await home()).unfinished).toHaveLength(5)
 })
@@ -107,13 +111,14 @@ test('next: 3 not_started boxes of the gap tier, newest release first, nulls las
   for (let i = 0; i < 10; i++) box(db, { status: 'rooted', rooted_at: ago(100) })
   for (let i = 0; i < 2; i++) box(db, { status: 'rooted', difficulty: 'Medium', rooted_at: ago(100) })
   const m = (release: string | null) => box(db, { difficulty: 'Medium', release_date: release })
-  const [old, nul, mid, newer] = [m('2020-01-01'), m(null), m('2022-01-01'), m('2024-01-01')]
+  const [old, mid, newer] = [m('2020-01-01'), m('2022-01-01'), m('2024-01-01')]
+  const nul = m(null)
   box(db, { difficulty: 'Hard' })
   const x = (await home()).next
   expect(x.difficulty).toBe('Medium')
   expect(x.reason).toBe('2 Medium rooted against 10 Easy')
   expect(x.boxes.map((b) => b.id)).toEqual([newer, mid, old])
-  expect(nul).toBeGreaterThan(0)
+  expect(x.boxes.map((b) => b.id)).not.toContain(nul)
 })
 
 test('learned: techniques, dead ends and writeups use the 30-day window', async () => {
@@ -126,12 +131,15 @@ test('learned: techniques, dead ends and writeups use the 30-day window', async 
   db.prepare('INSERT INTO technique_uses (technique_id, step_id) VALUES (2, ?)').run(sOld)
   expect((await home()).techniques).toEqual([{ id: 1, name: 'Kerberoast', count: 2 }])
 
-  step(db, { box_id: b1, position: 2, dead: 1, tried: '', saw: 'saw it', updated_at: ago(1) })
+  step(db, { box_id: b1, position: 2, dead: 1, tried: '', saw: 'saw it\nsecond line', updated_at: ago(1) })
   step(db, { box_id: b2, position: 2, dead: 1, tried: 'x'.repeat(200), updated_at: ago(4) })
+  step(db, { box_id: b2, position: 5, dead: 1, tried: ' ', saw: '', body: '', updated_at: ago(1) })
   step(db, { box_id: b2, position: 3, dead: 1, tried: 'ancient', updated_at: ago(40) })
   step(db, { box_id: b2, position: 4, dead: 1, body: '\n  first line\nsecond', updated_at: ago(3) })
   const d = (await home()).deadEnds
   expect(d.map((e) => e.text.slice(0, 9))).toEqual(['saw it', 'first lin', 'xxxxxxxxx'])
+  expect(d[0].text).toBe('saw it')
+  expect(d).toHaveLength(3)
   expect(d[2].text).toHaveLength(120)
   expect(d[0]).toMatchObject({ kind: 'box', ownerId: b1, owner: 'One' })
 
@@ -141,7 +149,7 @@ test('learned: techniques, dead ends and writeups use the 30-day window', async 
   const wu = (await home()).writeups
   expect(wu.items.map((i) => i.id)).toEqual([wa, wb, wc])
   expect(wu.more).toBe(1)
-  expect(wd).toBeGreaterThan(0)
+  expect(wu.items.map((i) => i.id)).not.toContain(wd)
   expect((await home()).rootedThisWeek).toBe(5)
 })
 
@@ -163,14 +171,17 @@ test('POST /api/recents: upsert, trim to 50, searches separate', async () => {
   expect(h.recents.some((r) => r.kind === 'search')).toBe(false)
 
   for (let i = 1; i <= 51; i++) await post({ kind: 'reference', ref: String(i), label: `R${i}` })
+  const refs = (db.prepare(`SELECT ref FROM recents WHERE kind = 'reference'`).all() as { ref: string }[]).map((r) => r.ref)
   expect((db.prepare('SELECT COUNT(*) c FROM recents').get() as { c: number }).c).toBe(50)
+  expect(refs).not.toContain('1')
+  expect(refs).toContain('51')
   expect((await home()).recents).toHaveLength(8)
 })
 
 test('POST /api/recents rejects bad input and stores nothing', async () => {
   const { db, post } = await setup()
   const bad = [
-    { kind: 'nope', ref: '1', label: 'x' }, { kind: 'box', ref: 'abc', label: 'x' }, { kind: 'box', ref: '0', label: 'x' },
+    { kind: 'nope', ref: '1', label: 'x' }, { kind: 'box', ref: 'abc', label: 'x' }, { kind: 'box', ref: '0', label: 'x' }, { kind: 'box', ref: '1'.repeat(13), label: 'x' },
     { kind: 'search', ref: '   ', label: 'x' }, { kind: 'search', ref: 'q'.repeat(201), label: 'x' },
     { kind: 'box', ref: '1' }, { kind: 'box', ref: '1', label: 'x'.repeat(201) }, { kind: 'box', ref: '1', label: '  ' },
   ]

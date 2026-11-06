@@ -58,18 +58,18 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
     const box = ctx?.active_box_id ? one(`SELECT * FROM boxes WHERE id = ? AND status <> 'rooted'`, ctx.active_box_id) : undefined
     if (box) working = workOf('box', box)
     else if (ctx?.active_host_id) {
-      const h = one(`SELECT h.*, n.name AS network, n.platform FROM hosts h JOIN networks n ON n.id = h.network_id WHERE h.id = ?`, ctx.active_host_id)
+      const h = one(`SELECT h.*, n.name AS network, n.platform FROM hosts h JOIN networks n ON n.id = h.network_id WHERE h.id = ? AND h.status <> 'rooted'`, ctx.active_host_id)
       if (h) working = workOf('host', h)
     }
 
     const unfinished: HomeUnfinished[] = [
       ...all(`SELECT * FROM boxes WHERE status IN ('in_progress','user_flag')`).filter((b) => !(working?.kind === 'box' && working.id === b.id)).map((b): HomeUnfinished => {
         const w = workOf('box', b)
-        return { kind: 'box', id: b.id, name: b.name, platform: b.platform, difficulty: b.difficulty, status: b.status, currentPhase: w.currentPhase, hosts: null, lastWorked: w.lastWorked }
+        return { kind: 'box', id: b.id, name: b.name, platform: b.platform, difficulty: b.difficulty, status: b.status, currentPhase: w.currentPhase, persistence: w.persistence, hosts: null, lastWorked: w.lastWorked }
       }),
       ...all(`SELECT n.*, ${hostTotals}, (SELECT MAX(s.updated_at) FROM steps s JOIN hosts h ON h.id = s.host_id WHERE h.network_id = n.id) AS last
         FROM networks n`).filter((n) => n.started > 0).map((n): HomeUnfinished => ({
-        kind: 'network', id: n.id, name: n.name, platform: n.platform, difficulty: null, status: null, currentPhase: null,
+        kind: 'network', id: n.id, name: n.name, platform: n.platform, difficulty: null, status: null, currentPhase: null, persistence: false,
         hosts: { rooted: n.rooted, total: n.total }, lastWorked: n.last,
       })),
     ].sort(byRecent).slice(0, 5)
@@ -92,9 +92,9 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
       WHERE s.updated_at >= ? GROUP BY t.id ORDER BY count DESC, t.name LIMIT 5`, since) as Home['techniques']
     const deadEnds = all(`SELECT s.id, s.box_id, s.host_id, s.tried, s.saw, s.body, COALESCE(b.name, h.name) AS owner
       FROM steps s LEFT JOIN boxes b ON b.id = s.box_id LEFT JOIN hosts h ON h.id = s.host_id
-      WHERE s.dead = 1 AND s.updated_at >= ? ORDER BY s.updated_at DESC, s.id DESC LIMIT 5`, since).map((r) => ({
+      WHERE s.dead = 1 AND s.updated_at >= ? AND (trim(s.tried, ' ' || char(9, 10, 13)) <> '' OR trim(s.saw, ' ' || char(9, 10, 13)) <> '' OR trim(s.body, ' ' || char(9, 10, 13)) <> '') ORDER BY s.updated_at DESC, s.id DESC LIMIT 5`, since).map((r) => ({
       stepId: r.id, kind: r.box_id ? 'box' as const : 'host' as const, ownerId: r.box_id ?? r.host_id, owner: r.owner,
-      text: [r.tried, r.saw, r.body.split('\n').find((l: string) => l.trim()) ?? ''].map((t: string) => t.trim()).find(Boolean)?.slice(0, 120) ?? '',
+      text: [r.tried, r.saw, r.body].map((t: string) => t.trim()).find(Boolean)!.split('\n')[0].trim().slice(0, 120),
     }))
     const wu = all(`SELECT id, name FROM boxes WHERE status = 'rooted' AND (trim(foothold) = '' OR trim(privesc) = '') ORDER BY rooted_at DESC, id DESC`)
 
@@ -117,7 +117,7 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
     const label = isStr(b.label) ? b.label.trim() : ''
     if (!label || label.length > 200) fail('invalid label')
     const ref = isStr(b.ref) ? (kind === 'search' ? b.ref.trim() : b.ref) : ''
-    if (kind === 'search' ? ref.length < 1 || ref.length > 200 : !/^[1-9]\d*$/.test(ref)) fail('invalid ref')
+    if (kind === 'search' ? ref.length < 1 || ref.length > 200 : !/^[1-9]\d{0,11}$/.test(ref)) fail('invalid ref')
     db.transaction(() => {
       db.prepare(`INSERT INTO recents (kind, ref, label, opened_at) VALUES (?, ?, ?, ?)
         ON CONFLICT(kind, ref) DO UPDATE SET label = excluded.label, opened_at = excluded.opened_at`).run(kind, ref, label, iso())

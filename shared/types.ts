@@ -146,7 +146,7 @@ export interface HomeWork {
 }
 export interface HomeUnfinished {
   kind: 'box' | 'network'; id: number; name: string; platform: Platform | null
-  difficulty: Difficulty | null; status: BoxStatus | null; currentPhase: Phase | null
+  difficulty: Difficulty | null; status: BoxStatus | null; currentPhase: Phase | null; persistence: boolean
   hosts: { rooted: number; total: number } | null; lastWorked: string | null
 }
 export interface Home {
