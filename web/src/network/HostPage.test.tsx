@@ -80,3 +80,12 @@ test('the last IP has no Remove button (a host keeps at least one IP)', async ()
   await screen.findByRole('heading', { name: 'DC01' })
   expect(screen.queryByRole('button', { name: /^Remove / })).toBeNull()
 })
+
+test('?tab=Report opens the lazily mounted Report panel on first load', async () => {
+  location.hash = '#/hosts/3?tab=Report'
+  render(<HostPage id={3} />)
+  await screen.findByRole('heading', { name: 'DC01' })
+  const panel = document.getElementById('work-panel-Report')!
+  expect(panel).toBeTruthy()
+  expect(panel.hidden).toBe(false)
+})

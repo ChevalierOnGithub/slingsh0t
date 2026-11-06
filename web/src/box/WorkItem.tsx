@@ -65,7 +65,9 @@ export function WorkBody({ item, reload, extra = {} }: { item: WorkItem; reload(
   // A box's report lives on its Writeups page (#/writeups/:id); hosts have no index there, so they keep the tab.
   const tabs = ['Writeup', 'Notes', ...(item.kind === 'host' ? ['Report'] : []), ...Object.keys(extra)]
   const wanted = query.get('tab')
-  const [tab, setTab] = useState(wanted && tabs.includes(wanted) ? wanted : 'Writeup')
+  const step0 = query.get('step')
+  // A ?step= link wins over ?tab= even on first load.
+  const [tab, setTab] = useState(!step0 && wanted && tabs.includes(wanted) ? wanted : 'Writeup')
   // A ?step= link opens Writeup during render, so Writeup's scroll effect finds its panel already shown.
   const step = query.get('step')
   const [seenStep, setSeenStep] = useState(step)
@@ -73,7 +75,7 @@ export function WorkBody({ item, reload, extra = {} }: { item: WorkItem; reload(
     setSeenStep(step)
     if (step) setTab('Writeup')
   }
-  const [visited, setVisited] = useState<string[]>([]) // Report and extra tabs mount on first visit, then stay mounted
+  const [visited, setVisited] = useState<string[]>(() => [tab]) // Report and extra tabs mount on first visit, then stay mounted
   const show = (t: string) => { setTab(t); setVisited((v) => (v.includes(t) ? v : [...v, t])) }
   const [insert, setInsert] = useState<Insert | null>(null)
   const cur = currentStepId(item.steps)

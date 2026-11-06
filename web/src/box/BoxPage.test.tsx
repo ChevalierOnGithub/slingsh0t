@@ -225,3 +225,11 @@ test('records the box as recent once per id after it loads', async () => {
   await waitFor(() => expect(posts()).toHaveLength(1))
   expect(JSON.parse(posts()[0][1]!.body as string)).toEqual({ kind: 'box', ref: '1', label: 'Box 1' })
 })
+
+test('?step= beats ?tab= on first load', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json(boxOf(1, 5))))
+  location.hash = '#/boxes/1?tab=Notes&step=5'
+  render(<BoxPage id={1} />)
+  expect((await screen.findByRole('tab', { name: 'Writeup' })).getAttribute('aria-selected')).toBe('true')
+  location.hash = ''
+})
