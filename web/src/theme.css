@@ -203,7 +203,7 @@ select, input[type='text'] { background: var(--ground); border: 1px solid var(--
 .home-row > div { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .home-row .home-phases { flex-basis: 100%; }
 .home-row .home-phases li::before { height: 5px; }
-.home-net { flex-direction: column; align-items: stretch; gap: 6px; }
+.home-list .home-net { flex-direction: column; align-items: stretch; gap: 6px; }
 .home-net .home-meta { white-space: normal; }
 .home-net i { height: 5px; border-radius: 2px; background: linear-gradient(var(--accent), var(--accent)) 0 0 / var(--w) 100% no-repeat, color-mix(in srgb, var(--muted) 25%, var(--border)); }
 .home-dead a { border-left: 2px solid var(--danger); padding-left: 8px; }
