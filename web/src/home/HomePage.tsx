@@ -61,7 +61,7 @@ export function HomePage() {
               {home.networks.map((n) => (
                 <li key={n.id} className="home-net">
                   <a href={`#/networks/${n.id}`}>{n.name} <span className="home-meta">{n.hostsRooted} / {n.hostsTotal} hosts · {plural(n.flags, 'flag', 'flags')}</span></a>
-                  <i aria-hidden="true" style={{ '--w': `${(n.hostsRooted / Math.max(1, n.hostsTotal)) * 100}%` } as CSSProperties} />
+                  <HostBar rooted={n.hostsRooted} total={n.hostsTotal} />
                 </li>
               ))}
             </List>
@@ -189,14 +189,19 @@ function Rooted({ stats, week }: { stats: Stats; week: number }) {
   )
 }
 
+/** A network's hosts rooted out of its total, as a filled bar; the text beside it carries the numbers. */
+function HostBar({ rooted, total }: { rooted: number; total: number }) {
+  return <i className="home-hostbar" aria-hidden="true" style={{ '--w': `${(rooted / Math.max(1, total)) * 100}%` } as CSSProperties} />
+}
+
 function Unfinished({ u }: { u: HomeUnfinished }) {
   return (
     <li className="home-row">
       <div>
         <a href={`#/${u.kind === 'box' ? 'boxes' : 'networks'}/${u.id}`}>{u.name}</a>
         {u.difficulty ? <span className="home-pill" style={{ color: `var(--${u.difficulty.toLowerCase()})` }}>{u.difficulty}</span> : u.kind === 'network' && <span className="home-pill">Network</span>}
-        {u.hosts && <span className="home-meta">{u.hosts.rooted} / {u.hosts.total} hosts</span>}
-        <PhaseBar current={u.currentPhase} persistence={u.persistence} />
+        {u.hosts ? <><span className="home-meta">{u.hosts.rooted} / {u.hosts.total} hosts</span><HostBar {...u.hosts} /></>
+          : <PhaseBar current={u.currentPhase} persistence={u.persistence} />}
       </div>
       <span className="home-meta">{[u.status && STATUS_LABEL[u.status], u.lastWorked && ago(u.lastWorked)].filter(Boolean).join(' · ')}</span>
     </li>

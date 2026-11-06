@@ -83,7 +83,11 @@ test('full dashboard: working box, rooted tally, next, learned and recents', asy
 
   expect(link('Copperline')).toBe('#/boxes/8')
   expect(screen.getAllByRole('list', { name: 'Phase: PrivEsc' })[0].children).toHaveLength(6) // Persistence shown
-  expect(screen.getByRole('link', { name: 'Dante' }).closest('li')!.textContent).toContain('7 / 27 hosts')
+  const netRow = screen.getByRole('link', { name: 'Dante' }).closest('li')!
+  expect(screen.getByRole('link', { name: 'Dante' }).getAttribute('href')).toBe('#/networks/3')
+  expect(netRow.textContent).toContain('7 / 27 hosts')
+  expect(within(netRow).queryByRole('list', { name: /^Phase:/ })).toBeNull() // hosts bar instead of phases
+  expect((netRow.querySelector('.home-hostbar') as HTMLElement).style.getPropertyValue('--w')).toBe(`${(7 / 27) * 100}%`)
 
   const gap = screen.getByRole('heading', { name: 'Fill the gap: Medium' }).closest('section')!
   expect(within(gap).getByText('8 Medium rooted against 29 Easy')).toBeTruthy()

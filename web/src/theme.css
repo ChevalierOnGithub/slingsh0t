@@ -201,11 +201,11 @@ select, input[type='text'] { background: var(--ground); border: 1px solid var(--
 .home-list .home-meta { white-space: nowrap; }
 .home-card .home-list + .home-note, .home-card > .home-note + .home-list { margin-top: 8px; }
 .home-row > div { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
-.home-row .home-phases { flex-basis: 100%; }
+.home-row .home-phases, .home-row .home-hostbar { flex-basis: 100%; }
 .home-row .home-phases li::before { height: 5px; }
 .home-list .home-net { flex-direction: column; align-items: stretch; gap: 6px; }
 .home-net .home-meta { white-space: normal; }
-.home-net i { height: 5px; border-radius: 2px; background: linear-gradient(var(--accent), var(--accent)) 0 0 / var(--w) 100% no-repeat, color-mix(in srgb, var(--muted) 25%, var(--border)); }
+.home-hostbar { height: 5px; border-radius: 2px; background: linear-gradient(var(--accent), var(--accent)) 0 0 / var(--w) 100% no-repeat, color-mix(in srgb, var(--muted) 25%, var(--border)); }
 .home-dead a { border-left: 2px solid var(--danger); padding-left: 8px; }
 
 .home-search { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
