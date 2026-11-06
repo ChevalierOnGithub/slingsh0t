@@ -133,3 +133,32 @@ export interface NetworkPreset {
 }
 
 export interface Attachment { key: string; name: string; mime: string; size: number; createdAt: string }
+
+export type RecentKind = 'box' | 'host' | 'network' | 'writeup' | 'network-writeup' | 'reference' | 'search'
+export interface Recent { kind: RecentKind; ref: string; label: string; openedAt: string }
+export interface HomeWork {
+  kind: 'box' | 'host'; id: number; name: string; status: BoxStatus
+  platform: Platform | null; difficulty: Difficulty | null; os: string; network: string | null
+  totalSeconds: number; lastWorked: string | null
+  currentPhase: Phase | null; persistence: boolean; stepNumber: number | null
+  step: { saw: string; think: string; tried: string; got: string } | null
+  openThreads: string
+}
+export interface HomeUnfinished {
+  kind: 'box' | 'network'; id: number; name: string; platform: Platform | null
+  difficulty: Difficulty | null; status: BoxStatus | null; currentPhase: Phase | null
+  hosts: { rooted: number; total: number } | null; lastWorked: string | null
+}
+export interface Home {
+  working: HomeWork | null
+  unfinished: HomeUnfinished[]
+  rootedThisWeek: number
+  next: { difficulty: Difficulty; reason: string; boxes: { id: number; name: string; platform: Platform; os: string }[] }
+  networks: { id: number; name: string; hostsRooted: number; hostsTotal: number; flags: number }[]
+  networksNotStarted: number
+  techniques: { id: number; name: string; count: number }[]
+  deadEnds: { stepId: number; kind: 'box' | 'host'; ownerId: number; owner: string; text: string }[]
+  writeups: { items: { id: number; name: string }[]; more: number }
+  recents: Recent[]
+  searches: string[]
+}
