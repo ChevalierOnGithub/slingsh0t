@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { reportLost } from '../autosave'
 import { ContextProvider } from './TargetBar'
 import { Shell } from './Shell'
+import { readFileSync } from 'node:fs'
 
 afterEach(() => { vi.unstubAllGlobals(); location.hash = ''; localStorage.clear() })
 
@@ -103,6 +104,8 @@ test('the rail toggles collapsed, hides its links, and remembers it', async () =
   const btn = screen.getByRole('button', { name: 'Collapse menu' })
   expect(btn.getAttribute('aria-expanded')).toBe('true')
   expect(btn.getAttribute('aria-controls')).toBe(container.querySelector('.navs')!.id)
+  // jsdom does not model UA-vs-author cascade, so computed display cannot show the bug; guard the rule itself.
+  expect(readFileSync('web/src/theme.css', 'utf8')).toMatch(/^\.rail \[hidden\] \{ display: none; \}/m)
   await userEvent.click(btn)
   const open = screen.getByRole('button', { name: 'Expand menu' })
   expect(open.getAttribute('aria-expanded')).toBe('false')

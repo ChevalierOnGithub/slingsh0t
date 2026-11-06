@@ -83,9 +83,9 @@ select, input[type='text'] { background: var(--ground); border: 1px solid var(--
 .views a { padding: 3px 8px; border-radius: 5px; font-size: 13px; color: var(--muted); }
 .views a:hover { color: var(--text); background: var(--hover); }
 .views a.on { color: var(--accent); }
-.totals { display: flex; justify-content: space-between; font: 12px var(--mono); color: var(--muted); }
 .app.collapsed { grid-template-columns: 48px 1fr; }
 .app.collapsed .rail { padding: 12px 6px; overflow: hidden; }
+.rail [hidden] { display: none; }
 .rail-toggle { align-self: flex-start; width: 34px; height: 30px; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font: 16px/1 var(--mono); cursor: pointer; }
 .rail-toggle:hover { background: var(--hover); color: var(--text); }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
