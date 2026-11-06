@@ -1,8 +1,9 @@
-import { useEffect, useState, type CSSProperties } from 'react'
-import type { Difficulty, Stats } from '../../../shared/types'
+import { useEffect, useState } from 'react'
+import type { Stats } from '../../../shared/types'
 import { api } from '../api'
 import { LOST_EVENT } from '../autosave'
 import { useRoute } from '../router'
+import { HomePage } from '../home/HomePage'
 import { BoxesPage } from '../boxes/BoxesPage'
 import { BoxPage } from '../box/BoxPage'
 import { HostPage } from '../network/HostPage'
@@ -22,16 +23,23 @@ import { SearchPalette } from '../search/SearchPalette'
 
 type Count = 'boxes' | 'networks' | 'loot' | 'techniques' | 'tools' | 'writeups' | 'reference'
 const NAV: [string, string, Count | null][] = [
-  ['boxes', 'Boxes', 'boxes'], ['networks', 'Networks', 'networks'], ['loot', 'Loot', 'loot'], ['techniques', 'Techniques', 'techniques'], ['tools', 'Tools and commands', 'tools'],
+  ['home', 'Home', null], ['boxes', 'Boxes', 'boxes'], ['networks', 'Networks', 'networks'], ['loot', 'Loot', 'loot'], ['techniques', 'Techniques', 'techniques'], ['tools', 'Tools and commands', 'tools'],
   ['shells', 'Reverse shells', null], ['writeups', 'Writeups', 'writeups'], ['reference', 'Reference', 'reference'],
   ['import', 'Import / Backup', null],
 ]
 const VIEWS = [['table', 'Table'], ['board', 'Board'], ['pyramid', 'Pyramid']]
-const PAGES = { boxes: BoxesPage, networks: NetworksPage, loot: LootPage, techniques: TechniquesPage, tools: ToolsPage, shells: ShellsPage, writeups: WriteupsPage, import: ImportPage, credits: CreditsPage }
-const TIERS: Difficulty[] = ['Insane', 'Hard', 'Medium', 'Easy']
+const PAGES = { home: HomePage, boxes: BoxesPage, networks: NetworksPage, loot: LootPage, techniques: TechniquesPage, tools: ToolsPage, shells: ShellsPage, writeups: WriteupsPage, import: ImportPage, credits: CreditsPage }
+const RAIL_KEY = 'slingsh0t:rail'
+const readCollapsed = () => { try { return localStorage.getItem(RAIL_KEY) === 'collapsed' } catch { return false } }
 
 export function Shell() {
   const route = useRoute()
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+  const toggleRail = () => {
+    const next = !collapsed
+    setCollapsed(next)
+    try { if (next) localStorage.setItem(RAIL_KEY, 'collapsed'); else localStorage.removeItem(RAIL_KEY) } catch { /* keep in memory */ }
+  }
   const [stats, setStats] = useState<Stats | null>(null)
   // Refetch on every route change, and on 'slingsh0t:stats' from pages that change counts in place.
   useEffect(() => {
@@ -51,15 +59,14 @@ export function Shell() {
 
   const section = route.name === 'box' ? 'boxes' : route.name === 'host' || route.name === 'network' ? 'networks' : route.name === 'writeup' ? 'writeups' : route.name
   const view = route.query.get('view') ?? 'table'
-  const tier = (d: Difficulty) => (stats ? stats.rooted.HTB[d] + stats.rooted.THM[d] : 0)
-  const widest = Math.max(1, ...TIERS.map(tier))
   const Page = route.name === 'box' || route.name === 'host' || route.name === 'network' || route.name === 'reference' || route.name === 'writeup' ? null : PAGES[route.name]
 
   return (
-    <div className="app">
+    <div className={collapsed ? 'app collapsed' : 'app'}>
       <nav className="rail">
-        <div className="brand">Sling<b>Sh0t</b></div>
-        <div className="navs">
+        <button type="button" className="rail-toggle" aria-label={collapsed ? 'Expand menu' : 'Collapse menu'} aria-expanded={!collapsed} aria-controls="rail-nav" onClick={toggleRail}>{collapsed ? '›' : '‹'}</button>
+        <div className="brand" hidden={collapsed}>Sling<b>Sh0t</b></div>
+        <div className="navs" id="rail-nav" hidden={collapsed}>
           {NAV.map(([name, label, count]) => (
             <div key={name}>
               {/* On the Boxes list its view link is the page, so Boxes itself is only 'true': one aria-current="page" per screen. */}
@@ -78,22 +85,6 @@ export function Shell() {
             </div>
           ))}
         </div>
-        {stats && (
-          <footer className="tally">
-            <div className="rooted"><b>{stats.totals.HTB.rooted + stats.totals.THM.rooted}</b> rooted</div>
-            <ul className="mini" aria-label="Rooted by difficulty">
-              {TIERS.map((d) => (
-                <li key={d} style={{ '--c': `var(--${d.toLowerCase()})`, '--w': `${(tier(d) / widest) * 100}%` } as CSSProperties}>
-                  <i aria-hidden="true" /><span className="vh">{d}</span><span>{tier(d)}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="totals">
-              <span>HTB {stats.totals.HTB.rooted}/{stats.totals.HTB.total}</span>
-              <span>THM {stats.totals.THM.rooted}/{stats.totals.THM.total}</span>
-            </div>
-          </footer>
-        )}
       </nav>
       <main>
         <TargetBar />

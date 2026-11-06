@@ -1,11 +1,11 @@
 import { useMemo, useSyncExternalStore } from 'react'
 
-type Page = 'boxes' | 'techniques' | 'tools' | 'shells' | 'writeups' | 'reference' | 'import' | 'networks' | 'loot' | 'credits'
+type Page = 'home' | 'boxes' | 'techniques' | 'tools' | 'shells' | 'writeups' | 'reference' | 'import' | 'networks' | 'loot' | 'credits'
 export type Route = ({ name: 'box' | 'host' | 'network'; id: number } | { name: 'writeup'; kind: 'box' | 'network'; id: number } | { name: 'reference'; id?: number } | { name: Exclude<Page, 'reference'> }) & {
   query: URLSearchParams
 }
 
-const PAGES: readonly string[] = ['boxes', 'techniques', 'tools', 'shells', 'writeups', 'reference', 'import', 'networks', 'loot', 'credits']
+const PAGES: readonly string[] = ['home', 'boxes', 'techniques', 'tools', 'shells', 'writeups', 'reference', 'import', 'networks', 'loot', 'credits']
 
 export function parseHash(hash: string): Route {
   const [path, qs = ''] = hash.split(/\?(.*)/)
@@ -19,7 +19,7 @@ export function parseHash(hash: string): Route {
   if (m?.[1] === 'writeups' && m[2]) return { name: 'writeup', kind: 'box', id: Number(m[2]), query }
   if (m?.[1] === 'reference') return { name: 'reference', id: m[2] ? Number(m[2]) : undefined, query }
   if (m && !m[2] && PAGES.includes(m[1])) return { name: m[1] as Exclude<Page, 'reference'>, query }
-  return { name: 'boxes', query }
+  return { name: 'home', query }
 }
 
 const subscribe = (cb: () => void) => {

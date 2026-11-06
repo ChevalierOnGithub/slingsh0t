@@ -17,5 +17,6 @@ test('parses hash routes with a query', () => {
   expect(parseHash('#/writeups/3')).toMatchObject({ name: 'writeup', kind: 'box', id: 3 })
   expect(parseHash('#/writeups').name).toBe('writeups')
   expect(parseHash('#/loot').name).toBe('loot')
-  for (const h of ['', '#/', '#/nope', '#/tools/4', '#/hosts', '#/loot/1']) expect(parseHash(h).name).toBe('boxes')
+  for (const h of ['', '#/', '#/nope', '#/tools/4', '#/hosts', '#/loot/1']) expect(parseHash(h).name).toBe('home')
+  expect(parseHash('#/home').name).toBe('home')
 })

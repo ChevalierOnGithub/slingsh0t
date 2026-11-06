@@ -76,20 +76,18 @@ select, input[type='text'] { background: var(--ground); border: 1px solid var(--
 .add { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: var(--rail); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
 .add label.chk { display: flex; align-items: center; gap: 6px; }
 
-/* Sidebar: nav, Boxes view switch, rooted tally */
+/* Sidebar: nav, Boxes view switch, collapse */
 .rail { overflow-y: auto; position: relative; }
 .navs { display: flex; flex-direction: column; gap: 2px; }
 .views { display: flex; gap: 2px; padding: 4px 0 6px 10px; }
 .views a { padding: 3px 8px; border-radius: 5px; font-size: 13px; color: var(--muted); }
 .views a:hover { color: var(--text); background: var(--hover); }
 .views a.on { color: var(--accent); }
-.tally { margin-top: auto; border-top: 1px solid var(--border); padding: 16px 8px 0; display: grid; gap: 12px; }
-.tally .rooted { color: var(--muted); font-size: 13px; }
-.tally .rooted b { display: block; font: 700 48px/0.9 var(--cond); color: var(--text); }
-.mini { list-style: none; display: grid; gap: 4px; }
-.mini li { display: grid; grid-template-columns: 1fr 34px; align-items: center; gap: 8px; font: 11px var(--mono); color: var(--muted); text-align: right; }
-.mini i { justify-self: center; width: var(--w); min-width: 3px; height: 6px; border-radius: 2px; background: var(--c); }
 .totals { display: flex; justify-content: space-between; font: 12px var(--mono); color: var(--muted); }
+.app.collapsed { grid-template-columns: 48px 1fr; }
+.app.collapsed .rail { padding: 12px 6px; overflow: hidden; }
+.rail-toggle { align-self: flex-start; width: 34px; height: 30px; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font: 16px/1 var(--mono); cursor: pointer; }
+.rail-toggle:hover { background: var(--hover); color: var(--text); }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Boxes: filters, sortable table, pager */

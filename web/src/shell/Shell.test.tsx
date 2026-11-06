@@ -6,7 +6,7 @@ import { reportLost } from '../autosave'
 import { ContextProvider } from './TargetBar'
 import { Shell } from './Shell'
 
-afterEach(() => { vi.unstubAllGlobals(); location.hash = '' })
+afterEach(() => { vi.unstubAllGlobals(); location.hash = ''; localStorage.clear() })
 
 test('sidebar refetches stats on the slingsh0t:stats event', async () => {
   const stats = { boxes: 1, techniques: 0, tools: 0, writeups: 0, reference: 0,
@@ -16,14 +16,15 @@ test('sidebar refetches stats on the slingsh0t:stats event', async () => {
   const fetchMock = vi.fn(async (url: string) =>
     new Response(JSON.stringify(url === '/api/stats' ? stats : url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null } : [])))
   vi.stubGlobal('fetch', fetchMock)
+  location.hash = '#/loot'
   const statsCalls = () => fetchMock.mock.calls.filter(([u]) => u === '/api/stats').length
   const { findByText } = render(<ContextProvider><Shell /></ContextProvider>)
-  expect(await findByText('HTB 0/1')).toBeTruthy()
+  expect(await findByText('1', { selector: 'a.nav span' })).toBeTruthy()
   expect(statsCalls()).toBe(1)
 
-  stats.totals.HTB.rooted = 1
+  stats.boxes = 7
   act(() => { dispatchEvent(new Event('slingsh0t:stats')) })
-  expect(await findByText('HTB 1/1')).toBeTruthy()
+  expect(await findByText('7', { selector: 'a.nav span' })).toBeTruthy()
   await waitFor(() => expect(statsCalls()).toBe(2))
 })
 
@@ -49,6 +50,11 @@ const T = { Easy: 0, Medium: 0, Hard: 0, Insane: 0 }
 const STATS = { boxes: 0, networks: 0, loot: 0, techniques: 0, tools: 0, writeups: 0, reference: 0,
   rooted: { HTB: T, THM: T }, inProgress: { HTB: T, THM: T }, totals: { HTB: { rooted: 0, total: 0 }, THM: { rooted: 0, total: 0 } } }
 
+const HOME = { working: null, unfinished: [], rootedThisWeek: 0, next: { difficulty: 'Easy', reason: '', boxes: [] }, networks: [], networksNotStarted: 0,
+  techniques: [], deadEnds: [], writeups: { items: [], more: 0 }, recents: [], searches: [] }
+const homeFetch = () => vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(
+  url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null, activeHostId: null, via: null } : url === '/api/stats' ? STATS : url === '/api/home' ? HOME : []))))
+
 test('the Boxes list has one aria-current="page": the view link; Boxes itself is "true"', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(
     url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null, activeHostId: null, via: null } : url === '/api/stats' ? STATS : []))))
@@ -60,8 +66,7 @@ test('the Boxes list has one aria-current="page": the view link; Boxes itself is
 })
 
 test('shows a lost-edit message until dismissed', async () => {
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(
-    url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null, activeHostId: null, via: null } : url === '/api/stats' ? STATS : []))))
+  homeFetch()
   render(<ContextProvider><Shell /></ContextProvider>)
   act(() => reportLost('notes', 'offline'))
   const alert = await screen.findByRole('alert')
@@ -73,11 +78,52 @@ test('shows a lost-edit message until dismissed', async () => {
 })
 
 test('Credits is not in the nav but #/credits still opens it (licence notices)', async () => {
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(
-    url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null, activeHostId: null, via: null } : url === '/api/stats' ? STATS : []))))
+  homeFetch()
   const { container } = render(<ContextProvider><Shell /></ContextProvider>)
   const links = [...container.querySelectorAll('nav.rail a.nav')].map((a) => a.textContent)
   expect(links).not.toContain('Credits')
   act(() => { location.hash = '#/credits'; dispatchEvent(new HashChangeEvent('hashchange')) })
   expect(await screen.findByRole('heading', { name: 'Credits', level: 1 })).toBeTruthy()
+})
+
+test('Home is the first rail link and current on #/home; the rail no longer carries the rooted tally', async () => {
+  homeFetch()
+  location.hash = '#/home'
+  const { container } = render(<ContextProvider><Shell /></ContextProvider>)
+  const first = container.querySelector('nav.rail a.nav') as HTMLAnchorElement
+  expect(first.textContent).toBe('Home')
+  expect(first.getAttribute('href')).toBe('#/home')
+  expect(first.getAttribute('aria-current')).toBe('page')
+  expect(container.querySelector('nav.rail')!.textContent).not.toContain('rooted')
+})
+
+test('the rail toggles collapsed, hides its links, and remembers it', async () => {
+  homeFetch()
+  const { container } = render(<ContextProvider><Shell /></ContextProvider>)
+  const btn = screen.getByRole('button', { name: 'Collapse menu' })
+  expect(btn.getAttribute('aria-expanded')).toBe('true')
+  expect(btn.getAttribute('aria-controls')).toBe(container.querySelector('.navs')!.id)
+  await userEvent.click(btn)
+  const open = screen.getByRole('button', { name: 'Expand menu' })
+  expect(open.getAttribute('aria-expanded')).toBe('false')
+  expect(screen.queryByRole('link', { name: 'Home' })).toBeNull()
+  expect(localStorage.getItem('slingsh0t:rail')).toBe('collapsed')
+  await userEvent.click(open)
+  expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy()
+  expect(localStorage.getItem('slingsh0t:rail')).toBeNull()
+})
+
+test('a stored collapsed flag starts the rail collapsed; failing storage falls back to expanded and still toggles', async () => {
+  homeFetch()
+  localStorage.setItem('slingsh0t:rail', 'collapsed')
+  const first = render(<ContextProvider><Shell /></ContextProvider>)
+  expect(screen.getByRole('button', { name: 'Expand menu' })).toBeTruthy()
+  first.unmount()
+  localStorage.clear()
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('denied') })
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('denied') })
+  render(<ContextProvider><Shell /></ContextProvider>)
+  await userEvent.click(screen.getByRole('button', { name: 'Collapse menu' }))
+  expect(screen.getByRole('button', { name: 'Expand menu' })).toBeTruthy()
+  vi.restoreAllMocks()
 })
