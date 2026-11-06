@@ -4,6 +4,7 @@ import { api } from '../api'
 import { WorkActs, WorkBody, useWorkItem } from '../box/WorkItem'
 import { statsChanged } from '../box/StepSection'
 import { navigate } from '../router'
+import { recordRecent } from '../recents'
 
 export function HostPage({ id }: { id: number }) {
   const { item: host, error, reload, change } = useWorkItem<HostDetail>(`/api/hosts/${id}`)
@@ -13,6 +14,7 @@ export function HostPage({ id }: { id: number }) {
   useEffect(() => {
     if (networkId) api<{ name: string }>('GET', `/api/networks/${networkId}`).then((n) => setNetwork({ name: n.name }), (e) => setNetwork({ error: e.message }))
   }, [networkId])
+  useEffect(() => { if (host) recordRecent('host', host.id, host.name) }, [host?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!host) return error ? <p className="err" role="alert">{error}</p> : null
 
   const remove = async () => {

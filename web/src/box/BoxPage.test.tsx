@@ -202,3 +202,26 @@ test('Delete box asks first, then deletes and opens the boxes list', async () =>
   location.hash = ''
 })
 
+
+test('?tab=Notes opens on Notes; an unknown tab falls back to Writeup', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json(boxOf(1, 5))))
+  location.hash = '#/boxes/1?tab=Notes'
+  const { unmount } = render(<BoxPage id={1} />)
+  expect((await screen.findByRole('tab', { name: 'Notes' })).getAttribute('aria-selected')).toBe('true')
+  unmount()
+  location.hash = '#/boxes/1?tab=Nope'
+  render(<BoxPage id={1} />)
+  expect((await screen.findByRole('tab', { name: 'Writeup' })).getAttribute('aria-selected')).toBe('true')
+  location.hash = ''
+})
+
+test('records the box as recent once per id after it loads', async () => {
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => init?.method === 'POST' ? new Response(null, { status: 204 }) : json(boxOf(1, 5)))
+  vi.stubGlobal('fetch', fetchMock)
+  const posts = () => fetchMock.mock.calls.filter(([u, i]) => u === '/api/recents' && i?.method === 'POST')
+  render(<BoxPage id={1} />)
+  await screen.findByText('Box 1')
+  act(() => { dispatchEvent(new Event('focus')) })
+  await waitFor(() => expect(posts()).toHaveLength(1))
+  expect(JSON.parse(posts()[0][1]!.body as string)).toEqual({ kind: 'box', ref: '1', label: 'Box 1' })
+})

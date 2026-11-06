@@ -19,7 +19,7 @@ const net: NetworkDetail = {
 
 let fetchMock: ReturnType<typeof vi.fn>
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
-const calls = (method: string) => fetchMock.mock.calls.filter(([, i]) => (i?.method ?? 'GET') === method)
+const calls = (method: string) => fetchMock.mock.calls.filter(([u, i]) => u !== '/api/recents' && (i?.method ?? 'GET') === method) // the recents write is covered elsewhere
 
 beforeEach(() => {
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {

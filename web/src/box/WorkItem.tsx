@@ -61,9 +61,12 @@ export function WorkActs({ item, change }: { item: WorkItem; change(to: string, 
 
 /** Attack path, Writeup/Notes tabs (Report on hosts, plus `extra` tabs) and the Toolbox; shared by box and host pages. */
 export function WorkBody({ item, reload, extra = {} }: { item: WorkItem; reload(): void; extra?: Record<string, () => ReactNode> }) {
-  const [tab, setTab] = useState('Writeup')
-  // A ?step= link opens Writeup during render, so Writeup's scroll effect finds its panel already shown.
   const { query } = useRoute()
+  // A box's report lives on its Writeups page (#/writeups/:id); hosts have no index there, so they keep the tab.
+  const tabs = ['Writeup', 'Notes', ...(item.kind === 'host' ? ['Report'] : []), ...Object.keys(extra)]
+  const wanted = query.get('tab')
+  const [tab, setTab] = useState(wanted && tabs.includes(wanted) ? wanted : 'Writeup')
+  // A ?step= link opens Writeup during render, so Writeup's scroll effect finds its panel already shown.
   const step = query.get('step')
   const [seenStep, setSeenStep] = useState(step)
   if (step !== seenStep) {
@@ -72,8 +75,6 @@ export function WorkBody({ item, reload, extra = {} }: { item: WorkItem; reload(
   }
   const [visited, setVisited] = useState<string[]>([]) // Report and extra tabs mount on first visit, then stay mounted
   const show = (t: string) => { setTab(t); setVisited((v) => (v.includes(t) ? v : [...v, t])) }
-  // A box's report lives on its Writeups page (#/writeups/:id); hosts have no index there, so they keep the tab.
-  const tabs = ['Writeup', 'Notes', ...(item.kind === 'host' ? ['Report'] : []), ...Object.keys(extra)]
   const [insert, setInsert] = useState<Insert | null>(null)
   const cur = currentStepId(item.steps)
   return (

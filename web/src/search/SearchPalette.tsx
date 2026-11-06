@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { SearchHit } from '../../../shared/types'
 import { api } from '../api'
 import { navigate } from '../router'
+import { recordRecent } from '../recents'
 import { matchPages } from './pages'
 import './SearchPalette.css'
 
@@ -42,9 +43,9 @@ export function SearchPalette() {
     setOpen(false)
     ;(opener.current as HTMLElement | null)?.focus?.()
   }
-  const show = () => {
+  const show = (initial = '') => {
     opener.current = document.activeElement
-    setQ(''); setHits([]); setSel(0); setFailed(false); setExpanded([]); setOpen(true)
+    setQ(initial); setHits([]); setSel(0); setFailed(false); setExpanded([]); setOpen(true)
   }
 
   useEffect(() => {
@@ -55,7 +56,7 @@ export function SearchPalette() {
         if (open) close(); else show()
       } else if (open && e.key === 'Escape' && !e.isComposing) { e.preventDefault(); close() } // Esc during IME composition cancels the composition only
     }
-    const onOpen = () => show()
+    const onOpen = (e: Event) => show(typeof (e as CustomEvent).detail === 'string' ? (e as CustomEvent).detail : '')
     addEventListener('keydown', onKey)
     addEventListener('slingsh0t:search', onOpen)
     return () => { removeEventListener('keydown', onKey); removeEventListener('slingsh0t:search', onOpen) }
@@ -80,7 +81,10 @@ export function SearchPalette() {
   useEffect(() => { document.querySelector('#sp-list [aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' }) }, [sel, hits, expanded, open, q])
 
   if (!open) return null
-  const go = (href: string) => { close(); navigate(href) }
+  const go = (href: string) => {
+    if (q.trim()) recordRecent('search', q.trim(), q.trim())
+    close(); navigate(href)
+  }
   type Row = { key: string; act: () => void; body: ReactNode; more?: true }
   const pages = matchPages(q)
   const groups: { label: string; heading: string; rows: Row[] }[] = pages.length

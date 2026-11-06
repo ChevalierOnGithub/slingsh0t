@@ -279,3 +279,32 @@ test('clicking Show all expands; clicking a Pages row navigates', async () => {
   await userEvent.click(screen.getByRole('option', { name: 'Reverse shells' }))
   expect(location.hash).toBe('#/shells')
 })
+
+test('a string detail on slingsh0t:search opens prefilled; null or a plain Event opens empty', async () => {
+  setup()
+  fireEvent.keyDown(window, { key: 'Escape' })
+  fireEvent(window, new CustomEvent('slingsh0t:search', { detail: 'smb' }))
+  expect(((await screen.findByRole('combobox')) as HTMLInputElement).value).toBe('smb')
+  fireEvent.keyDown(window, { key: 'Escape' })
+  fireEvent(window, new CustomEvent('slingsh0t:search', { detail: null }))
+  expect(((await screen.findByRole('combobox')) as HTMLInputElement).value).toBe('')
+  fireEvent.keyDown(window, { key: 'Escape' })
+  fireEvent(window, new Event('slingsh0t:search'))
+  expect(((await screen.findByRole('combobox')) as HTMLInputElement).value).toBe('')
+  fireEvent.keyDown(window, { key: 'Escape' })
+  fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+  expect(((await screen.findByRole('combobox')) as HTMLInputElement).value).toBe('')
+})
+
+test('choosing a result with a query records the search; an empty query records nothing', async () => {
+  const fetchMock = setup()
+  const calls = () => fetchMock.mock.calls as unknown as [string, RequestInit?][]
+  const input = await screen.findByRole('combobox')
+  await userEvent.type(input, ' smb ')
+  await screen.findByText('Foothold')
+  await userEvent.keyboard('{Enter}')
+  const posts = () => calls().filter(([, i]) => i?.method === 'POST')
+  await waitFor(() => expect(posts()).toHaveLength(1))
+  expect(posts()[0][0]).toBe('/api/recents')
+  expect(JSON.parse(posts()[0][1]!.body as string)).toEqual({ kind: 'search', ref: 'smb', label: 'smb' })
+})

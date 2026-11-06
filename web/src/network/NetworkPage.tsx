@@ -3,6 +3,7 @@ import type { NetworkDetail } from '../../../shared/types'
 import { api } from '../api'
 import { focusFirstField } from '../forms'
 import { navigate } from '../router'
+import { recordRecent } from '../recents'
 import { Notes } from '../box/Notes'
 import { statsChanged } from '../box/StepSection'
 import { STATUS_LABEL } from '../status'
@@ -34,6 +35,7 @@ export function NetworkPage({ id }: { id: number }) {
     addEventListener('slingsh0t:stats', load)
     return () => removeEventListener('slingsh0t:stats', load)
   }, [path])
+  useEffect(() => { if (net) recordRecent('network', net.id, net.name) }, [net?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!net) return error ? <p className="err" role="alert">{error}</p> : null
 
   const act = async (f: () => Promise<unknown>) => {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReferencePage as Page } from '../../../shared/types'
 import { api } from '../api'
 import { reportLost } from '../autosave'
+import { recordRecent } from '../recents'
 import { Editor } from '../box/Editor'
 import { jump, md } from '../box/StepSection'
 import '../box/box.css' // .md typography
@@ -22,6 +23,7 @@ export function ReferencePage({ id }: { id?: number }) {
   }, [])
   const saves = useRef(0) // bumped by every completed save, so an older reload can be told apart
   const page = pages?.find((p) => p.id === id)
+  useEffect(() => { if (page) recordRecent('reference', page.id, page.title) }, [page?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="lib">

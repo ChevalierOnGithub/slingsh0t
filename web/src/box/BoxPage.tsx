@@ -1,6 +1,7 @@
 import type { BoxDetail } from '../../../shared/types'
 import { api } from '../api'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { recordRecent } from '../recents'
 import { useAutosave } from '../autosave'
 import { navigate } from '../router'
 import { statsChanged } from './StepSection'
@@ -20,6 +21,7 @@ function BoxView({ box, error, reload, change }: { box: BoxDetail; error: string
   const dns = useAutosave(box.dns, (d) => api('PATCH', `/api/boxes/${box.id}`, { dns: d.trim() }).then(reload), 'the DNS name')
   const url = useAutosave(box.url, (u) => api('PATCH', `/api/boxes/${box.id}`, { url: u.trim() }).then(reload), 'the room link')
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  useEffect(() => recordRecent('box', box.id, box.name), [box.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const remove = async () => {
     if (!confirm(`Delete ${box.name} with its steps, notes, credentials and flags? This can't be undone.`)) return
     try {
