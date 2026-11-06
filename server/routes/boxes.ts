@@ -34,16 +34,17 @@ const ownerTags = (db: Db, o: Owner): string[] =>
 const stepsOf = (db: Db, o: Owner) => (db.prepare(`SELECT * FROM steps WHERE ${o.col} = ? ORDER BY position`).all(o.id) as Row[]).map(toStep)
 const usesOf = (db: Db, o: Owner) => (db.prepare(`SELECT u.* FROM technique_uses u JOIN steps s ON s.id = u.step_id WHERE s.${o.col} = ? ORDER BY u.id`).all(o.id) as Row[])
   .map(useOf)
-// Inserts at `pos`, shifting later steps down.
-const insertStep = (db: Db, o: Owner, phase: Phase, pos: number): Step => {
+const isoAt = (sec: number) => new Date(sec * 1000).toISOString()
+// Inserts at `pos`, shifting later steps down; `at` is epoch seconds.
+const insertStep = (db: Db, o: Owner, phase: Phase, pos: number, at: number): Step => {
   db.prepare(`UPDATE steps SET position = position + 1 WHERE ${o.col} = ? AND position >= ?`).run(o.id, pos)
-  const { lastInsertRowid } = db.prepare(`INSERT INTO steps (${o.col}, phase, position) VALUES (?, ?, ?)`).run(o.id, phase, pos)
+  const { lastInsertRowid } = db.prepare(`INSERT INTO steps (${o.col}, phase, position, updated_at) VALUES (?, ?, ?, ?)`).run(o.id, phase, pos, isoAt(at))
   return toStep(db.prepare('SELECT * FROM steps WHERE id = ?').get(lastInsertRowid) as Row)
 }
-export const addDefaultSteps = (db: Db, o: Owner, tags: string[]) => (tags.includes(AD_TAG) ? PHASES : BASE_PHASES).forEach((p, i) => insertStep(db, o, p, i))
-const STOP_TIMER = 'UPDATE steps SET seconds = seconds + MAX(0, ? - timer_started_at), timer_started_at = NULL WHERE timer_started_at IS NOT NULL AND'
+export const addDefaultSteps = (db: Db, o: Owner, tags: string[], at: number) => (tags.includes(AD_TAG) ? PHASES : BASE_PHASES).forEach((p, i) => insertStep(db, o, p, i, at))
+const STOP_TIMER = 'UPDATE steps SET seconds = seconds + MAX(0, ? - timer_started_at), timer_started_at = NULL, updated_at = ? WHERE timer_started_at IS NOT NULL AND'
 export const stopTimers = (db: Db, o: Owner, at: number, exceptStepId = -1) =>
-  db.prepare(`${STOP_TIMER} ${o.col} = ? AND id != ?`).run(at, o.id, exceptStepId)
+  db.prepare(`${STOP_TIMER} ${o.col} = ? AND id != ?`).run(at, isoAt(at), o.id, exceptStepId)
 /** Rooted, however it was set: timers stop and every step is behind you. Box callers also stamp rooted_at/started_at. */
 export const markRooted = (db: Db, o: Owner, at: number) => {
   stopTimers(db, o, at)
@@ -98,7 +99,7 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
   }
   const ownerDetail = (o: Owner) => (o.col === 'box_id' ? detail(o.id) : hostDetail(db, o.id))
 
-  const iso = () => new Date(now() * 1000).toISOString()
+  const iso = () => isoAt(now())
   const checkPhase = (o: Owner, phase: unknown): Phase => {
     if (!isPhase(phase)) return fail('invalid phase')
     if (phase === 'Persistence' && !ownerTags(db, o).includes(AD_TAG)) fail('Persistence requires the Active Directory tag')
@@ -120,7 +121,7 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
     const newId = tx(() => {
       const { lastInsertRowid } = db.prepare('INSERT INTO boxes (short_id, platform, name, os, difficulty, tags) VALUES (?, ?, ?, ?, ?, ?)')
         .run(nextShortId(db, b.platform === 'HTB' ? 'H' : 'T'), b.platform, name, b.os ?? '', b.difficulty, JSON.stringify(tags))
-      addDefaultSteps(db, box(Number(lastInsertRowid)), tags)
+      addDefaultSteps(db, box(Number(lastInsertRowid)), tags, now())
       return Number(lastInsertRowid)
     })
     return reply.code(201).send(detail(newId))
@@ -171,7 +172,7 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
       return reply.code(201).send(tx(() => {
         const tags = ownerTags(db, o)
         if (stepsOf(db, o).length) fail('already has steps', 409)
-        addDefaultSteps(db, o, tags)
+        addDefaultSteps(db, o, tags, now())
         return ownerDetail(o)
       }))
     })
@@ -189,7 +190,7 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
           const a = db.prepare(`SELECT position FROM steps WHERE id = ? AND ${col} = ?`).get(afterStepId, o.id) as Row | undefined
           pos = (a ?? fail('afterStepId not in this step list')).position + 1
         }
-        return insertStep(db, o, p, pos)
+        return insertStep(db, o, p, pos, now())
       }))
     })
 
@@ -209,7 +210,7 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
 
   app.post('/api/steps/:id/duplicate', async (req, reply) => reply.code(201).send(tx(() => {
     const s = stepRow(id(req.params))
-    return insertStep(db, ownerOf(s), s.phase, s.position + 1)
+    return insertStep(db, ownerOf(s), s.phase, s.position + 1, now())
   })))
 
   app.patch('/api/steps/:id', async (req) => {
@@ -224,9 +225,9 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
     return tx(() => {
       const s = stepRow(id(req.params))
       const phase = b.phase === undefined ? s.phase : checkPhase(ownerOf(s), b.phase)
-      db.prepare('UPDATE steps SET phase = ?, body = ?, done = ?, saw = ?, think = ?, tried = ?, got = ?, dead = ? WHERE id = ?').run(
+      db.prepare('UPDATE steps SET phase = ?, body = ?, done = ?, saw = ?, think = ?, tried = ?, got = ?, dead = ?, updated_at = ? WHERE id = ?').run(
         phase, b.body ?? s.body, b.done === undefined ? s.done : Number(b.done),
-        ...LOOP.map((k) => line(k, s[k])), b.dead === undefined ? s.dead : Number(b.dead), s.id)
+        ...LOOP.map((k) => line(k, s[k])), b.dead === undefined ? s.dead : Number(b.dead), iso(), s.id)
       return toStep(stepRow(s.id))
     })
   })
@@ -242,7 +243,7 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
       const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       if (!new RegExp(`(^|[^\\w-])${escaped}($|[^\\w-])`, 'i').test(s.tried)) {
         const kept = s.tried.replace(/[\s,]+$/, '')
-        db.prepare('UPDATE steps SET tried = ? WHERE id = ?').run(kept ? `${kept}, ${n}` : n, s.id)
+        db.prepare('UPDATE steps SET tried = ?, updated_at = ? WHERE id = ?').run(kept ? `${kept}, ${n}` : n, iso(), s.id)
       }
       return toStep(stepRow(s.id))
     })
@@ -265,10 +266,10 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
     return tx(() => {
       const s = stepRow(id(req.params))
       const o = ownerOf(s)
-      if (action === 'stop') db.prepare(`${STOP_TIMER} id = ?`).run(now(), s.id)
+      if (action === 'stop') db.prepare(`${STOP_TIMER} id = ?`).run(now(), iso(), s.id)
       else {
         stopTimers(db, o, now(), s.id)
-        db.prepare('UPDATE steps SET timer_started_at = COALESCE(timer_started_at, ?) WHERE id = ?').run(now(), s.id)
+        db.prepare('UPDATE steps SET timer_started_at = COALESCE(timer_started_at, ?), updated_at = ? WHERE id = ?').run(now(), iso(), s.id)
         // Hosts have no started_at column.
         if (o.col === 'box_id') db.prepare("UPDATE boxes SET status = 'in_progress', started_at = ? WHERE id = ? AND status = 'not_started'").run(iso(), o.id)
         else db.prepare("UPDATE hosts SET status = 'in_progress' WHERE id = ? AND status = 'not_started'").run(o.id)

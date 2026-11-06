@@ -27,8 +27,10 @@ test('migrates a v0 file db without data loss', () => {
   expect(db.prepare('SELECT foothold, privesc, rating FROM boxes').get()).toEqual({ foothold: '', privesc: '', rating: '' })
   expect((db.pragma('table_info(hosts)') as { name: string }[]).map((c) => c.name)).toEqual(expect.arrayContaining(['foothold', 'privesc', 'rating']))
   expect(MIGRATIONS[9]).toContain('ADD COLUMN foothold')
-  expect(MIGRATIONS).toHaveLength(20)
+  expect(MIGRATIONS).toHaveLength(22)
   expect(MIGRATIONS[19]).toContain('CREATE TABLE attachments')
+  expect(MIGRATIONS[20]).toContain('ADD COLUMN updated_at')
+  expect(MIGRATIONS[21]).toContain('CREATE TABLE recents')
   expect((db.prepare('PRAGMA table_info(networks)').all() as any[]).map((c) => c.name)).toContain('entry')
   expect(MIGRATIONS[15]).toContain('networks ADD COLUMN url')
   expect(MIGRATIONS[16]).toContain('credentials ADD COLUMN works_on')
@@ -241,4 +243,26 @@ test('indexes the foreign keys the cascades and library lists scan', () => {
   const idx = (t: string) => (db.pragma(`index_list(${t})`) as { name: string }[]).map((i) => i.name)
   expect(idx('technique_uses')).toContain('technique_uses_step')
   expect(idx('commands')).toEqual(expect.arrayContaining(['commands_technique', 'commands_tool']))
+})
+
+test('migrations 21-22 backfill steps.updated_at from the box and add recents', () => {
+  const f = join(tmp(), 'a.db')
+  const old = new Database(f)
+  old.exec(readFileSync(join(__dirname, 'schema.sql'), 'utf8').replaceAll('{{PHASES}}', PHASES.map((p) => `'${p}'`).join(',')))
+  for (const m of MIGRATIONS.slice(0, 20)) old.exec(typeof m === 'string' ? m : m.sql)
+  old.pragma('user_version = 20')
+  old.exec(`INSERT INTO boxes (short_id, platform, name, difficulty, status, started_at, rooted_at) VALUES ('H-0001','HTB','Lame','Easy','rooted','2026-09-30T00:00:00.000Z','2026-10-01T00:00:00.000Z');
+    INSERT INTO boxes (short_id, platform, name, difficulty, status, started_at) VALUES ('H-0002','HTB','Forest','Easy','in_progress','2026-09-30T00:00:00.000Z');
+    INSERT INTO networks (short_id, platform, name) VALUES ('N-001','HTB','Dante');
+    INSERT INTO hosts (short_id, network_id, name) VALUES ('HS-001',1,'WEB01');
+    INSERT INTO steps (box_id, phase, position) VALUES (1,'Recon',0), (2,'Recon',0);
+    INSERT INTO steps (host_id, phase, position) VALUES (1,'Recon',0);`)
+  old.close()
+  const db = openDb(f)
+  expect(db.pragma('user_version', { simple: true })).toBe(MIGRATIONS.length)
+  expect(db.prepare('SELECT updated_at FROM steps ORDER BY id').all()).toEqual([
+    { updated_at: '2026-10-01T00:00:00.000Z' }, { updated_at: '2026-09-30T00:00:00.000Z' }, { updated_at: null }])
+  db.exec("INSERT INTO recents (kind, ref, label, opened_at) VALUES ('box','H-0001','Lame','2026-10-01T00:00:00.000Z')")
+  expect(() => db.exec("INSERT INTO recents (kind, ref, label, opened_at) VALUES ('box','H-0001','x','y')")).toThrow(/UNIQUE/)
+  db.close()
 })

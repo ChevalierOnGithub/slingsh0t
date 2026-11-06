@@ -155,6 +155,33 @@ describe('boxes', () => {
     expect((await call('PATCH', `/api/steps/${id}`, { dead: 'yes' })).statusCode).toBe(400)
     expect((await call('PATCH', `/api/steps/${id}`, { saw: 1 })).statusCode).toBe(400)
   })
+  it('stamps updated_at on step writes', async () => {
+    const stamp = (id: number) => (db.prepare('SELECT updated_at u FROM steps WHERE id = ?').get(id) as { u: string | null }).u
+    const iso = (s: number) => new Date(s * 1000).toISOString()
+    t = 1000
+    const b = await mk()
+    const [a, c] = b.steps
+    expect(stamp(a.id)).toBe(iso(1000))
+    for (const [at, send] of [
+      [2000, () => call('PATCH', `/api/steps/${a.id}`, { body: 'x' })],
+      [3000, () => call('POST', `/api/steps/${a.id}/tried`, { name: 'nmap' })],
+      [4000, () => call('POST', `/api/steps/${a.id}/timer`, { action: 'start' })],
+      [5000, () => call('POST', `/api/steps/${a.id}/timer`, { action: 'stop' })],
+    ] as const) {
+      t = at
+      expect((await send()).statusCode).toBe(200)
+      expect(stamp(a.id), String(at)).toBe(iso(at))
+    }
+    // starting another step's timer stops (and stamps) the one running
+    t = 6000; await call('POST', `/api/steps/${a.id}/timer`, { action: 'start' })
+    t = 7000; await call('POST', `/api/steps/${c.id}/timer`, { action: 'start' })
+    expect(stamp(a.id)).toBe(iso(7000))
+    // reorder leaves it alone
+    t = 8000
+    const ids = b.steps.map((s) => s.id).reverse()
+    expect((await call('PUT', `/api/boxes/${b.id}/step-order`, { stepIds: ids })).statusCode).toBe(200)
+    expect(stamp(a.id)).toBe(iso(7000))
+  })
   it('newlines in a field are flattened', async () => {
     const b = await mk()
     expect((await call('PATCH', `/api/steps/${b.steps[0].id}`, { tried: 'ffuf\r\ncurl\n\nwget' })).json<Step>().tried).toBe('ffuf curl wget')

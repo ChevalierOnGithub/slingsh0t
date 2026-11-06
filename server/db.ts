@@ -263,6 +263,18 @@ CREATE INDEX commands_tool ON commands(tool_id);`,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX attachments_step ON attachments(step_id);`,
+  // Nullable: ALTER can't take a non-constant default, so writes stamp it. Host steps stay NULL until touched.
+  `ALTER TABLE steps ADD COLUMN updated_at TEXT;
+UPDATE steps SET updated_at = (SELECT COALESCE(rooted_at, started_at) FROM boxes WHERE boxes.id = steps.box_id) WHERE box_id IS NOT NULL;`,
+  `CREATE TABLE recents (
+  id INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL,
+  ref TEXT NOT NULL,
+  label TEXT NOT NULL,
+  opened_at TEXT NOT NULL,
+  UNIQUE(kind, ref)
+);
+CREATE INDEX recents_opened ON recents(opened_at);`,
 ]
 
 export function openDb(file: string): Database.Database {

@@ -102,7 +102,7 @@ export const networksRoutes: FastifyPluginAsync<{ db: Database.Database; now?: (
         .run(nextShortId(db, 'HS'), nid, name, b.os ?? '').lastInsertRowid)
       const ins = db.prepare('INSERT INTO host_ips (host_id, ip, is_primary) VALUES (?, ?, ?)')
       b.ips.forEach((ip: string, i: number) => ins.run(hid, ip, i === 0 ? 1 : 0))
-      addDefaultSteps(db, { col: 'host_id', id: hid }, JSON.parse(net.tags))
+      addDefaultSteps(db, { col: 'host_id', id: hid }, JSON.parse(net.tags), now())
       return hid
     })
     return reply.code(201).send(hostDetail(db, hid))
