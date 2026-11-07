@@ -9,7 +9,8 @@ import { BoxesTable, DIFFICULTIES } from './BoxesTable'
 import { Pyramid } from './Pyramid'
 import { Continue } from './Continue'
 
-const NO_FILTER = { q: '', platform: '', difficulty: '', os: '', status: '' }
+const VIEWS = [['table', 'Table'], ['board', 'Board'], ['pyramid', 'Pyramid']]
+const NO_FILTER ={ q: '', platform: '', difficulty: '', os: '', status: '' }
 // The table hides rooted boxes until asked; the board keeps its Rooted column to drop boxes into.
 const statusFor = (view: string | null) => (view === 'board' ? '' : 'open')
 
@@ -69,7 +70,14 @@ export function BoxesPage() {
 
   return (
     <section>
-      <h1>Boxes</h1>
+      <div className="page-head">
+        <h1>Boxes</h1>
+        <nav className="views" aria-label="Boxes view">
+          {VIEWS.map(([v, l]) => (
+            <a key={v} href={`#/boxes?view=${v}`} aria-current={(view ?? 'table') === v ? 'page' : undefined}>{l}</a>
+          ))}
+        </nav>
+      </div>
       {error && <p className="err" role="alert">{error}</p>}
       {boxes === null && !error && <p className="empty" role="status">Loading boxes…</p>}
       {boxes?.length === 0 && <p className="empty">No boxes yet. Add the box you're working on.</p>}

@@ -20,12 +20,12 @@ test('sidebar refetches stats on the slingsh0t:stats event', async () => {
   location.hash = '#/loot'
   const statsCalls = () => fetchMock.mock.calls.filter(([u]) => u === '/api/stats').length
   const { findByText } = render(<ContextProvider><Shell /></ContextProvider>)
-  expect(await findByText('1', { selector: 'a.nav span' })).toBeTruthy()
+  expect(await findByText('1', { selector: 'a.nav .count' })).toBeTruthy()
   expect(statsCalls()).toBe(1)
 
   stats.boxes = 7
   act(() => { dispatchEvent(new Event('slingsh0t:stats')) })
-  expect(await findByText('7', { selector: 'a.nav span' })).toBeTruthy()
+  expect(await findByText('7', { selector: 'a.nav .count' })).toBeTruthy()
   await waitFor(() => expect(statsCalls()).toBe(2))
 })
 
@@ -56,14 +56,13 @@ const HOME = { working: null, unfinished: [], rootedThisWeek: 0, next: { difficu
 const homeFetch = () => vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(
   url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null, activeHostId: null, via: null } : url === '/api/stats' ? STATS : url === '/api/home' ? HOME : []))))
 
-test('the Boxes list has one aria-current="page": the view link; Boxes itself is "true"', async () => {
+test('the rail has no Boxes view links; Boxes is the current page on any view', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(
     url === '/api/context' ? { target: '', lhost: '', lport: '', activeBoxId: null, activeHostId: null, via: null } : url === '/api/stats' ? STATS : []))))
   location.hash = '#/boxes?view=board'
   const { findByRole, container } = render(<ContextProvider><Shell /></ContextProvider>)
-  expect((await findByRole('link', { name: 'Board' })).getAttribute('aria-current')).toBe('page')
-  expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1)
-  expect((await findByRole('link', { name: /^Boxes/ })).getAttribute('aria-current')).toBe('true')
+  expect((await findByRole('link', { name: /^Boxes/ })).getAttribute('aria-current')).toBe('page')
+  expect(container.querySelector('.rail .views')).toBeNull()
 })
 
 test('shows a lost-edit message until dismissed', async () => {
@@ -98,7 +97,7 @@ test('Home is the first rail link and current on #/home; the rail no longer carr
   expect(container.querySelector('nav.rail')!.textContent).not.toContain('rooted')
 })
 
-test('the rail toggles collapsed, hides its links, and remembers it', async () => {
+test('the rail toggles collapsed, shows icon-only links, and remembers it', async () => {
   homeFetch()
   const { container } = render(<ContextProvider><Shell /></ContextProvider>)
   const btn = screen.getByRole('button', { name: 'Collapse menu' })
@@ -109,10 +108,15 @@ test('the rail toggles collapsed, hides its links, and remembers it', async () =
   await userEvent.click(btn)
   const open = screen.getByRole('button', { name: 'Expand menu' })
   expect(open.getAttribute('aria-expanded')).toBe('false')
-  expect(screen.queryByRole('link', { name: 'Home' })).toBeNull()
+  // Collapsed keeps every link as an icon, named by its label (tooltip too), without counts or brand.
+  const home = screen.getByRole('link', { name: 'Home' })
+  expect(home.getAttribute('title')).toBe('Home')
+  expect(home.querySelector('svg')).toBeTruthy()
+  expect(container.querySelector('.rail .count')).toBeNull()
+  expect(container.querySelector('.brand')!.hasAttribute('hidden')).toBe(true)
   expect(localStorage.getItem('slingsh0t:rail')).toBe('collapsed')
   await userEvent.click(open)
-  expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Home' }).hasAttribute('title')).toBe(false)
   expect(localStorage.getItem('slingsh0t:rail')).toBeNull()
 })
 

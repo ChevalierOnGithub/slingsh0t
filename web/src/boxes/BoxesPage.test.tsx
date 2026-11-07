@@ -162,3 +162,14 @@ test('adding a box announces stats before navigating', async () => {
   expect(hashAtStats).not.toBe('#/boxes/8')
   location.hash = ''
 })
+
+test('the Boxes page carries the Table / Board / Pyramid view switch, current view marked', async () => {
+  location.hash = '#/boxes?view=board'
+  vi.stubGlobal('fetch', vi.fn(async () => json(200, [])))
+  render(<BoxesPage />)
+  const views = screen.getByRole('navigation', { name: 'Boxes view' })
+  const links = Array.from(views.querySelectorAll('a'))
+  expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([['Table', '#/boxes?view=table'], ['Board', '#/boxes?view=board'], ['Pyramid', '#/boxes?view=pyramid']])
+  expect(links.map((a) => a.getAttribute('aria-current'))).toEqual([null, 'page', null])
+  location.hash = ''
+})
