@@ -83,6 +83,9 @@ test('full dashboard: working box, rooted tally, next, learned and recents', asy
 
   expect(link('Copperline')).toBe('#/boxes/8')
   expect(screen.getAllByRole('list', { name: 'Phase: PrivEsc' })[0].children).toHaveLength(6) // Persistence shown
+  const segs = [...document.querySelectorAll('.home-phases li')]
+  expect(segs.some((li) => !li.textContent)).toBe(true)
+  for (const li of segs) expect(li.getAttribute('aria-hidden') === 'true', li.outerHTML).toBe(!li.textContent) // blank segments hidden from AT
   const netRow = screen.getByRole('link', { name: 'Dante' }).closest('li')!
   expect(screen.getByRole('link', { name: 'Dante' }).getAttribute('href')).toBe('#/networks/3')
   expect(netRow.textContent).toContain('7 / 27 hosts')

@@ -50,7 +50,9 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
 
   const hostTotals = `(SELECT COUNT(*) FROM hosts WHERE network_id = n.id AND status <> 'not_started') AS started,
     (SELECT COUNT(*) FROM hosts WHERE network_id = n.id AND status = 'rooted') AS rooted,
+    n.hosts_in_scope AS scope,
     COALESCE(n.hosts_in_scope, (SELECT COUNT(*) FROM hosts WHERE network_id = n.id)) AS total`
+  const finished = (n: Row) => n.scope !== null && n.rooted >= n.scope
 
   app.get('/api/home', async (): Promise<Home> => {
     const ctx = one('SELECT active_box_id, active_host_id FROM context WHERE id = 1')
@@ -68,7 +70,7 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
         return { kind: 'box', id: b.id, name: b.name, platform: b.platform, difficulty: b.difficulty, status: b.status, currentPhase: w.currentPhase, persistence: w.persistence, hosts: null, lastWorked: w.lastWorked }
       }),
       ...all(`SELECT n.*, ${hostTotals}, (SELECT MAX(s.updated_at) FROM steps s JOIN hosts h ON h.id = s.host_id WHERE h.network_id = n.id) AS last
-        FROM networks n`).filter((n) => n.started > 0).map((n): HomeUnfinished => ({
+        FROM networks n`).filter((n) => n.started > 0 && !finished(n)).map((n): HomeUnfinished => ({
         kind: 'network', id: n.id, name: n.name, platform: n.platform, difficulty: null, status: null, currentPhase: null, persistence: false,
         hosts: { rooted: n.rooted, total: n.total }, lastWorked: n.last,
       })),
@@ -84,7 +86,7 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
     }
 
     const nets = all(`SELECT n.id, n.name, ${hostTotals}, (SELECT COUNT(*) FROM flags WHERE network_id = n.id AND value <> '') AS flags FROM networks n ORDER BY n.id`)
-    const started = nets.filter((n) => n.started > 0)
+    const started = nets.filter((n) => n.started > 0 && !finished(n))
 
     const since = iso(-30 * DAY)
     const techniques = all(`SELECT t.id, t.name, COUNT(DISTINCT COALESCE('b' || s.box_id, 'h' || s.host_id)) AS count
@@ -92,11 +94,11 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
       WHERE s.updated_at >= ? GROUP BY t.id ORDER BY count DESC, t.name LIMIT 5`, since) as Home['techniques']
     const deadEnds = all(`SELECT s.id, s.box_id, s.host_id, s.tried, s.saw, s.body, COALESCE(b.name, h.name) AS owner
       FROM steps s LEFT JOIN boxes b ON b.id = s.box_id LEFT JOIN hosts h ON h.id = s.host_id
-      WHERE s.dead = 1 AND s.updated_at >= ? AND (trim(s.tried, ' ' || char(9, 10, 13)) <> '' OR trim(s.saw, ' ' || char(9, 10, 13)) <> '' OR trim(s.body, ' ' || char(9, 10, 13)) <> '') ORDER BY s.updated_at DESC, s.id DESC LIMIT 5`, since).map((r) => ({
+      WHERE s.dead = 1 AND s.updated_at >= ? ORDER BY s.updated_at DESC, s.id DESC`, since).map((r) => ({
       stepId: r.id, kind: r.box_id ? 'box' as const : 'host' as const, ownerId: r.box_id ?? r.host_id, owner: r.owner,
-      text: [r.tried, r.saw, r.body].map((t: string) => t.trim()).find(Boolean)!.split('\n')[0].trim().slice(0, 120),
-    }))
-    const wu = all(`SELECT id, name FROM boxes WHERE status = 'rooted' AND (trim(foothold) = '' OR trim(privesc) = '') ORDER BY rooted_at DESC, id DESC`)
+      text: ([r.tried, r.saw, r.body].map((t: string) => t.trim()).find(Boolean) ?? '').split('\n')[0].trim().slice(0, 120),
+    })).filter((d) => d.text).slice(0, 5)
+    const wu = all(`SELECT id, name FROM boxes WHERE status = 'rooted' AND (trim(foothold, ' ' || char(9, 10, 11, 12, 13, 160)) = '' OR trim(privesc, ' ' || char(9, 10, 11, 12, 13, 160)) = '') ORDER BY rooted_at DESC, id DESC`)
 
     return {
       working, unfinished,
@@ -106,7 +108,12 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
       networksNotStarted: nets.length - started.length,
       techniques, deadEnds,
       writeups: { items: wu.slice(0, 3) as { id: number; name: string }[], more: Math.max(0, wu.length - 3) },
-      recents: all(`SELECT kind, ref, label, opened_at AS openedAt FROM recents WHERE kind <> 'search' ORDER BY opened_at DESC, id DESC LIMIT 8`) as Recent[],
+      recents: all(`SELECT kind, ref, label, opened_at AS openedAt FROM recents r WHERE kind <> 'search' AND EXISTS (
+        SELECT 1 FROM (
+          SELECT 'box' k, id FROM boxes UNION ALL SELECT 'writeup', id FROM boxes UNION ALL SELECT 'host', id FROM hosts
+          UNION ALL SELECT 'network', id FROM networks UNION ALL SELECT 'network-writeup', id FROM networks
+          UNION ALL SELECT 'reference', id FROM reference_pages) t WHERE t.k = r.kind AND t.id = CAST(r.ref AS INTEGER))
+      ORDER BY opened_at DESC, id DESC LIMIT 8`) as Recent[],
       searches: all(`SELECT ref FROM recents WHERE kind = 'search' ORDER BY opened_at DESC, id DESC LIMIT 4`).map((r) => r.ref),
     }
   })
@@ -114,8 +121,8 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
   app.post('/api/recents', async (req, reply) => {
     const b = (req.body ?? {}) as Row
     const kind = KINDS.find((k) => k === b.kind) ?? fail('invalid kind')
-    const label = isStr(b.label) ? b.label.trim() : ''
-    if (!label || label.length > 200) fail('invalid label')
+    const label = isStr(b.label) ? b.label.trim().slice(0, 200) : ''
+    if (!label) fail('invalid label')
     const ref = isStr(b.ref) ? (kind === 'search' ? b.ref.trim() : b.ref) : ''
     if (kind === 'search' ? ref.length < 1 || ref.length > 200 : !/^[1-9]\d{0,11}$/.test(ref)) fail('invalid ref')
     db.transaction(() => {

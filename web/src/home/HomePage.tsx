@@ -127,7 +127,7 @@ function PhaseBar({ current, persistence, labels }: { current: Phase | null; per
   const at = current ? list.indexOf(current) : -1
   return (
     <ol className="home-phases" aria-label={`Phase: ${current ?? 'not started'}`}>
-      {list.map((p, i) => <li key={p} className={i < at ? 'done' : i === at ? 'now' : undefined}>{labels && p}</li>)}
+      {list.map((p, i) => <li key={p} className={i < at ? 'done' : i === at ? 'now' : undefined} aria-hidden={labels ? undefined : true}>{labels && p}</li>)}
     </ol>
   )
 }

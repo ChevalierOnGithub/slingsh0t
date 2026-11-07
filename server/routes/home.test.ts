@@ -155,6 +155,8 @@ test('learned: techniques, dead ends and writeups use the 30-day window', async 
 
 test('POST /api/recents: upsert, trim to 50, searches separate', async () => {
   const { home, post, db } = await setup()
+  for (let i = 0; i < 5; i++) box(db) // recents only list targets that still exist
+  db.exec(`INSERT INTO networks (short_id, platform, name) VALUES ('N-9','HTB','Net'); INSERT INTO hosts (short_id, network_id, name) VALUES ('HS-9',1,'WEB01'), ('HS-10',1,'WEB02')`)
   expect((await post({ kind: 'box', ref: '5', label: 'Lanternfish' })).statusCode).toBe(204)
   let h = await home()
   expect(h.recents).toMatchObject([{ kind: 'box', ref: '5', label: 'Lanternfish' }])
@@ -170,6 +172,7 @@ test('POST /api/recents: upsert, trim to 50, searches separate', async () => {
   expect(h.searches).toEqual(['e', 'd', 'c', 'b'])
   expect(h.recents.some((r) => r.kind === 'search')).toBe(false)
 
+  for (let i = 1; i <= 51; i++) db.prepare(`INSERT INTO reference_pages (title, body) VALUES ('P', '')`).run()
   for (let i = 1; i <= 51; i++) await post({ kind: 'reference', ref: String(i), label: `R${i}` })
   const refs = (db.prepare(`SELECT ref FROM recents WHERE kind = 'reference'`).all() as { ref: string }[]).map((r) => r.ref)
   expect((db.prepare('SELECT COUNT(*) c FROM recents').get() as { c: number }).c).toBe(50)
@@ -183,8 +186,55 @@ test('POST /api/recents rejects bad input and stores nothing', async () => {
   const bad = [
     { kind: 'nope', ref: '1', label: 'x' }, { kind: 'box', ref: 'abc', label: 'x' }, { kind: 'box', ref: '0', label: 'x' }, { kind: 'box', ref: '1'.repeat(13), label: 'x' },
     { kind: 'search', ref: '   ', label: 'x' }, { kind: 'search', ref: 'q'.repeat(201), label: 'x' },
-    { kind: 'box', ref: '1' }, { kind: 'box', ref: '1', label: 'x'.repeat(201) }, { kind: 'box', ref: '1', label: '  ' },
+    { kind: 'box', ref: '1' }, { kind: 'box', ref: '1', label: '  ' },
   ]
   for (const b of bad) expect((await post(b)).statusCode, JSON.stringify(b)).toBe(400)
   expect((db.prepare('SELECT COUNT(*) c FROM recents').get() as { c: number }).c).toBe(0)
+})
+
+test('dead ends: NBSP-only rows neither 500 nor take a slot', async () => {
+  const { db, home } = await setup()
+  const b = box(db)
+  for (let i = 0; i < 6; i++) step(db, { box_id: b, position: i, dead: 1, tried: `real ${i}`, updated_at: ago(10 + i) })
+  step(db, { box_id: b, position: 20, dead: 1, tried: ' ', updated_at: ago(1) })
+  step(db, { box_id: b, position: 21, dead: 1, saw: '\f\v ', body: ' ', updated_at: ago(1) })
+  const res = await (async () => (await home()).deadEnds)()
+  expect(res).toHaveLength(5)
+  expect(res.every((e) => e.text.startsWith('real'))).toBe(true)
+})
+
+test('finished networks leave unfinished and the networks panel; unscoped all-rooted stays', async () => {
+  const { db, home } = await setup()
+  db.exec(`INSERT INTO networks (short_id, platform, name, hosts_in_scope) VALUES ('N-1','HTB','Done',2), ('N-2','HTB','Open',3), ('N-3','HTB','NoScope',null);
+    INSERT INTO hosts (short_id, network_id, name, status) VALUES ('HS-1',1,'A','rooted'), ('HS-2',1,'B','rooted'), ('HS-3',2,'C','rooted'), ('HS-4',3,'D','rooted')`)
+  const h = await home()
+  expect(h.unfinished.map((u) => u.name).sort()).toEqual(['NoScope', 'Open'])
+  expect(h.networks.map((n) => n.name)).toEqual(['Open', 'NoScope'])
+})
+
+test('recents drop deleted targets and still fill 8', async () => {
+  const { db, home, post } = await setup()
+  const kept = Array.from({ length: 8 }, () => box(db))
+  const gone = box(db)
+  for (const id of kept) await post({ kind: 'box', ref: String(id), label: `K${id}` })
+  await post({ kind: 'box', ref: String(gone), label: 'Gone' })
+  await post({ kind: 'box', ref: '999999', label: 'Never' })
+  await post({ kind: 'reference', ref: '999999', label: 'NoRef' })
+  db.prepare('DELETE FROM boxes WHERE id = ?').run(gone)
+  const labels = (await home()).recents.map((x) => x.label)
+  expect(labels).toHaveLength(8)
+  for (const l of ['Gone', 'Never', 'NoRef']) expect(labels).not.toContain(l)
+})
+
+test('writeups to finish: newline-only foothold counts as unwritten', async () => {
+  const { db, home } = await setup()
+  const w = box(db, { status: 'rooted', rooted_at: ago(1), foothold: '\n\n', privesc: 'p' })
+  box(db, { status: 'rooted', rooted_at: ago(2), foothold: 'f', privesc: 'p' })
+  expect((await home()).writeups.items.map((i) => i.id)).toEqual([w])
+})
+
+test('POST /api/recents truncates a long label to 200', async () => {
+  const { db, post } = await setup()
+  expect((await post({ kind: 'box', ref: '1', label: 'x'.repeat(300) })).statusCode).toBe(204)
+  expect((db.prepare('SELECT label FROM recents').get() as { label: string }).label).toHaveLength(200)
 })
