@@ -233,6 +233,13 @@ test('writeups to finish: newline-only foothold counts as unwritten', async () =
   expect((await home()).writeups.items.map((i) => i.id)).toEqual([w])
 })
 
+test('writeups to finish: boxes marked No writeup are left out, and not counted in more', async () => {
+  const { db, home } = await setup()
+  const w = box(db, { status: 'rooted', rooted_at: ago(1) })
+  box(db, { status: 'rooted', rooted_at: ago(2), no_writeup: 1 })
+  expect((await home()).writeups).toEqual({ items: [{ id: w, name: expect.any(String) }], more: 0 })
+})
+
 test('POST /api/recents truncates a long label to 200', async () => {
   const { db, post } = await setup()
   expect((await post({ kind: 'box', ref: '1', label: 'x'.repeat(300) })).statusCode).toBe(204)

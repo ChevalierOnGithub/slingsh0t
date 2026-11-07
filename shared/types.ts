@@ -39,7 +39,7 @@ export interface TechniqueUse { id: number; techniqueId: number; stepId: number;
 
 export interface BoxDetail extends BoxSummary {
   kind: 'box'; tags: string[]; nextStep: string; notes: string
-  foothold: string; privesc: string; rating: string
+  foothold: string; privesc: string; rating: string; noWriteup: boolean
   startedAt: string | null; rootedAt: string | null
   steps: Step[]; uses: TechniqueUse[]; services: BoxService[]; haves: Have[]
 }

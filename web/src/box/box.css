@@ -36,6 +36,9 @@
 .tabs button:hover { color: var(--text); }
 .tabs button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--accent); }
 
+.writeup-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.writeup-bar .mode { margin: 0 0 0 auto; }
+.no-writeup { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; cursor: pointer; }
 .mode { display: flex; width: fit-content; margin: 0 0 4px auto; background: var(--rail); border: 1px solid var(--border); border-radius: 6px; padding: 2px; }
 .mode button { background: none; border: 0; border-radius: 4px; padding: 4px 10px; color: var(--muted); font-size: 12px; cursor: pointer; }
 .mode button[aria-pressed='true'] { background: var(--raised); color: var(--text); }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { WorkItem } from '../../../shared/types'
+import type { BoxDetail, WorkItem } from '../../../shared/types'
 import { api } from '../api'
 import { useFlash } from '../library/useFlash'
 import { useRoute } from '../router'
@@ -27,10 +27,20 @@ export function Writeup({ item, insert, onInserted, reload }: { item: WorkItem; 
 
   return (
     <div className="writeup">
-      <div className="mode" role="group" aria-label="Editor mode">
-        {MODES.map(([m, label]) => (
-          <button key={m} aria-pressed={mode === m} onClick={() => setMode(m)}>{label}</button>
-        ))}
+      <div className="writeup-bar">
+        {/* Boxes only: Home's "Writeups to finish" skips rooms marked here (too old, not interesting). */}
+        {item.kind === 'box' && (
+          <label className="no-writeup">
+            <input type="checkbox" checked={(item as BoxDetail).noWriteup}
+              onChange={(e) => { const noWriteup = e.target.checked; setErrAt(null); act(() => api('PATCH', `/api/boxes/${item.id}`, { noWriteup })) }} />
+            No writeup
+          </label>
+        )}
+        <div className="mode" role="group" aria-label="Editor mode">
+          {MODES.map(([m, label]) => (
+            <button key={m} aria-pressed={mode === m} onClick={() => setMode(m)}>{label}</button>
+          ))}
+        </div>
       </div>
       {steps.length === 0 && (
         <p className="empty">

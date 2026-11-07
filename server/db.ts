@@ -275,6 +275,8 @@ UPDATE steps SET updated_at = (SELECT COALESCE(rooted_at, started_at) FROM boxes
   UNIQUE(kind, ref)
 );
 CREATE INDEX recents_opened ON recents(opened_at);`,
+  // Rooms the owner will never write up (too old, not interesting): kept out of Home's Writeups to finish.
+  `ALTER TABLE boxes ADD COLUMN no_writeup INTEGER NOT NULL DEFAULT 0;`,
 ]
 
 export function openDb(file: string): Database.Database {

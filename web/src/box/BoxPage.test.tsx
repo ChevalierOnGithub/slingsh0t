@@ -16,7 +16,7 @@ vi.mock('../shell/TargetBar', () => ({
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 })
 const boxOf = (id: number, stepId: number) => ({
   id, kind: 'box', shortId: 'H-0001', platform: 'HTB', name: `Box ${id}`, os: 'Linux', difficulty: 'Easy', status: 'in_progress',
-  targetIp: null, totalSeconds: 0, releaseDate: null, dns: '', url: '', tags: [], nextStep: '', notes: '', foothold: '', privesc: '', rating: '', startedAt: null, rootedAt: null, uses: [], services: [], haves: [],
+  targetIp: null, totalSeconds: 0, releaseDate: null, dns: '', url: '', tags: [], nextStep: '', notes: '', foothold: '', privesc: '', rating: '', noWriteup: false, startedAt: null, rootedAt: null, uses: [], services: [], haves: [],
   steps: [{ id: stepId, boxId: id, hostId: null, phase: 'Recon', position: 0, body: '', seconds: 0, timerStartedAt: null, done: false, saw: '', think: '', tried: '', got: '', dead: false }],
 }) as BoxDetail
 
@@ -232,4 +232,20 @@ test('?step= beats ?tab= on first load', async () => {
   render(<BoxPage id={1} />)
   expect((await screen.findByRole('tab', { name: 'Writeup' })).getAttribute('aria-selected')).toBe('true')
   location.hash = ''
+})
+
+test('No writeup on the Writeup tab patches the box and shows the saved state', async () => {
+  let box = boxOf(1, 5)
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === 'PATCH' && url === '/api/boxes/1') box = { ...box, ...JSON.parse(init.body as string) }
+    return json(box)
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  render(<BoxPage id={1} />)
+  const tick = await screen.findByRole('checkbox', { name: 'No writeup' })
+  expect((tick as HTMLInputElement).checked).toBe(false)
+  await userEvent.click(tick)
+  const patch = fetchMock.mock.calls.find(([url, i]) => i?.method === 'PATCH' && url === '/api/boxes/1')!
+  expect(JSON.parse(patch[1]!.body as string)).toEqual({ noWriteup: true })
+  await waitFor(() => expect((screen.getByRole('checkbox', { name: 'No writeup' }) as HTMLInputElement).checked).toBe(true))
 })

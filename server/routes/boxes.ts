@@ -95,7 +95,7 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
 
   const detail = (id: number): BoxDetail => {
     const r = boxRow(id)
-    return { ...toSummary(r), kind: 'box', tags: JSON.parse(r.tags), nextStep: r.next_step, notes: r.notes, foothold: r.foothold, privesc: r.privesc, rating: r.rating, startedAt: r.started_at, rootedAt: r.rooted_at, steps: stepsOf(db, box(id)), uses: usesOf(db, box(id)), ...shelfOf(r) }
+    return { ...toSummary(r), kind: 'box', tags: JSON.parse(r.tags), nextStep: r.next_step, notes: r.notes, foothold: r.foothold, privesc: r.privesc, rating: r.rating, noWriteup: r.no_writeup === 1, startedAt: r.started_at, rootedAt: r.rooted_at, steps: stepsOf(db, box(id)), uses: usesOf(db, box(id)), ...shelfOf(r) }
   }
   const ownerDetail = (o: Owner) => (o.col === 'box_id' ? detail(o.id) : hostDetail(db, o.id))
 
@@ -144,6 +144,7 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
     if (b.targetIp !== undefined) isHostOrEmpty(b.targetIp) ? (set.target_ip = b.targetIp || null) : fail('invalid targetIp')
     if (b.dns !== undefined) isHostOrEmpty(b.dns) ? (set.dns = b.dns) : fail('invalid dns')
     if (b.url !== undefined) isUrlOrEmpty(b.url) ? (set.url = b.url) : fail('invalid url')
+    if (b.noWriteup !== undefined) typeof b.noWriteup === 'boolean' ? (set.no_writeup = b.noWriteup ? 1 : 0) : fail('invalid noWriteup')
     return tx(() => {
       const cur = boxRow(boxId)
       if (b.tags !== undefined) checkAdRemoval(db, b.tags, "SELECT 1 FROM steps WHERE box_id = ? AND phase = 'Persistence'", boxId)

@@ -21,7 +21,7 @@ const json = (status: number, body: unknown) => new Response(JSON.stringify(body
 const step: Step = { id: 5, boxId: 1, hostId: null, phase: 'Recon', position: 0, body: 'nmap {{TARGET}}', seconds: 0, timerStartedAt: null, done: false, saw: '', think: '', tried: '', got: '', dead: false }
 const box = {
   id: 1, kind: 'box', shortId: 'H-0001', platform: 'HTB', name: 'Cicada', os: 'Windows', difficulty: 'Easy', status: 'in_progress',
-  targetIp: '10.10.11.35', totalSeconds: 0, releaseDate: null, tags: [], nextStep: '', notes: '', foothold: '', privesc: '', rating: '', dns: '', url: '', startedAt: null, rootedAt: null, steps: [step], uses: [], services: [], haves: [],
+  targetIp: '10.10.11.35', totalSeconds: 0, releaseDate: null, tags: [], nextStep: '', notes: '', foothold: '', privesc: '', rating: '', noWriteup: false, dns: '', url: '', startedAt: null, rootedAt: null, steps: [step], uses: [], services: [], haves: [],
 } as BoxDetail
 
 let fetchMock: ReturnType<typeof vi.fn>

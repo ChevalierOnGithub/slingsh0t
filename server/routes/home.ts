@@ -98,7 +98,7 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
       stepId: r.id, kind: r.box_id ? 'box' as const : 'host' as const, ownerId: r.box_id ?? r.host_id, owner: r.owner,
       text: ([r.tried, r.saw, r.body].map((t: string) => t.trim()).find(Boolean) ?? '').split('\n')[0].trim().slice(0, 120),
     })).filter((d) => d.text).slice(0, 5)
-    const wu = all(`SELECT id, name FROM boxes WHERE status = 'rooted' AND (trim(foothold, ' ' || char(9, 10, 11, 12, 13, 160)) = '' OR trim(privesc, ' ' || char(9, 10, 11, 12, 13, 160)) = '') ORDER BY rooted_at DESC, id DESC`)
+    const wu = all(`SELECT id, name FROM boxes WHERE status = 'rooted' AND no_writeup = 0 AND (trim(foothold, ' ' || char(9, 10, 11, 12, 13, 160)) = '' OR trim(privesc, ' ' || char(9, 10, 11, 12, 13, 160)) = '') ORDER BY rooted_at DESC, id DESC`)
 
     return {
       working, unfinished,

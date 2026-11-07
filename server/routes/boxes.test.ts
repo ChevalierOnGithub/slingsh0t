@@ -76,6 +76,15 @@ describe('boxes', () => {
     expect((await call('PATCH', `/api/boxes/${b.id}`, { rating: 5 })).statusCode).toBe(400)
   })
 
+  it('patches the No writeup flag', async () => {
+    const b = await mk()
+    expect((await call('GET', `/api/boxes/${b.id}`)).json<BoxDetail>().noWriteup).toBe(false)
+    expect((await call('PATCH', `/api/boxes/${b.id}`, { noWriteup: true })).json<BoxDetail>().noWriteup).toBe(true)
+    expect((await call('GET', `/api/boxes/${b.id}`)).json<BoxDetail>().noWriteup).toBe(true)
+    expect((await call('PATCH', `/api/boxes/${b.id}`, { noWriteup: 'yes' })).statusCode).toBe(400)
+    expect((await call('PATCH', `/api/boxes/${b.id}`, { noWriteup: false })).json<BoxDetail>().noWriteup).toBe(false)
+  })
+
   it('patches services and haves, deduped and validated', async () => {
     const b = await mk()
     expect(b).toMatchObject({ services: [], haves: [] })
