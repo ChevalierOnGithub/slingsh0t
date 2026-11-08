@@ -9,7 +9,7 @@
     },
     {
       "name": "msfconsole",
-      "description": "Metasploit Framework console: search, use, set, run.",
+      "description": "Metasploit Framework console: search, use, set, run. OSCP exam: modules and Meterpreter on one target only; multi/handler on any.",
       "commands": [
         {"purpose": "Start Metasploit quietly", "template": "msfconsole -q", "intent": "exploit"},
         {"purpose": "Search for a module by product and version", "template": "search <product> <version>", "intent": "discover"},
@@ -19,7 +19,7 @@
     },
     {
       "name": "msfvenom",
-      "description": "Standalone payload/shellcode generator.",
+      "description": "Standalone payload/shellcode generator. OSCP exam: allowed on every target.",
       "commands": [
         {"purpose": "List payloads for a platform", "template": "msfvenom -l payloads --platform <os>", "intent": "discover"},
         {"purpose": "Generate a payload for the target OS and format (pick the exact payload, format and matching listener from the app's Reverse shells page)", "template": "msfvenom -p <payload> LHOST={{LHOST}} LPORT={{LPORT}} -f <format> -o <file>", "intent": "exploit"}

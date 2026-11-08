@@ -150,6 +150,12 @@ const MUST: Must[] = [
   { technique: 'Dump local secrets once you are admin', has: ['--sam', 'lsassy'] },
 ]
 
+test('OSCP exam restrictions are labelled', () => {
+  const unlabelled = ['sqlmap', 'commix', 'sstimap', 'Responder', 'msfconsole', 'msfvenom', 'nuclei']
+    .filter((n) => !tools.some((t) => t.name === n && t.description?.includes('OSCP exam:')))
+  expect(unlabelled).toEqual([])
+})
+
 test('mimikatz runs one-shot, so it never hangs a reverse shell or evil-winrm (A4)', () => {
   const ts = toolTemplates('mimikatz')
   expect(ts.length).toBeGreaterThan(0)

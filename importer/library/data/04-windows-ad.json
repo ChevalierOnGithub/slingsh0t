@@ -123,7 +123,7 @@
       { "purpose": "Crack Kerberoast TGS", "template": "hashcat -m 13100 spn.hash /usr/share/wordlists/rockyou.txt", "intent": "exploit" },
       { "purpose": "Crack NetNTLMv2 from Responder", "template": "hashcat -m 5600 ntlmv2.hash /usr/share/wordlists/rockyou.txt", "intent": "exploit" }
     ] },
-    { "name": "Responder", "description": "LLMNR/NBT-NS/MDNS poisoner that captures NetNTLM hashes", "commands": [
+    { "name": "Responder", "description": "LLMNR/NBT-NS/MDNS poisoner that captures NetNTLM hashes. OSCP exam: poisoning is banned (spoofing).", "commands": [
       { "purpose": "Poison name resolution on the subnet", "template": "responder -I tun0", "intent": "dump" }
     ] },
     { "name": "bloodhound-python", "description": "Remote BloodHound collector run from Kali", "commands": [

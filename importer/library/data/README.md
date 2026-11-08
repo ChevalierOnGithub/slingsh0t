@@ -21,3 +21,4 @@ Intents: discover | enumerate | authenticate | exploit | pivot | dump | transfer
 Order inside a phase = order in the file; files load in name order (01, 02, …).
 `05-impacket.json` holds every `impacket-*` tool; techniques in any file link them by name.
 The same command written twice in different words (quoting, blank names, `netexec`/`nxc`) fails validation; NetExec is always `nxc`.
+Tool descriptions end with `OSCP exam: …` where the exam restricts the tool.

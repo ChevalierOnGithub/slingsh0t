@@ -139,7 +139,7 @@
     { "name": "joomscan", "description": "OWASP Joomla scanner.", "commands": [
       { "purpose": "Scan a Joomla site for version, components and config leaks", "template": "joomscan -u http://{{DNS}}", "intent": "enumerate" }
     ]},
-    { "name": "nuclei", "description": "Template-based scanner for CVEs, misconfigs and default logins.", "commands": [
+    { "name": "nuclei", "description": "Template-based scanner for CVEs, misconfigs and default logins. OSCP exam: counts as a mass vulnerability scanner; check the exam guide.", "commands": [
       { "purpose": "Update the template library", "template": "nuclei -ut", "intent": "tune" },
       { "purpose": "Run the default templates against a site", "template": "nuclei -u http://{{DNS}}", "intent": "enumerate" },
       { "purpose": "Only CVE templates", "template": "nuclei -u http://{{DNS}} -tags cve", "intent": "enumerate" },
@@ -160,7 +160,7 @@
       { "purpose": "SSH with few threads, stop on first hit", "template": "hydra -l <user> -P /usr/share/wordlists/rockyou.txt -t 4 -f ssh://{{TARGET}}", "intent": "authenticate" },
       { "purpose": "FTP login guessing", "template": "hydra -L <wordlist> -P <wordlist> -f ftp://{{TARGET}}", "intent": "authenticate" }
     ]},
-    { "name": "sqlmap", "description": "Automated SQL injection detection and extraction.", "commands": [
+    { "name": "sqlmap", "description": "Automated SQL injection detection and extraction. OSCP exam: banned (automatic exploitation).", "commands": [
       { "purpose": "Test a GET parameter", "template": "sqlmap -u 'http://{{DNS}}/<page>?id=1' --batch", "intent": "discover" },
       { "purpose": "Test a request saved from Burp (POST, cookies, headers)", "template": "sqlmap -r <file> --batch", "intent": "discover" },
       { "purpose": "Find and test forms on the site", "template": "sqlmap -u 'http://{{DNS}}/' --forms --crawl=2 --batch", "intent": "discover" },
@@ -169,11 +169,11 @@
       { "purpose": "Dump one table", "template": "sqlmap -r <file> --batch -D <db> -T <table> --dump", "intent": "dump" },
       { "purpose": "Try harder when nothing is found", "template": "sqlmap -r <file> --batch --level 5 --risk 3", "intent": "tune" }
     ]},
-    { "name": "commix", "description": "Automated command injection tester.", "commands": [
+    { "name": "commix", "description": "Automated command injection tester. OSCP exam: banned (automatic exploitation).", "commands": [
       { "purpose": "Test a GET parameter for command injection", "template": "commix -u 'http://{{DNS}}/<page>?ip=127.0.0.1' --batch", "intent": "discover" },
       { "purpose": "Test a POST parameter", "template": "commix -u 'http://{{DNS}}/<page>' --data='ip=127.0.0.1' --batch", "intent": "discover" }
     ]},
-    { "name": "sstimap", "description": "Detects server-side template injection and the engine behind it.", "commands": [
+    { "name": "sstimap", "description": "Detects server-side template injection and the engine behind it. OSCP exam: banned (automatic exploitation).", "commands": [
       { "purpose": "Test the parameters in a URL", "template": "sstimap -u 'http://{{DNS}}/<page>?name=test'", "intent": "discover" }
     ]},
     { "name": "jwt_tool", "description": "JWT toolkit (github.com/ticarpi/jwt_tool): decode, tamper, re-sign and test known JWT attacks.", "commands": [
