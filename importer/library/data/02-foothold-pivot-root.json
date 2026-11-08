@@ -60,37 +60,6 @@
       { "purpose": "In the session: download a file to your Kali folder", "template": "download <file>", "intent": "transfer" }
     ] },
     {
-      "name": "impacket-psexec",
-      "description": "SYSTEM shell via an SMB-installed service.",
-      "commands": [
-        {"purpose": "SYSTEM shell with credentials", "template": "impacket-psexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate"},
-        {"purpose": "SYSTEM shell with an NT hash", "template": "impacket-psexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "authenticate"}
-      ]
-    },
-    {
-      "name": "impacket-wmiexec",
-      "description": "Semi-interactive shell over WMI (quieter than psexec).",
-      "commands": [
-        {"purpose": "Shell with credentials", "template": "impacket-wmiexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate"},
-        {"purpose": "Shell with an NT hash", "template": "impacket-wmiexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "authenticate"}
-      ]
-    },
-    {
-      "name": "impacket-smbexec",
-      "description": "Command execution over SMB.",
-      "commands": [
-        {"purpose": "Shell with credentials", "template": "impacket-smbexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate"}
-      ]
-    },
-    {
-      "name": "impacket-smbserver",
-      "description": "Stand up an SMB share on Kali for file transfer.",
-      "commands": [
-        {"purpose": "Serve the current dir as share 'share' (SMB2 for modern Windows)", "template": "impacket-smbserver share $(pwd) -smb2support", "intent": "transfer"},
-        {"purpose": "Serve with credentials (Windows refuses guest SMB in many builds)", "template": "impacket-smbserver share $(pwd) -smb2support -user <user> -password <pass>", "intent": "transfer"}
-      ]
-    },
-    {
       "name": "xfreerdp3",
       "description": "RDP client (FreeRDP 3, the xfreerdp3 command on current Kali).",
       "commands": [
@@ -296,7 +265,7 @@
       "needs": ["creds"],
       "yields": ["admin"],
       "when": "Your credential is a local admin on the box and you want a SYSTEM or admin shell.",
-      "tools": ["impacket-psexec", "impacket-wmiexec", "impacket-smbexec"],
+      "tools": ["impacket-psexec", "impacket-wmiexec", "impacket-smbexec", "impacket-atexec", "impacket-dcomexec", "impacket-smbclient"],
       "commands": []
     },
     {

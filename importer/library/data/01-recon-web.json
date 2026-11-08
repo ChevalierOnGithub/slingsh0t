@@ -89,10 +89,6 @@
       { "purpose": "Log in remotely (Kali's MariaDB client may need --skip-ssl)", "template": "mysql -h {{TARGET}} -u <user> -p --skip-ssl", "intent": "authenticate" },
       { "purpose": "Try root with an empty password", "template": "mysql -h {{TARGET}} -u root --skip-ssl", "intent": "authenticate" }
     ]},
-    { "name": "impacket-mssqlclient", "description": "Impacket MSSQL client with handy built-in commands.", "commands": [
-      { "purpose": "Log in with a SQL account", "template": "impacket-mssqlclient '<user>:<pass>@{{TARGET}}'", "intent": "authenticate" },
-      { "purpose": "Log in with a Windows / domain account", "template": "impacket-mssqlclient '<domain>/<user>:<pass>@{{TARGET}}' -windows-auth", "intent": "authenticate" }
-    ]},
     { "name": "evil-winrm", "description": "WinRM shell client for Windows.", "commands": [
       { "purpose": "Open a PowerShell session with a password", "template": "evil-winrm -i {{TARGET}} -u '<user>' -p '<pass>'", "intent": "authenticate" },
       { "purpose": "Open a session with an NT hash (pass-the-hash)", "template": "evil-winrm -i {{TARGET}} -u '<user>' -H '<hash>'", "intent": "authenticate" }
@@ -257,10 +253,9 @@
       "phase": "Recon", "service": "rpc", "applies": "any",
       "needs": [], "yields": [],
       "when": "Port 111 or 135 is open: list registered RPC services and, on Windows, try a null session for users.",
-      "tools": ["rpcclient"],
+      "tools": ["rpcclient", "impacket-rpcdump"],
       "commands": [
-        { "purpose": "List RPC programs on port 111 (look for nfs and mountd)", "template": "rpcinfo -p {{TARGET}}", "intent": "enumerate" },
-        { "purpose": "List Windows RPC endpoints on port 135", "template": "impacket-rpcdump -port 135 {{TARGET}}", "intent": "enumerate" }
+        { "purpose": "List RPC programs on port 111 (look for nfs and mountd)", "template": "rpcinfo -p {{TARGET}}", "intent": "enumerate" }
       ]
     },
     {
