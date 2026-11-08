@@ -43,4 +43,10 @@ describe('servicesInText', () => {
     expect(servicesInText('80/tcp open http')).toEqual([{ name: 'http', port: 80 }])
     expect(servicesInText('443/tcp open ssl/http')).toEqual([{ name: 'http', port: 443 }])
   })
+
+  it('maps the extra nmap names', () => {
+    expect(servicesInText('135/tcp open msrpc\n6379/tcp open redis\n993/tcp open ssl/imap\n2375/tcp open docker\n623/udp open asf-rmcp'))
+      .toEqual([{ name: 'rpc', port: 135 }, { name: 'redis', port: 6379 }, { name: 'imap', port: 993 }, { name: 'docker-api', port: 2375 }, { name: 'ipmi', port: 623 }])
+    expect(servicesInText('user is in the docker group')).toEqual([])
+  })
 })

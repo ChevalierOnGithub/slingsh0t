@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { openDb } from '../../server/db'
-import { loadSeed, readSeed, validateSeed, type SeedFile } from './seed'
+import { loadSeed, normalTemplate, readSeed, validateSeed, type SeedFile } from './seed'
 
 const files = (data: SeedFile, file = 'x.json') => [{ file, data }]
 
@@ -23,6 +23,35 @@ test('validateSeed catches the mistakes a hand-written file makes', () => {
     expect.stringContaining('unknown tool "ghost"'),
     expect.stringContaining('duplicate name'),
   ]))
+})
+
+test('validateSeed rejects near-duplicate commands across files and unknown service slugs', () => {
+  const errors = validateSeed([
+    { file: 'a.json', data: { tools: [{ name: 'evil-winrm', commands: [{ purpose: 'x', template: "evil-winrm -i {{TARGET}} -u '<user>' -p '<pass>'", intent: 'authenticate' }] }] } },
+    { file: 'b.json', data: {
+      tools: [{ name: 'Evil-WinRM', commands: [{ purpose: 'y', template: 'evil-winrm -i {{TARGET}} -u <user> -p <pass>', intent: 'pivot' }] }],
+      techniques: [{ name: 'Mail', phase: 'Recon', service: 'pop99' }],
+    } },
+  ])
+  expect(errors).toEqual(expect.arrayContaining([
+    expect.stringContaining('near-duplicate of "evil-winrm -i {{TARGET}} -u \'<user>\' -p \'<pass>\'"'),
+    expect.stringContaining('service "pop99" is not any, shell or a SERVICES slug'),
+  ]))
+})
+
+test('a near-duplicate inside one technique is caught; different literal values are not near-duplicates', () => {
+  expect(validateSeed(files({ techniques: [{ name: 'T', phase: 'Recon', commands: [
+    { purpose: 'a', template: 'rpcclient -U "" -N {{TARGET}}', intent: 'enumerate' },
+    { purpose: 'b', template: "rpcclient -U '' -N {{TARGET}}", intent: 'enumerate' },
+  ] }] }))).toEqual([expect.stringContaining('near-duplicate of')])
+  expect(validateSeed(files({ tools: [{ name: 'hashcat', commands: [
+    { purpose: 'a', template: 'hashcat -m 1000 <hashfile> x', intent: 'tune' },
+    { purpose: 'b', template: 'hashcat -m <mode> <hashfile> x', intent: 'tune' },
+  ] }] }))).toEqual([])
+})
+
+test('normalTemplate ignores quoting, case, blank names, spacing and the netexec spelling', () => {
+  expect(normalTemplate(`netexec  smb {{TARGET}} -u '<user>' -p "<pass>"`)).toBe(normalTemplate('nxc smb {{TARGET}} -u <USER> -p <password>'))
 })
 
 test('loadSeed wipes the library and loads tools, techniques, links and commands in file order', () => {

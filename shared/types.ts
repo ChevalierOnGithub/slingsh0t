@@ -4,7 +4,8 @@ export type Phase = (typeof PHASES)[number]
 export type Applies = 'any' | 'linux' | 'windows' | 'ad'
 export const APPLIES: Applies[] = ['any', 'linux', 'windows', 'ad']
 
-export const SERVICES = ['http', 'smb', 'ssh', 'ftp', 'dns', 'ldap', 'kerberos', 'rdp', 'winrm', 'nfs', 'smtp', 'snmp', 'mysql', 'mssql'] as const  // suggestions; a technique's service may be any slug
+export const SERVICES = ['http', 'smb', 'ssh', 'ftp', 'dns', 'ldap', 'kerberos', 'rdp', 'winrm', 'nfs', 'smtp', 'snmp', 'mysql', 'mssql',
+  'rpc', 'redis', 'pop3', 'imap', 'postgresql', 'mongodb', 'vnc', 'tftp', 'rsync', 'finger', 'ipmi', 'docker-api'] as const  // the seed only uses these; a technique edited in the app may be any slug
 export const HAVES = ['web app', 'version', 'creds', 'hash', 'shell', 'admin', 'domain creds'] as const
 export type Have = (typeof HAVES)[number]
 export const INTENTS = ['discover', 'enumerate', 'authenticate', 'exploit', 'pivot', 'dump', 'transfer', 'tune'] as const

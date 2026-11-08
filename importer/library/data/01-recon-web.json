@@ -51,7 +51,7 @@
       { "purpose": "Run every check with a null session", "template": "enum4linux-ng -A {{TARGET}}", "intent": "enumerate" },
       { "purpose": "Run every check with credentials", "template": "enum4linux-ng -A -u '<user>' -p '<pass>' {{TARGET}}", "intent": "enumerate" }
     ]},
-    { "name": "netexec", "description": "NetExec (nxc): checks credentials and enumerates SMB, WinRM, LDAP, MSSQL, RDP and more.", "commands": [
+    { "name": "nxc", "description": "NetExec (nxc): checks credentials and enumerates SMB, WinRM, LDAP, MSSQL, RDP and more.", "commands": [
       { "purpose": "Host info: OS, hostname, domain, SMB signing", "template": "nxc smb {{TARGET}}", "intent": "enumerate" },
       { "purpose": "List shares with a null session", "template": "nxc smb {{TARGET}} -u '' -p '' --shares", "intent": "enumerate" },
       { "purpose": "List shares as guest", "template": "nxc smb {{TARGET}} -u guest -p '' --shares", "intent": "enumerate" },
@@ -268,7 +268,7 @@
       "phase": "Recon", "service": "smb", "applies": "any",
       "needs": [], "yields": ["creds"],
       "when": "Port 139 or 445 is open: list shares, see which ones you can read or write, and pull their files.",
-      "tools": ["smbclient", "smbmap", "netexec"],
+      "tools": ["smbclient", "smbmap", "nxc"],
       "commands": [
         { "purpose": "SMB versions, signing and OS scripts", "template": "nmap -p139,445 --script smb-protocols,smb-security-mode,smb2-security-mode,smb-os-discovery {{TARGET}}", "intent": "enumerate" },
         { "purpose": "Check for known SMB vulnerabilities (MS17-010 and friends)", "template": "nmap -p445 --script 'smb-vuln*' {{TARGET}}", "intent": "enumerate" }
@@ -279,7 +279,7 @@
       "phase": "Recon", "service": "smb", "applies": "windows",
       "needs": [], "yields": [],
       "when": "SMB allows null or guest sessions: collect usernames, groups and the password policy before any guessing.",
-      "tools": ["enum4linux-ng", "netexec", "rpcclient"],
+      "tools": ["enum4linux-ng", "nxc", "rpcclient"],
       "commands": []
     },
     {
@@ -320,7 +320,7 @@
       "phase": "Recon", "service": "mssql", "applies": "windows",
       "needs": [], "yields": ["version"],
       "when": "Port 1433 is open: read the version and hostname, then try any credentials you have.",
-      "tools": ["impacket-mssqlclient", "netexec"],
+      "tools": ["impacket-mssqlclient", "nxc"],
       "commands": [
         { "purpose": "Version, instance and NTLM host info", "template": "nmap -p1433 -sV --script ms-sql-info,ms-sql-ntlm-info {{TARGET}}", "intent": "enumerate" },
         { "purpose": "Once logged in: list databases", "template": "SELECT name FROM sys.databases;", "intent": "enumerate" }

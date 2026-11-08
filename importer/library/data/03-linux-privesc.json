@@ -106,7 +106,6 @@
       "name": "searchsploit",
       "description": "Offline Exploit-DB search on Kali.",
       "commands": [
-        { "purpose": "Search by product and version", "template": "searchsploit <software> <version>", "intent": "enumerate" },
         { "purpose": "Kernel privesc candidates", "template": "searchsploit linux kernel <version> privilege escalation", "intent": "enumerate" },
         { "purpose": "Read an entry", "template": "searchsploit -x <id>", "intent": "enumerate" },
         { "purpose": "Copy an entry to the current folder", "template": "searchsploit -m <id>", "intent": "transfer" }
@@ -149,7 +148,7 @@
   "techniques": [
     {
       "name": "Situational awareness: who and where you are",
-      "phase": "PrivEsc", "service": "shell", "applies": "linux",
+      "phase": "PrivEsc", "service": "any", "applies": "linux",
       "needs": ["shell"], "yields": ["version"],
       "when": "First thing after landing a shell, before running any script.",
       "tools": [],

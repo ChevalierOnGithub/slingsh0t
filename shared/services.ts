@@ -7,6 +7,7 @@ const known = (name: string) => (SERVICES as readonly string[]).includes(name)
 const ALIAS = new Map(Object.entries({
   'microsoft-ds': 'smb', 'netbios-ssn': 'smb', domain: 'dns', 'kerberos-sec': 'kerberos', 'ms-wbt-server': 'rdp',
   'ms-sql-s': 'mssql', 'ssl/http': 'http', 'http-proxy': 'http', 'http-alt': 'http',
+  msrpc: 'rpc', pop3s: 'pop3', 'ssl/pop3': 'pop3', imaps: 'imap', 'ssl/imap': 'imap', mongod: 'mongodb', 'asf-rmcp': 'ipmi', docker: 'docker-api',
 }))
 /** Our slug for a parsed name; nmap calls WinRM http (or wsman) on 5985/5986. */
 const normal = (name: string, port: number) =>

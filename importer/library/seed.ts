@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { dataDir } from '../../server/dataDir'
 import { backupDb, openDb } from '../../server/db'
 import { nextShortId } from '../../server/ids'
-import { APPLIES, HAVES, INTENTS, PHASES, type Applies, type Have, type Intent, type Phase } from '../../shared/types'
+import { APPLIES, HAVES, INTENTS, PHASES, SERVICES, type Applies, type Have, type Intent, type Phase } from '../../shared/types'
 
 export type SeedCommand = { purpose: string; template: string; intent: Intent }
 export type SeedTool = { name: string; description?: string; commands?: SeedCommand[] }
@@ -24,11 +24,27 @@ const KNOWN = new Set(['TARGET', 'LHOST', 'LPORT', 'DNS'])
 export const readSeed = (dir = DATA): { file: string; data: SeedFile }[] =>
   readdirSync(dir).filter((f) => f.endsWith('.json')).sort().map((file) => ({ file, data: JSON.parse(readFileSync(join(dir, file), 'utf8')) as SeedFile }))
 
+const BLANK = /<[a-z][\w./ -]*>/g // `<user>`, `<path/lib.so>`; never XML like `<!ENTITY …>` or `<?xml …>`
+/** A template with case, quotes around a blank, `""` vs `''`, blank names (`<user>` = `<pass>`), spacing and the netexec spelling ironed out. */
+export const normalTemplate = (t: string): string =>
+  t.toLowerCase().replace(/(["'])(<[a-z][\w./ -]*>)\1/g, '$2').replace(/""/g, "''").replace(BLANK, '<>')
+    .replace(/\bnetexec\b/g, 'nxc').replace(/\s+/g, ' ').trim()
+
 /** Every problem across the files; empty means loadable. Checked by seed.test.ts and before any write. */
 export function validateSeed(files: { file: string; data: SeedFile }[]): string[] {
   const errors: string[] = []
   const toolNames = new Set<string>()
   const techNames = new Set<string>()
+  // A list shows each command once: the same command written twice in different words is a mistake.
+  // Identical templates are fine, the loader keeps one.
+  const nearDup = (seen: Map<string, string>, where: string, template: string) => {
+    if (typeof template !== 'string') return
+    const n = normalTemplate(template)
+    const other = seen.get(n)
+    if (other !== undefined && other !== template) errors.push(`${where}: near-duplicate of "${other}"`)
+    else if (other === undefined) seen.set(n, template)
+  }
+  const toolSeen = new Map<string, Map<string, string>>() // per merged (lowercase) tool name
   const cmd = (where: string, c: SeedCommand) => {
     if (typeof c.template !== 'string' || !c.template.trim()) errors.push(`${where}: empty template`)
     if (typeof c.purpose !== 'string') errors.push(`${where}: purpose must be a string`)
@@ -38,8 +54,10 @@ export function validateSeed(files: { file: string; data: SeedFile }[]): string[
   for (const { file, data } of files) {
     for (const t of data.tools ?? []) {
       if (!t.name?.trim()) errors.push(`${file}: tool without a name`)
-      ;(t.commands ?? []).forEach((c, i) => cmd(`${file} tool ${t.name} #${i + 1}`, c))
-      toolNames.add(t.name.toLowerCase())
+      const key = t.name?.toLowerCase()
+      if (!toolSeen.has(key)) toolSeen.set(key, new Map())
+      ;(t.commands ?? []).forEach((c, i) => { cmd(`${file} tool ${t.name} #${i + 1}`, c); nearDup(toolSeen.get(key)!, `${file} tool ${t.name} #${i + 1}`, c.template) })
+      toolNames.add(key)
     }
   }
   for (const { file, data } of files) {
@@ -51,10 +69,13 @@ export function validateSeed(files: { file: string; data: SeedFile }[]): string[
       if (!PHASES.includes(t.phase)) errors.push(`${where}: bad phase "${t.phase}"`)
       const service = t.service ?? 'any'
       if (service !== 'any' && service !== 'shell' && !SLUG.test(service)) errors.push(`${where}: bad service "${service}"`)
+      // a shelf only lights up for a slug servicesInText can find in a Saw line
+      else if (service !== 'any' && service !== 'shell' && !(SERVICES as readonly string[]).includes(service)) errors.push(`${where}: service "${service}" is not any, shell or a SERVICES slug`)
       if (t.applies !== undefined && !APPLIES.includes(t.applies)) errors.push(`${where}: bad applies "${t.applies}"`)
       for (const h of [...(t.needs ?? []), ...(t.yields ?? [])]) if (!HAVES.includes(h)) errors.push(`${where}: bad have "${h}"`)
       for (const name of t.tools ?? []) if (!toolNames.has(name.toLowerCase())) errors.push(`${where}: unknown tool "${name}"`)
-      ;(t.commands ?? []).forEach((c, i) => cmd(`${where} #${i + 1}`, c))
+      const seen = new Map<string, string>()
+      ;(t.commands ?? []).forEach((c, i) => { cmd(`${where} #${i + 1}`, c); nearDup(seen, `${where} #${i + 1}`, c.template) })
     }
   }
   return errors

