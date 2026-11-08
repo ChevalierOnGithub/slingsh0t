@@ -230,7 +230,7 @@
       { "purpose": "Try a null session for users", "template": "rpcclient -U \"\" -N {{TARGET}} -c enumdomusers", "intent": "enumerate" },
       { "purpose": "RID-brute users over SMB", "template": "nxc smb {{TARGET}} -u '' -p '' --rid-brute", "intent": "enumerate" }
     ] },
-    { "name": "Enumerate valid domain usernames", "phase": "Recon", "service": "kerberos", "applies": "ad", "needs": [], "yields": [], "when": "You need a confirmed user list before spraying or AS-REP roasting; Kerberos pre-auth leaks which names exist quietly.", "tools": ["kerbrute"], "commands": [
+    { "name": "Enumerate valid domain usernames", "phase": "Recon", "service": "kerberos", "applies": "ad", "needs": [], "yields": [], "when": "You need a confirmed user list before spraying or AS-REP roasting; Kerberos pre-auth leaks which names exist quietly.", "tools": ["kerbrute", "exiftool"], "commands": [
       { "purpose": "Test a username wordlist against the DC", "template": "kerbrute userenum -d <domain> --dc {{TARGET}} users.txt", "intent": "enumerate" }
     ] },
     { "name": "Use Kerberos from Kali", "phase": "Recon", "service": "kerberos", "applies": "ad", "needs": [], "yields": [], "when": "Kerberos tools fail with KRB_AP_ERR_SKEW or 'server not found', or NTLM is off and you must log in with a ticket.", "tools": ["evil-winrm"], "commands": [

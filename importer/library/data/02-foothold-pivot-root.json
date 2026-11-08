@@ -293,7 +293,7 @@
       ]
     },
     { "name": "Brute-force an SSH or FTP login", "phase": "Initial Access", "service": "ssh", "applies": "any", "needs": [], "yields": ["creds"], "when": "You have a valid username and the service allows unlimited attempts (lab only).", "tools": ["hydra"] },
-    { "name": "Build a custom wordlist", "phase": "Initial Access", "service": "any", "applies": "any", "needs": [], "yields": [], "when": "rockyou fails or you need usernames: build lists from the site's own words and from staff names found on the box.", "tools": ["cewl","username-anarchy"], "commands": [
+    { "name": "Build a custom wordlist", "phase": "Initial Access", "service": "any", "applies": "any", "needs": [], "yields": [], "when": "rockyou fails or you need usernames: build lists from the site's own words and from staff names found on the box.", "tools": ["cewl", "username-anarchy", "exiftool"], "commands": [
       { "purpose": "Mutate a short list with hashcat rules", "template": "hashcat --stdout -r /usr/share/hashcat/rules/best64.rule words.txt > mutated.txt", "intent": "tune" }
     ] },
     {

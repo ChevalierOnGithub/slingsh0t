@@ -62,6 +62,34 @@ const MUST: Must[] = [
   { technique: 'Forge a golden ticket (domain is done)', has: ['impacket-lookupsid'] },
   { technique: 'Pivot across a domain trust', has: ['impacket-raiseChild', '-extra-sid'] },
   { technique: 'RPC enumeration', has: ['impacket-rpcdump'] },
+  // Task 3: recon and web
+  { tool: 'nmap', has: ['nmap -sn <subnet>'] },
+  { tool: 'fping', has: ['fping -asgq <subnet>'] },
+  { technique: 'Find live hosts on a subnet', has: ['nmap -sn', 'fping'] },
+  { tool: 'smtp-user-enum', has: ['-M VRFY', '-M RCPT'] },
+  { tool: 'dnsrecon', has: ['-r <cidr>', '-t brt'] },
+  { tool: 'snmp-check', has: ['snmp-check {{TARGET}}'] },
+  { tool: 'git-dumper', has: ['/.git/'] },
+  { tool: 'ftp', has: ['ftp {{TARGET}}'] },
+  { tool: 'tcpdump', has: ['tcpdump -ni tun0 icmp'] },
+  { tool: 'exiftool', has: ['exiftool -a -u', '-Author -Creator'] },
+  { technique: 'Build a custom wordlist', has: ['exiftool'] },
+  { technique: 'Enumerate valid domain usernames', has: ['exiftool'] },
+  { technique: 'POP3 and IMAP mailbox access', has: ['imap-capabilities', 'imaps://{{TARGET}}/INBOX;UID=1', 'pop3s://', 'openssl s_client'] },
+  { technique: 'PostgreSQL access check', has: ['psql -h {{TARGET}} -U postgres', 'COPY slg FROM PROGRAM'] },
+  { technique: 'MongoDB access check', has: ['mongodb-info', 'mongosh mongodb://'] },
+  { technique: 'VNC access check', has: ['vnc-info', 'vncviewer {{TARGET}}::5900'] },
+  { technique: 'TFTP file pull', has: ['tftp-enum', 'tftp {{TARGET}} -c get'] },
+  { technique: 'Rsync module access', has: ['rsync-list-modules', '--list-only', 'rsync://{{TARGET}}/<share>'] },
+  { technique: 'Finger user enumeration', has: ['finger @{{TARGET}}', 'finger-user-enum -U'] },
+  { technique: 'IPMI hash dump', has: ['ipmi-cipher-zero', 'ipmi_dumphashes', '-m 7300'] },
+  { technique: 'Upload through WebDAV', has: ['davtest -url', 'cadaver http://', 'curl -T'] },
+  { technique: 'Exposed Docker API to host root', has: [':2375/version', 'images', 'chroot /mnt sh'] },
+  { technique: 'Steal a session with stored or blind XSS', has: ['http.server 80', 'document.cookie'] },
+  { technique: 'SQL injection', has: ['ORDER%20BY', 'UNION%20SELECT%201,2,3', 'information_schema.tables', 'xp_cmdshell'] },
+  { technique: 'Local file inclusion and path traversal', has: ['?file=http://{{LHOST}}/', 'data://text/plain;base64', "-A '<webshell>'", 'access.log&cmd=id'] },
+  { technique: 'XML external entity injection', has: ['http.server 80', 'http://{{LHOST}}/xxe'] },
+  { technique: 'Server-side request forgery', has: ['url=http://{{LHOST}}/ssrf'] },
 ]
 
 test('every review finding is in the library', () => {
@@ -76,6 +104,11 @@ test('every review finding is in the library', () => {
 test('netexec is spelled nxc', () => {
   expect(allTemplates().filter((t) => /(^|[;&|]\s*)netexec\b/.test(t))).toEqual([])
   expect(allToolRefs().filter((n) => n.toLowerCase() === 'netexec')).toEqual([])
+})
+
+// {{LPORT}} is the listener's port; a file server on it collides with the listener (A2). Red until Task 6.
+test.fails('serving files never uses {{LPORT}}', () => {
+  expect(allTemplates().filter((t) => /http\.server \{\{LPORT\}\}|\{\{LHOST\}\}:\{\{LPORT\}\}\//.test(t))).toEqual([])
 })
 
 test('every impacket-* tool is defined only in 05-impacket.json', () => {
