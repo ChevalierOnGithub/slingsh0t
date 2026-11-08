@@ -48,5 +48,7 @@ describe('servicesInText', () => {
     expect(servicesInText('135/tcp open msrpc\n6379/tcp open redis\n993/tcp open ssl/imap\n2375/tcp open docker\n623/udp open asf-rmcp'))
       .toEqual([{ name: 'rpc', port: 135 }, { name: 'redis', port: 6379 }, { name: 'imap', port: 993 }, { name: 'docker-api', port: 2375 }, { name: 'ipmi', port: 623 }])
     expect(servicesInText('user is in the docker group')).toEqual([])
+    // Windows answers msrpc on every ephemeral port; only the endpoint mapper is the RPC service
+    expect(servicesInText('135/tcp open msrpc\n49664/tcp open msrpc\n49665/tcp open msrpc')).toEqual([{ name: 'rpc', port: 135 }])
   })
 })

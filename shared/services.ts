@@ -9,9 +9,10 @@ const ALIAS = new Map(Object.entries({
   'ms-sql-s': 'mssql', 'ssl/http': 'http', 'http-proxy': 'http', 'http-alt': 'http',
   msrpc: 'rpc', pop3s: 'pop3', 'ssl/pop3': 'pop3', imaps: 'imap', 'ssl/imap': 'imap', mongod: 'mongodb', 'asf-rmcp': 'ipmi', docker: 'docker-api',
 }))
-/** Our slug for a parsed name; nmap calls WinRM http (or wsman) on 5985/5986. */
+/** Our slug for a parsed name; nmap calls WinRM http (or wsman) on 5985/5986, and msrpc on every ephemeral port where only 135 is the RPC service. */
 const normal = (name: string, port: number) =>
-  (port === 5985 || port === 5986) && (name === 'http' || name === 'wsman') ? 'winrm' : ALIAS.get(name) ?? name
+  (port === 5985 || port === 5986) && (name === 'http' || name === 'wsman') ? 'winrm'
+    : name === 'msrpc' && port !== 135 ? name : ALIAS.get(name) ?? name
 
 /** One entry per name+port, first wins; keeps only name and port. */
 export const uniqServices = (xs: BoxService[]): BoxService[] =>

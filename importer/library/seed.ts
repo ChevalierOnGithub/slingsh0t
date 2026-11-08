@@ -36,12 +36,12 @@ export function validateSeed(files: { file: string; data: SeedFile }[]): string[
   const toolNames = new Set<string>()
   const techNames = new Set<string>()
   // A list shows each command once: the same command written twice in different words is a mistake.
-  // Identical templates are fine, the loader keeps one.
-  const nearDup = (seen: Map<string, string>, where: string, template: string) => {
+  // Identical copies under one tool are fine (the loader keeps one); a technique loads every copy, so there they count.
+  const nearDup = (seen: Map<string, string>, where: string, template: string, identical = false) => {
     if (typeof template !== 'string') return
     const n = normalTemplate(template)
     const other = seen.get(n)
-    if (other !== undefined && other !== template) errors.push(`${where}: near-duplicate of "${other}"`)
+    if (other !== undefined && (identical || other !== template)) errors.push(`${where}: near-duplicate of "${other}"`)
     else if (other === undefined) seen.set(n, template)
   }
   const toolSeen = new Map<string, Map<string, string>>() // per merged (lowercase) tool name
@@ -75,24 +75,37 @@ export function validateSeed(files: { file: string; data: SeedFile }[]): string[
       for (const h of [...(t.needs ?? []), ...(t.yields ?? [])]) if (!HAVES.includes(h)) errors.push(`${where}: bad have "${h}"`)
       for (const name of t.tools ?? []) if (!toolNames.has(name.toLowerCase())) errors.push(`${where}: unknown tool "${name}"`)
       const seen = new Map<string, string>()
-      ;(t.commands ?? []).forEach((c, i) => { cmd(`${where} #${i + 1}`, c); nearDup(seen, `${where} #${i + 1}`, c.template) })
+      ;(t.commands ?? []).forEach((c, i) => {
+        cmd(`${where} #${i + 1}`, c)
+        if (typeof c.template !== 'string') return
+        // the toolbox lists a technique's own commands and its linked tools' commands together
+        const n = normalTemplate(c.template)
+        const tool = (t.tools ?? []).find((name) => toolSeen.get(name.toLowerCase())?.has(n))
+        if (tool) errors.push(`${where} #${i + 1}: near-duplicate of linked tool ${tool} "${toolSeen.get(tool.toLowerCase())!.get(n)}"`)
+        else nearDup(seen, `${where} #${i + 1}`, c.template, true)
+      })
     }
   }
   return errors
 }
 
-/** Replaces the whole library (techniques, tools, commands, and so technique uses) with the seed files. */
-export function loadSeed(db: Database.Database, files = readSeed()): { techniques: number; tools: number; commands: number } {
+type LoadStats = { techniques: number; tools: number; commands: number; uses: { kept: number; dropped: number } }
+
+/** Replaces the whole library (techniques, tools, commands) with the seed files. Technique uses survive by technique name; uses of a technique the seed no longer has are dropped. */
+export function loadSeed(db: Database.Database, files = readSeed()): LoadStats {
   const errors = validateSeed(files)
   if (errors.length) throw new Error(`seed invalid:\n${errors.join('\n')}`)
-  const stats = { techniques: 0, tools: 0, commands: 0 }
+  const stats: LoadStats = { techniques: 0, tools: 0, commands: 0, uses: { kept: 0, dropped: 0 } }
   const insTool = db.prepare('INSERT INTO tools (short_id, name, description) VALUES (?, ?, ?)')
   const insTech = db.prepare(`INSERT INTO techniques (short_id, name, phase, description, position, applies, service, needs, yields)
     VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(position), 0) + 1 FROM techniques WHERE phase = ?), ?, ?, ?, ?)`)
   const insCmd = db.prepare('INSERT INTO commands (tool_id, technique_id, purpose, template, intent) VALUES (?, ?, ?, ?, ?)')
   const link = db.prepare('INSERT INTO technique_tools (technique_id, tool_id) VALUES (?, ?) ON CONFLICT DO NOTHING')
   db.transaction(() => {
-    // Uses cascade from techniques; the search index follows through its triggers.
+    // Uses cascade from techniques, so keep them by name and put them back below.
+    const oldUses = db.prepare('SELECT u.step_id, t.name, u.tool_ids FROM technique_uses u JOIN techniques t ON t.id = u.technique_id ORDER BY u.id').all() as { step_id: number; name: string; tool_ids: string | null }[]
+    const oldTools = new Map((db.prepare('SELECT id, name FROM tools').all() as { id: number; name: string }[]).map((t) => [t.id, t.name.toLowerCase()]))
+    // The search index follows through its triggers.
     db.exec('DELETE FROM commands; DELETE FROM technique_tools; DELETE FROM techniques; DELETE FROM tools;')
     const toolIds = new Map<string, number>()
     const seenTemplates = new Map<number, Set<string>>() // the same command listed under a tool twice loads once
@@ -122,6 +135,16 @@ export function loadSeed(db: Database.Database, files = readSeed()): { technique
         for (const name of t.tools ?? []) link.run(id, toolIds.get(name.toLowerCase())!)
         for (const c of t.commands ?? []) { insCmd.run(null, id, c.purpose, c.template, c.intent); stats.commands++ }
       }
+    }
+    const techIds = new Map((db.prepare('SELECT id, name FROM techniques').all() as { id: number; name: string }[]).map((t) => [t.name, t.id]))
+    const insUse = db.prepare('INSERT INTO technique_uses (technique_id, step_id, tool_ids) VALUES (?, ?, ?)')
+    for (const u of oldUses) {
+      const tq = techIds.get(u.name)
+      if (tq === undefined) { stats.uses.dropped++; continue }
+      const used = u.tool_ids === null ? null
+        : JSON.stringify((JSON.parse(u.tool_ids) as number[]).map((x) => toolIds.get(oldTools.get(x) ?? '')).filter((x) => x !== undefined))
+      insUse.run(tq, u.step_id, used)
+      stats.uses.kept++
     }
   })()
   return stats

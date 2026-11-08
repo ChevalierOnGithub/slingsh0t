@@ -421,17 +421,29 @@
       ]
     },
     {
-      "name": "POP3 and IMAP mailbox access",
+      "name": "IMAP mailbox access",
       "phase": "Recon", "service": "imap", "applies": "any",
       "needs": ["creds"], "yields": ["creds"],
-      "when": "Ports 110/143/993/995 are open and you have mail creds: read the inbox for passwords, links and usernames.",
+      "when": "Port 143 or 993 is open and you have mail creds: read the inbox for passwords, links and usernames.",
       "tools": [],
       "commands": [
-        { "purpose": "Versions and capabilities of the mail services", "template": "nmap -p110,143,993,995 -sV --script 'pop3-capabilities,imap-capabilities' {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "Version and capabilities", "template": "nmap -p143,993 -sV --script imap-capabilities {{TARGET}}", "intent": "enumerate" },
         { "purpose": "List the inbox over IMAPS", "template": "curl -k 'imaps://{{TARGET}}/INBOX' --user '<user>:<pass>'", "intent": "enumerate" },
         { "purpose": "Read message 1 over IMAPS", "template": "curl -k 'imaps://{{TARGET}}/INBOX;UID=1' --user '<user>:<pass>'", "intent": "dump" },
-        { "purpose": "Read message 1 over POP3S", "template": "curl -k 'pop3s://{{TARGET}}/1' --user '<user>:<pass>'", "intent": "dump" },
         { "purpose": "Talk IMAP by hand over TLS (a1 LOGIN <user> <pass>)", "template": "openssl s_client -connect {{TARGET}}:993 -quiet", "intent": "authenticate" }
+      ]
+    },
+    {
+      "name": "POP3 mailbox access",
+      "phase": "Recon", "service": "pop3", "applies": "any",
+      "needs": ["creds"], "yields": ["creds"],
+      "when": "Port 110 or 995 is open and you have mail creds: read every message for passwords, links and usernames.",
+      "tools": [],
+      "commands": [
+        { "purpose": "Version and capabilities", "template": "nmap -p110,995 -sV --script pop3-capabilities {{TARGET}}", "intent": "enumerate" },
+        { "purpose": "List messages over POP3S", "template": "curl -k 'pop3s://{{TARGET}}/' --user '<user>:<pass>'", "intent": "enumerate" },
+        { "purpose": "Read message 1 over POP3S", "template": "curl -k 'pop3s://{{TARGET}}/1' --user '<user>:<pass>'", "intent": "dump" },
+        { "purpose": "Talk POP3 by hand over TLS (USER <user>, PASS <pass>, LIST, RETR 1)", "template": "openssl s_client -connect {{TARGET}}:995 -quiet", "intent": "authenticate" }
       ]
     },
     {

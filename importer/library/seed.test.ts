@@ -50,6 +50,35 @@ test('a near-duplicate inside one technique is caught; different literal values 
   ] }] }))).toEqual([])
 })
 
+test('a technique command that repeats a linked tool command is a near-duplicate, even when identical', () => {
+  const errors = validateSeed(files({
+    tools: [{ name: 'rpcclient', commands: [{ purpose: 'a', template: "rpcclient -U '' -N {{TARGET}}", intent: 'enumerate' }] }],
+    techniques: [{ name: 'T', phase: 'Recon', tools: ['rpcclient'], commands: [
+      { purpose: 'b', template: 'rpcclient -U "" -N {{TARGET}}', intent: 'enumerate' },
+      { purpose: 'c', template: "rpcclient -U '' -N {{TARGET}}", intent: 'enumerate' },
+    ] }],
+  }))
+  expect(errors).toEqual([expect.stringContaining('#1: near-duplicate of linked tool rpcclient'), expect.stringContaining('#2: near-duplicate of linked tool rpcclient')])
+})
+
+test('loadSeed keeps technique uses whose technique still exists, by name, with tool ids remapped', () => {
+  const db = openDb(':memory:')
+  const seed: SeedFile = {
+    tools: [{ name: 'smbclient', commands: [{ purpose: 'x', template: 'smbclient -L {{TARGET}}', intent: 'enumerate' }] }],
+    techniques: [{ name: 'Share enumeration', phase: 'Recon', tools: ['smbclient'] }, { name: 'Gone', phase: 'Recon' }],
+  }
+  loadSeed(db, files(seed))
+  db.exec("INSERT INTO boxes (short_id, platform, name, difficulty) VALUES ('BX-0001', 'HTB', 'b', 'Easy'); INSERT INTO steps (box_id, phase, position) VALUES (1, 'Recon', 0)")
+  const tq = (n: string) => (db.prepare('SELECT id FROM techniques WHERE name = ?').get(n) as { id: number }).id
+  const tl = (db.prepare("SELECT id FROM tools WHERE name = 'smbclient'").get() as { id: number }).id
+  db.prepare('INSERT INTO technique_uses (technique_id, step_id, tool_ids) VALUES (?, 1, ?)').run(tq('Share enumeration'), JSON.stringify([tl, 999]))
+  db.prepare('INSERT INTO technique_uses (technique_id, step_id, tool_ids) VALUES (?, 1, NULL)').run(tq('Gone'))
+  const next: SeedFile = { tools: [{ name: 'nmap' }, ...seed.tools!], techniques: [{ name: 'Port scanning', phase: 'Recon' }, seed.techniques![0]] }
+  expect(loadSeed(db, files(next)).uses).toEqual({ kept: 1, dropped: 1 })
+  const tl2 = (db.prepare("SELECT id FROM tools WHERE name = 'smbclient'").get() as { id: number }).id
+  expect(db.prepare('SELECT technique_id, step_id, tool_ids FROM technique_uses').all()).toEqual([{ technique_id: tq('Share enumeration'), step_id: 1, tool_ids: JSON.stringify([tl2]) }])
+})
+
 test('normalTemplate ignores quoting, case, blank names, spacing and the netexec spelling', () => {
   expect(normalTemplate(`netexec  smb {{TARGET}} -u '<user>' -p "<pass>"`)).toBe(normalTemplate('nxc smb {{TARGET}} -u <USER> -p <password>'))
 })
@@ -65,7 +94,7 @@ test('loadSeed wipes the library and loads tools, techniques, links and commands
       { name: 'Sudo abuse', phase: 'PrivEsc', service: 'shell', applies: 'linux', needs: ['shell'], yields: ['admin'], when: 'sudo -l shows something' },
     ],
   }
-  expect(loadSeed(db, files(seed))).toEqual({ techniques: 3, tools: 1, commands: 2 })
+  expect(loadSeed(db, files(seed))).toEqual({ techniques: 3, tools: 1, commands: 2, uses: { kept: 0, dropped: 0 } })
   expect(db.prepare("SELECT name, phase, position, service, applies, needs, yields, description FROM techniques ORDER BY id").all()).toEqual([
     { name: 'Port scanning', phase: 'Recon', position: 1, service: 'any', applies: 'any', needs: '[]', yields: '["version"]', description: '' },
     { name: 'Directory discovery', phase: 'Recon', position: 2, service: 'http', applies: 'any', needs: '["web app"]', yields: '[]', description: '' },
