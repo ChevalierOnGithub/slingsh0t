@@ -100,6 +100,12 @@ const MUST: Must[] = [
   { tool: 'hashcat', has: ['-m 0 ', '-m 500 ', '-m 3200 ', '-m 2100 '] },
   { technique: 'Phish a user with an email attachment', has: ['wsgidav --host=0.0.0.0 --port=80', 'swaks -t', '--auth LOGIN'] },
   { technique: 'Capture hashes with files dropped on a writable share', has: ['ntlm_theft.py -g all', 'mput *'] },
+  // Task 5: Linux privesc
+  { technique: 'Sudo LD_PRELOAD with env_keep', has: ['> /tmp/pe.c && gcc'] },
+  { technique: 'NFS no_root_squash abuse', has: ['cp /bin/bash <path>/rootbash', 'chown root:root', 'chmod 4755'] },
+  { technique: 'Shared object hijacking', has: ['strace'] },
+  { technique: 'Sudo rights abuse', has: ['doas.conf'] },
+  { tool: 'linpeas', has: ['http.server 80', 'http://{{LHOST}}/linpeas.sh'] },
 ]
 
 test('every review finding is in the library', () => {
@@ -114,6 +120,10 @@ test('every review finding is in the library', () => {
 test('netexec is spelled nxc', () => {
   expect(allTemplates().filter((t) => /(^|[;&|]\s*)netexec\b/.test(t))).toEqual([])
   expect(allToolRefs().filter((n) => n.toLowerCase() === 'netexec')).toEqual([])
+})
+
+test('shared object hijacking no longer copies libc over the missing library (A13)', () => {
+  expect(templatesOf({ technique: 'Shared object hijacking', has: [] }).filter((t) => t.includes('libc.so.6'))).toEqual([])
 })
 
 // {{LPORT}} is the listener's port; a file server on it collides with the listener (A2). Red until Task 6.
