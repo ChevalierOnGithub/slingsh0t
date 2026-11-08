@@ -90,6 +90,16 @@ const MUST: Must[] = [
   { technique: 'Local file inclusion and path traversal', has: ['?file=http://{{LHOST}}/', 'data://text/plain;base64', "-A '<webshell>'", 'access.log&cmd=id'] },
   { technique: 'XML external entity injection', has: ['http.server 80', 'http://{{LHOST}}/xxe'] },
   { technique: 'Server-side request forgery', has: ['url=http://{{LHOST}}/ssrf'] },
+  // Task 4: foothold, transfer, pivot, flags, persistence
+  { tool: 'ligolo-ng', has: ['start'] },
+  { technique: 'Find and prove the flags', has: ['local.txt', 'proof.txt', "'flag*.txt'", 'cat /root/proof.txt', 'Desktop\\proof.txt'] },
+  { technique: 'Exfil loot back to Kali', has: ['\\\\{{LHOST}}\\share', '-smb2support'] },
+  { tool: 'powershell', has: ['DownloadString'] },
+  { tool: 'ssh', has: ['ssh -R 1080', 'ssh -J'] },
+  { technique: 'Keep SSH access with your own key', has: ['ssh-keygen'] },
+  { tool: 'hashcat', has: ['-m 0 ', '-m 500 ', '-m 3200 ', '-m 2100 '] },
+  { technique: 'Phish a user with an email attachment', has: ['wsgidav --host=0.0.0.0 --port=80', 'swaks -t', '--auth LOGIN'] },
+  { technique: 'Capture hashes with files dropped on a writable share', has: ['ntlm_theft.py -g all', 'mput *'] },
 ]
 
 test('every review finding is in the library', () => {
