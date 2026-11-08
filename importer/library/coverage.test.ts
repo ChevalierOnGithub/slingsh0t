@@ -127,7 +127,36 @@ const MUST: Must[] = [
   { technique: 'Dump local secrets once you are admin', has: ['pypykatz'] },
   { technique: 'Abuse a privileged built-in group', has: ['whoami /groups', 'binPath=', 'dnscmd', 'start dns', 'IncludeDeletedObjects'] },
   { technique: 'Decrypt DPAPI-protected credentials', has: ['Microsoft\\Protect', 'impacket-dpapi'] },
+  // Task 7: Active Directory
+  { tool: 'nxc', has: ['nxc ldap', '--asreproast', '--kerberoasting', '--bloodhound', 'get-desc-users', '-M maq', '-M adcs', '--sam', '--lsa', 'lsassy', '--ntds', 'zerologon', 'nopac', 'printnightmare', '-M spooler', 'coerce_plus', ' -k', '--use-kcache', '-x whoami'] },
+  { tool: 'mimikatz', has: ['sekurlsa::logonpasswords', 'token::elevate', 'lsadump::dcsync', 'sekurlsa::tickets /export', 'kerberos::ptt'] },
+  { technique: 'DCSync the domain', has: ['/user:krbtgt" "exit"'] },
+  { technique: 'Pass the ticket / overpass-the-hash', has: ['kerberos::ptt'] },
+  { tool: 'certipy', has: ['-upn administrator@<domain> -sid <sid>', 'certipy template', 'certipy relay'] },
+  { tool: 'bloodhound-python', has: ['--zip'] },
+  { tool: 'bloodhound-ce-python', has: ['-c All --zip'] },
+  { tool: 'SharpHound', has: ['--zipfilename'] },
+  { technique: 'Map AD attack paths', has: ['bloodhound-ce-python', 'SharpHound.exe', 'get writable', '--bloodhound'] },
+  { tool: 'Snaffler', has: ['Snaffler.exe -s'] },
+  { technique: 'Enumerate the domain from a joined host', has: ['Snaffler.exe'] },
+  { tool: 'PowerView', has: ['. .\\PowerView.ps1', 'Get-DomainUser -SPN', 'Get-DomainComputer', 'Find-InterestingDomainAcl'] },
+  { tool: 'bloodyAD', has: ['get writable', 'servicePrincipalName'] },
+  { technique: 'Move laterally from a Windows host', has: ['winrs -r:', 'Enter-PSSession', 'Invoke-Command', 'PsExec64'] },
+  { technique: 'Relay or edit your way to a certificate (ESC4/ESC8)', has: ['coerce_plus', 'certipy relay', 'certipy template'] },
+  { technique: 'MSSQL command execution and hash capture', has: ['enum_links', 'use_link', 'exec_as_login'] },
+  { technique: 'AS-REP roast users without pre-auth', has: ['--asreproast'] },
+  { technique: 'Kerberoast service accounts', has: ['--kerberoasting'] },
+  { technique: 'Use Kerberos from Kali', has: ['--use-kcache', 'impacket-psexec -k -no-pass'] },
+  { technique: 'Dump local secrets once you are admin', has: ['--sam', 'lsassy'] },
 ]
+
+test('mimikatz runs one-shot, so it never hangs a reverse shell or evil-winrm (A4)', () => {
+  const ts = toolTemplates('mimikatz')
+  expect(ts.length).toBeGreaterThan(0)
+  expect(ts.filter((t) => !t.startsWith('.\\mimikatz.exe ') || !t.endsWith('"exit"'))).toEqual([])
+  const loose = techniques.flatMap((t) => (t.commands ?? []).map((c) => c.template)).filter((t) => /::/.test(t) && /^(privilege|sekurlsa|lsadump|kerberos|token)::/.test(t))
+  expect(loose).toEqual([])
+})
 
 test('every review finding is in the library', () => {
   const missing = MUST.flatMap((m) => {
