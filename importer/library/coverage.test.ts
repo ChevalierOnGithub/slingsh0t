@@ -106,6 +106,27 @@ const MUST: Must[] = [
   { technique: 'Shared object hijacking', has: ['strace'] },
   { technique: 'Sudo rights abuse', has: ['doas.conf'] },
   { tool: 'linpeas', has: ['http.server 80', 'http://{{LHOST}}/linpeas.sh'] },
+  // Task 6: Windows privesc
+  { tool: 'winpeas', has: ['http://{{LHOST}}/winPEASx64.exe', 'http://{{LHOST}}/winPEAS.ps1'] },
+  { tool: 'JuicyPotato', has: ['-t * -c {<clsid>}'] },
+  { tool: 'JuicyPotatoNG', has: ['-e cmd'] },
+  { tool: 'SweetPotato', has: ['-e cmd'] },
+  { tool: 'pypykatz', has: ['lsa minidump'] },
+  { tool: 'LaZagne', has: ['LaZagne.exe all'] },
+  { tool: 'PsExec', has: ['-accepteula -i \\\\<host>'] },
+  { technique: 'Get SYSTEM by abusing SeImpersonate', has: ['PrintSpoofer64.exe -c', 'GodPotato-NET4.exe -cmd "C:\\Windows\\Temp\\nc.exe', 'JuicyPotato.exe', 'SweetPotato.exe'] },
+  { technique: 'Replace a weak service binary', has: ['-f exe-service'] },
+  { technique: 'Reconfigure a service with weak permissions', has: ['-f exe-service'] },
+  { technique: 'Install an MSI as SYSTEM via AlwaysInstallElevated', has: ['-f msi'] },
+  { technique: 'Read SAM and SYSTEM with SeBackupPrivilege', has: ['Set-Content', 'diskshadow /s C:\\Windows\\Temp\\ds.txt', 'z:\\Windows\\NTDS . ntds.dit', '-ntds'] },
+  { technique: 'Hijack an unquoted service path', has: ['Get-CimInstance'] },
+  { technique: 'Abuse a dangerous token privilege', has: ['takeown /f', 'procdump'] },
+  { technique: 'Bypass UAC for a full admin token', has: ['fodhelper'] },
+  { technique: 'Map the host and your privileges', has: ['netstat -ano', 'tasklist /svc', 'Uninstall'] },
+  { technique: 'Hunt stored credentials on disk and registry', has: ['SimonTatham', 'reg query HKLM /f password', 'HistorySavePath', 'Get-ChildItem -Path C:\\Users', 'Panther', 'LaZagne'] },
+  { technique: 'Dump local secrets once you are admin', has: ['pypykatz'] },
+  { technique: 'Abuse a privileged built-in group', has: ['whoami /groups', 'binPath=', 'dnscmd', 'start dns', 'IncludeDeletedObjects'] },
+  { technique: 'Decrypt DPAPI-protected credentials', has: ['Microsoft\\Protect', 'impacket-dpapi'] },
 ]
 
 test('every review finding is in the library', () => {
@@ -122,12 +143,16 @@ test('netexec is spelled nxc', () => {
   expect(allToolRefs().filter((n) => n.toLowerCase() === 'netexec')).toEqual([])
 })
 
+test('SeBackup no longer robocopies the locked live hives (A6)', () => {
+  expect(templatesOf({ technique: 'Read SAM and SYSTEM with SeBackupPrivilege', has: [] }).filter((t) => t.includes('config . SAM SYSTEM'))).toEqual([])
+})
+
 test('shared object hijacking no longer copies libc over the missing library (A13)', () => {
   expect(templatesOf({ technique: 'Shared object hijacking', has: [] }).filter((t) => t.includes('libc.so.6'))).toEqual([])
 })
 
-// {{LPORT}} is the listener's port; a file server on it collides with the listener (A2). Red until Task 6.
-test.fails('serving files never uses {{LPORT}}', () => {
+// {{LPORT}} is the listener's port; a file server on it collides with the listener (A2).
+test('serving files never uses {{LPORT}}', () => {
   expect(allTemplates().filter((t) => /http\.server \{\{LPORT\}\}|\{\{LHOST\}\}:\{\{LPORT\}\}\//.test(t))).toEqual([])
 })
 
