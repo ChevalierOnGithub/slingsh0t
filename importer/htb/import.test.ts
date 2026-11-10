@@ -15,7 +15,6 @@ const fakeFetch = (routes: Record<string, () => Response>) =>
   vi.fn(async (url: string | URL | Request, _init?: RequestInit) => routes[String(url)]?.() ?? json({ message: 'not found' }, 404))
 const noWait = vi.fn(async (_ms: number) => {})
 const quarry: HtbMachine = { id: 102, name: 'Quarry', os: 'Windows', difficulty: 'Medium', releaseDate: null, userOwned: false, rootOwned: false }
-const ISO = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/ // toISOString(), as server/routes/boxes.ts writes
 const box = (db: ReturnType<typeof openDb>) => db.prepare('SELECT * FROM boxes').get() as Record<string, unknown>
 
 describe('htb importer', () => {
@@ -26,7 +25,25 @@ describe('htb importer', () => {
     expect(box(db)).toMatchObject({ os: 'Windows', release_date: '2020-01-01' })
     expect(importHtb(db, [{ ...quarry, os: '', releaseDate: null }])).toMatchObject({ updated: 0, skipped: 1 })
     importHtb(db, [{ ...quarry, os: 'Linux', releaseDate: '2024-05-18' }])
-    expect(box(db)).toMatchObject({ os: 'Linux', release_date: '2024-05-18' })
+    expect(box(db)).toMatchObject({ os: 'Windows', release_date: '2024-05-18' }) // a non-empty OS is the owner's
+    db.prepare("UPDATE boxes SET os = ''").run()
+    expect(importHtb(db, [{ ...quarry, os: 'Linux', releaseDate: '2024-05-18' }])).toMatchObject({ updated: 1 })
+    expect(box(db)).toMatchObject({ os: 'Linux' }) // an empty OS is filled in
+  })
+
+  it('a re-import keeps the name, difficulty and OS the owner set', () => {
+    const db = openDb(':memory:')
+    const lame: HtbMachine = { id: 1, name: 'Lame', os: 'Linux', difficulty: 'Easy', releaseDate: null, userOwned: false, rootOwned: false }
+    importHtb(db, [lame])
+    db.prepare("UPDATE boxes SET name = 'Lame (retired)', difficulty = 'Medium', os = 'BSD'").run()
+    expect(importHtb(db, [lame])).toEqual({ inserted: 0, updated: 0, skipped: 1, unknownDifficulty: 0 })
+    expect(box(db)).toMatchObject({ name: 'Lame (retired)', difficulty: 'Medium', os: 'BSD' })
+  })
+
+  it('imported progress sets no dates', () => {
+    const db = openDb(':memory:')
+    importHtb(db, [{ ...quarry, rootOwned: true }])
+    expect(box(db)).toMatchObject({ status: 'rooted', started_at: null, rooted_at: null })
   })
 
   it('stops after 100 full pages', async () => {
@@ -57,13 +74,11 @@ describe('htb importer', () => {
     expect(importHtb(db, machines)).toEqual({ inserted: 3, updated: 0, skipped: 0, unknownDifficulty: 1 })
     const rows = db.prepare('SELECT short_id, platform, source, source_id, status, started_at, rooted_at FROM boxes ORDER BY id').all() as Record<string, unknown>[]
     expect(db.prepare("SELECT url FROM boxes WHERE source_id = 'htb:101'").get()).toEqual({ url: 'https://app.hackthebox.com/machines/101' })
-    expect(rows.map(({ started_at, rooted_at, ...r }) => ({ ...r, started: !!started_at, rooted: !!rooted_at }))).toEqual([
-      { short_id: 'H-0001', platform: 'HTB', source: 'htb', source_id: 'htb:101', status: 'rooted', started: true, rooted: true },
-      { short_id: 'H-0002', platform: 'HTB', source: 'htb', source_id: 'htb:102', status: 'user_flag', started: true, rooted: false },
-      { short_id: 'H-0003', platform: 'HTB', source: 'htb', source_id: 'htb:103', status: 'not_started', started: false, rooted: false },
+    expect(rows.map(({ started_at, rooted_at, ...r }) => ({ ...r, started: started_at, rooted: rooted_at }))).toEqual([
+      { short_id: 'H-0001', platform: 'HTB', source: 'htb', source_id: 'htb:101', status: 'rooted', started: null, rooted: null },
+      { short_id: 'H-0002', platform: 'HTB', source: 'htb', source_id: 'htb:102', status: 'user_flag', started: null, rooted: null },
+      { short_id: 'H-0003', platform: 'HTB', source: 'htb', source_id: 'htb:103', status: 'not_started', started: null, rooted: null },
     ])
-    expect(rows[0].started_at).toMatch(ISO)
-    expect(rows[0].rooted_at).toBe(rows[0].started_at)
   })
 
   it('tolerates field variants and skips unknown difficulty', () => {
@@ -73,15 +88,15 @@ describe('htb importer', () => {
     expect(mapMachine({ id: '9', name: 'Z', difficultyText: 'Easy' })).toBeNull()
   })
 
-  it('reimport keeps owner fields and never lowers status', () => {
+  it('reimport keeps owner fields, fills a missing release date and never lowers status', () => {
     const db = openDb(':memory:')
     importHtb(db, [quarry])
     db.prepare("UPDATE boxes SET notes = 'my notes', target_ip = '10.10.11.5', status = 'rooted' WHERE source_id = 'htb:102'").run()
 
-    const next = { ...quarry, name: 'Quarry2', releaseDate: '2024-05-18', userOwned: true }
+    const next = { ...quarry, name: 'Quarry2', difficulty: 'Hard' as const, releaseDate: '2024-05-18', userOwned: true }
     expect(importHtb(db, [next])).toEqual({ inserted: 0, updated: 1, skipped: 0, unknownDifficulty: 0 })
-    expect(db.prepare('SELECT short_id, name, release_date, notes, target_ip, status, started_at, rooted_at FROM boxes').all()).toEqual([
-      { short_id: 'H-0001', name: 'Quarry2', release_date: '2024-05-18', notes: 'my notes', target_ip: '10.10.11.5', status: 'rooted', started_at: null, rooted_at: null },
+    expect(db.prepare('SELECT short_id, name, difficulty, release_date, notes, target_ip, status, started_at, rooted_at FROM boxes').all()).toEqual([
+      { short_id: 'H-0001', name: 'Quarry', difficulty: 'Medium', release_date: '2024-05-18', notes: 'my notes', target_ip: '10.10.11.5', status: 'rooted', started_at: null, rooted_at: null },
     ])
     expect(importHtb(db, [next])).toEqual({ inserted: 0, updated: 0, skipped: 1, unknownDifficulty: 0 })
 
@@ -90,19 +105,12 @@ describe('htb importer', () => {
     expect(db.prepare('SELECT status FROM boxes').pluck().get()).toBe('user_flag')
   })
 
-  it('stamps started_at and rooted_at only when the import moves status forward', () => {
+  it('moving a box forward writes no dates', () => {
     const db = openDb(':memory:')
     importHtb(db, [quarry])
-    expect(box(db)).toMatchObject({ status: 'not_started', started_at: null, rooted_at: null })
-
-    db.prepare("UPDATE boxes SET started_at = '2020-01-01T00:00:00.000Z'").run()
     expect(importHtb(db, [{ ...quarry, rootOwned: true }])).toMatchObject({ updated: 1 })
-    const advanced = box(db)
-    expect(advanced).toMatchObject({ status: 'rooted', started_at: '2020-01-01T00:00:00.000Z' })
-    expect(advanced.rooted_at).toMatch(ISO)
-
+    expect(box(db)).toMatchObject({ status: 'rooted', started_at: null, rooted_at: null })
     expect(importHtb(db, [{ ...quarry, rootOwned: true }])).toMatchObject({ updated: 0, skipped: 1 })
-    expect(box(db).rooted_at).toBe(advanced.rooted_at)
   })
 
   it('ticks every step of a box the import roots', () => {
@@ -121,7 +129,7 @@ describe('htb importer', () => {
     expect(importHtb(db, [{ ...quarry, userOwned: true }, { ...quarry, id: 101, name: 'Lantern' }]))
       .toEqual({ inserted: 1, updated: 1, skipped: 0, unknownDifficulty: 0 })
     expect(db.prepare("SELECT short_id, name, difficulty, status, notes, source, source_id FROM boxes WHERE platform = 'HTB' ORDER BY id").all()).toEqual([
-      { short_id: 'H-0042', name: 'Quarry', difficulty: 'Medium', status: 'user_flag', notes: 'mine', source: 'htb', source_id: 'htb:102' },
+      { short_id: 'H-0042', name: '  quarry ', difficulty: 'Easy', status: 'user_flag', notes: 'mine', source: 'htb', source_id: 'htb:102' },
       { short_id: 'H-0001', name: 'Lantern', difficulty: 'Medium', status: 'not_started', notes: '', source: 'htb', source_id: 'htb:101' },
     ])
   })

@@ -87,7 +87,7 @@ describe('thm client', () => {
 })
 
 describe('importThmCatalog', () => {
-  it('inserts once, updates only imported fields, never clears owner data', async () => {
+  it('inserts once, updates only a missing OS, url and release date, never clears owner data', async () => {
     const db = openDb(':memory:')
     const rooms = await fetchChallengeRooms(fakeFetch)
     expect(importThmCatalog(db, rooms)).toEqual({ inserted: 5, updated: 0, skipped: 0 })
@@ -96,12 +96,22 @@ describe('importThmCatalog', () => {
 
     db.prepare("UPDATE boxes SET os = 'Linux', notes = 'mine', status = 'in_progress' WHERE source_id = 'thm:rrootme'").run()
     const counters = db.prepare('SELECT * FROM id_counters ORDER BY type').all()
+    db.prepare("UPDATE boxes SET os = '' WHERE source_id = 'thm:relevant'").run()
     const changed: ThmRoom[] = rooms.map((r) => (r.code === 'relevant' ? { ...r, difficulty: 'Hard' } : r))
     expect(importThmCatalog(db, changed)).toEqual({ inserted: 0, updated: 1, skipped: 4 })
     expect(db.prepare('SELECT * FROM id_counters ORDER BY type').all()).toEqual(counters) // no short ids burned
-    expect(db.prepare("SELECT difficulty FROM boxes WHERE source_id = 'thm:relevant'").get()).toEqual({ difficulty: 'Hard' })
+    expect(db.prepare("SELECT difficulty, os FROM boxes WHERE source_id = 'thm:relevant'").get()).toEqual({ difficulty: 'Medium', os: 'Windows' })
     expect(db.prepare("SELECT os, notes, status FROM boxes WHERE source_id = 'thm:rrootme'").get())
       .toEqual({ os: 'Linux', notes: 'mine', status: 'in_progress' })
+  })
+
+  it('a catalog re-run keeps the name, difficulty and OS the owner set', async () => {
+    const db = openDb(':memory:')
+    const rooms = (await fetchChallengeRooms(fakeFetch)).filter((r) => r.code === 'relevant')
+    importThmCatalog(db, rooms)
+    db.prepare("UPDATE boxes SET name = 'Mine', difficulty = 'Insane', os = 'BSD'").run()
+    expect(importThmCatalog(db, rooms)).toEqual({ inserted: 0, updated: 0, skipped: 1 })
+    expect(db.prepare('SELECT name, difficulty, os FROM boxes').get()).toEqual({ name: 'Mine', difficulty: 'Insane', os: 'BSD' })
   })
 
   it('adopts a hand-made THM box with the same title instead of duplicating it', async () => {
@@ -110,7 +120,7 @@ describe('importThmCatalog', () => {
     db.prepare("INSERT INTO boxes (short_id, platform, name, difficulty) VALUES ('H-0001', 'HTB', 'Relevant', 'Easy')").run()
     expect(importThmCatalog(db, await fetchChallengeRooms(fakeFetch))).toEqual({ inserted: 4, updated: 1, skipped: 0 })
     expect(db.prepare("SELECT short_id, name, difficulty, source, source_id, notes, status FROM boxes WHERE short_id = 'T-0001'").get())
-      .toEqual({ short_id: 'T-0001', name: 'Daily Bugle', difficulty: 'Hard', source: 'thm', source_id: 'thm:dailybugle', notes: 'mine', status: 'user_flag' })
+      .toEqual({ short_id: 'T-0001', name: '  daily   BUGLE ', difficulty: 'Easy', source: 'thm', source_id: 'thm:dailybugle', notes: 'mine', status: 'user_flag' })
     expect(db.prepare("SELECT url FROM boxes WHERE source_id = 'thm:dailybugle'").get()).toEqual({ url: 'https://tryhackme.com/room/dailybugle' })
     expect(db.prepare("SELECT source_id FROM boxes WHERE short_id = 'H-0001'").get()).toEqual({ source_id: null }) // other platforms untouched
   })
@@ -127,7 +137,7 @@ describe('markThmCompleted', () => {
     const rows = db.prepare("SELECT source_id, status, rooted_at FROM boxes WHERE status = 'rooted' ORDER BY source_id").all() as { source_id: string; rooted_at: string }[]
     expect(rows.map((r) => r.source_id)).toEqual(['thm:dailybugle', 'thm:relevant', 'thm:rrootme'])
     expect(rows.find((r) => r.source_id === 'thm:relevant')?.rooted_at).toBe('2024-01-01 00:00:00')
-    expect(rows.find((r) => r.source_id === 'thm:dailybugle')?.rooted_at).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/) // ISO, like the server
+    expect(rows.find((r) => r.source_id === 'thm:dailybugle')?.rooted_at).toBeNull()
   })
 
   it('ticks every step of a box it roots, but leaves an already rooted box alone', async () => {
@@ -154,12 +164,12 @@ describe('markThmCompleted', () => {
     expect(db.prepare("SELECT status FROM boxes WHERE source_id = 'thm:FixtureMixed'").get()).toEqual({ status: 'rooted' })
   })
 
-  it('sets started_at like PATCH status=rooted', async () => {
+  it('marking completed rooms sets no dates', async () => {
     const db = openDb(':memory:')
     importThmCatalog(db, await fetchChallengeRooms(fakeFetch))
-    const box = db.prepare("SELECT id FROM boxes WHERE source_id = 'thm:relevant'").pluck().get() as number
     markThmCompleted(db, ['relevant'])
-    expect(db.prepare('SELECT started_at FROM boxes WHERE id = ?').pluck().get(box)).toMatch(/T.*Z$/)
+    expect(db.prepare("SELECT status, started_at, rooted_at FROM boxes WHERE source_id = 'thm:relevant'").get())
+      .toEqual({ status: 'rooted', started_at: null, rooted_at: null })
   })
 
   it('prefers a code match and reports a title shared by several boxes as ambiguous', async () => {

@@ -67,7 +67,7 @@ A new top-level runtime folder must be added to the `Dockerfile` (it copies fold
 - A step belongs to exactly one box or one host (`Owner` in `server/routes/boxes.ts`; CHECK constraint in the db). Box and host pages share the same step, toolbox and report code through the `WorkItem` type; a host inherits its network's tags.
 - The six phases live in `PHASES` (`shared/types.ts`). Persistence is offered only when the owner has the `Active Directory` tag. The list is interpolated into CHECK constraints in `schema.sql` and the networks migration, so existing databases keep the old list: changing a phase needs a table-rebuild migration.
 - The target context is a single `context` row (`server/routes/context.ts`): active box or host, LHOST, LPORT. `{{TARGET}}`, `{{LHOST}}`, `{{LPORT}}`, `{{DNS}}` are substituted at render time by `shared/placeholders.ts`; stored text always keeps the placeholders.
-- Imports only add boxes and update imported fields. They never touch notes, steps, tags or target IPs and never lower a status.
+- Imports add new boxes and fill in a missing OS, link or release date. They never change a box's name, difficulty, notes, steps, tags or target IP, never lower a status, and set no dates.
 
 ### Library seed
 

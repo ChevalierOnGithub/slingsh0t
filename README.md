@@ -55,7 +55,7 @@ Before a schema upgrade, an existing database is copied to `data/backups/pre-mig
 
 ## Importing boxes
 
-Use the Import screen in the app, or the commands. Imports only add boxes and update imported fields; they never touch your notes, steps, tags or target IPs, and never lower a box's status.
+Use the Import screen in the app, or the commands. Imports add new boxes and fill in a missing OS, link or release date. They never change a box's name, difficulty, notes, steps, tags or target IP, never lower a status, and set no dates.
 
 ```
 npm run import:htb    # HTB active + retired machines and your progress

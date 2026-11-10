@@ -15,23 +15,20 @@ type Stats = { inserted: number; updated: number; skipped: number; unknownDiffic
 
 /**
  * Upsert by source_id, adopting a manual HTB box of the same name before inserting.
- * Touches only imported fields; status only ever moves forward.
+ * An existing box keeps its name, difficulty and non-empty OS; status only ever moves forward; no dates are written.
  */
 export function importHtb(db: Database.Database, machines: HtbMachine[] & { unknownDifficulty?: number }): Stats {
   const stats = { inserted: 0, updated: 0, skipped: 0, unknownDifficulty: machines.unknownDifficulty ?? 0 }
-  const now = new Date().toISOString()
   const find = db.prepare('SELECT id, status FROM boxes WHERE source_id = ?')
   const findManual = db.prepare(`SELECT id, status FROM boxes
     WHERE platform = 'HTB' AND source_id IS NULL AND norm_name(name) = norm_name(?) ORDER BY id LIMIT 1`)
-  const insert = db.prepare(`INSERT INTO boxes (short_id, platform, name, os, difficulty, release_date, status, started_at, rooted_at, source, source_id, url)
-    VALUES (@shortId, 'HTB', @name, @os, @difficulty, @releaseDate, @status, @startedAt, @rootedAt, 'htb', @sourceId, @url)`)
+  const insert = db.prepare(`INSERT INTO boxes (short_id, platform, name, os, difficulty, release_date, status, source, source_id, url)
+    VALUES (@shortId, 'HTB', @name, @os, @difficulty, @releaseDate, @status, 'htb', @sourceId, @url)`)
   // The IS NOT guard makes `changes` 0 when nothing differs, so a no-op re-import counts as skipped.
-  const update = db.prepare(`UPDATE boxes SET source_id = @sourceId, source = 'htb', name = @name, os = COALESCE(NULLIF(@os, ''), os), difficulty = @difficulty,
-      release_date = COALESCE(@releaseDate, release_date), status = @status, started_at = COALESCE(started_at, @startedAt), rooted_at = COALESCE(rooted_at, @rootedAt),
-      url = CASE WHEN url = '' THEN @url ELSE url END
-    WHERE id = @id AND (source_id IS NOT @sourceId OR source IS NOT 'htb' OR name IS NOT @name OR os IS NOT COALESCE(NULLIF(@os, ''), os)
-      OR difficulty IS NOT @difficulty OR release_date IS NOT COALESCE(@releaseDate, release_date) OR status IS NOT @status OR url = '')`)
-  const secs = Math.floor(Date.parse(now) / 1000)
+  const update = db.prepare(`UPDATE boxes SET source_id = @sourceId, source = 'htb', os = CASE WHEN os = '' THEN @os ELSE os END,
+      release_date = COALESCE(@releaseDate, release_date), status = @status, url = CASE WHEN url = '' THEN @url ELSE url END
+    WHERE id = @id AND (source_id IS NOT @sourceId OR source IS NOT 'htb' OR os IS NOT CASE WHEN os = '' THEN @os ELSE os END
+      OR release_date IS NOT COALESCE(@releaseDate, release_date) OR status IS NOT @status OR url = '')`)
 
   db.transaction(() => {
     for (const { id: htbId, name, os, difficulty, releaseDate, userOwned, rootOwned } of machines) {
@@ -40,8 +37,8 @@ export function importHtb(db: Database.Database, machines: HtbMachine[] & { unkn
       const owned: BoxStatus = rootOwned ? 'rooted' : userOwned ? 'user_flag' : 'not_started'
       const row = (find.get(sourceId) ?? findManual.get(name)) as { id: number; status: BoxStatus } | undefined
       const status = row && RANK.indexOf(row.status) >= RANK.indexOf(owned) ? row.status : owned
-      const moved = status !== (row?.status ?? 'not_started') // only a real status change stamps the timestamps
-      const values = { sourceId, url, name, os, difficulty, releaseDate, status, startedAt: moved ? now : null, rootedAt: moved && status === 'rooted' ? now : null }
+      const moved = status !== (row?.status ?? 'not_started')
+      const values = { sourceId, url, name, os, difficulty, releaseDate, status }
       if (!row) {
         insert.run({ ...values, shortId: nextShortId(db, 'H') })
         stats.inserted++

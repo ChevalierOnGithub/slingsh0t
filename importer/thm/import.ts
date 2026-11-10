@@ -10,7 +10,7 @@ import { fetchChallengeRooms, fetchCompletedRooms, type ThmNetwork, type ThmRoom
 
 /**
  * Insert-if-absent by source_id; a hand-made THM box with the same title (no source_id) is adopted instead.
- * On re-runs only name/os/difficulty/release date change, never owner fields or status.
+ * On re-runs only a missing os, url or release date is filled in: never the name, difficulty, owner fields or status.
  */
 export function importThmCatalog(db: Database.Database, rooms: ThmRoom[]): { inserted: number; updated: number; skipped: number } {
   const stats = { inserted: 0, updated: 0, skipped: 0 }
@@ -18,7 +18,7 @@ export function importThmCatalog(db: Database.Database, rooms: ThmRoom[]): { ins
   const find = db.prepare('SELECT id, name, os, difficulty, source_id, url, release_date FROM boxes WHERE source_id = ?')
   const manual = db.prepare("SELECT id, name, os, difficulty, source_id, url, release_date FROM boxes WHERE platform = 'THM' AND source_id IS NULL AND norm_name(name) = norm_name(?) ORDER BY id LIMIT 1")
   const insert = db.prepare("INSERT INTO boxes (short_id, platform, name, os, difficulty, source_id, source, url, release_date) VALUES (?, 'THM', ?, ?, ?, ?, 'thm', ?, ?)")
-  const update = db.prepare("UPDATE boxes SET name = ?, os = ?, difficulty = ?, source_id = ?, source = 'thm', url = CASE WHEN url = '' THEN ? ELSE url END, release_date = ? WHERE id = ?")
+  const update = db.prepare("UPDATE boxes SET os = ?, source_id = ?, source = 'thm', url = CASE WHEN url = '' THEN ? ELSE url END, release_date = ? WHERE id = ?")
   db.transaction(() => {
     for (const room of rooms) {
       const sourceId = `thm:${room.code}`
@@ -30,10 +30,10 @@ export function importThmCatalog(db: Database.Database, rooms: ThmRoom[]): { ins
         stats.inserted++
         continue
       }
-      const os = room.os || row.os // THM often has no OS; keep what the owner set
+      const os = row.os || room.os // a non-empty OS is the owner's; THM often has none
       const released = room.releaseDate ?? row.release_date
-      if (row.source_id === sourceId && row.name === title && row.os === os && row.difficulty === room.difficulty && row.url !== '' && row.release_date === released) stats.skipped++
-      else { update.run(title, os, room.difficulty, sourceId, url, released, row.id); stats.updated++ }
+      if (row.source_id === sourceId && row.os === os && row.url !== '' && row.release_date === released) stats.skipped++
+      else { update.run(os, sourceId, url, released, row.id); stats.updated++ }
     }
   })()
   return stats
@@ -41,23 +41,21 @@ export function importThmCatalog(db: Database.Database, rooms: ThmRoom[]): { ins
 
 /**
  * Marks THM boxes rooted by room code (preferred) or title (case and whitespace ignored). As with PATCH status=rooted,
- * running step timers stop, every step is ticked, and rooted_at and started_at are set if empty.
+ * the status moves to rooted and every step is ticked; no dates are written.
  * Rooted is the top status, so this never lowers one, and a box already rooted is left untouched (no re-ticking). A title shared by several boxes is reported as ambiguous and roots nothing.
  */
 export function markThmCompleted(db: Database.Database, codesOrTitles: string[]): { matched: string[]; unmatched: string[]; ambiguous: string[] } {
   const result = { matched: [] as string[], unmatched: [] as string[], ambiguous: [] as string[] }
   const find = db.prepare(`SELECT id, lower(source_id) IS 'thm:' || lower(?) AS byCode FROM boxes
     WHERE platform = 'THM' AND (lower(source_id) = 'thm:' || lower(?) OR norm_name(name) = norm_name(?)) ORDER BY byCode DESC, id`)
-  const root = db.prepare("UPDATE boxes SET status = 'rooted', rooted_at = coalesce(rooted_at, ?), started_at = coalesce(started_at, ?) WHERE id = ? AND status <> 'rooted'")
-  const now = new Date()
-  const iso = now.toISOString()
+  const root = db.prepare("UPDATE boxes SET status = 'rooted' WHERE id = ? AND status <> 'rooted'")
   db.transaction(() => {
     for (const name of codesOrTitles.map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean)) {
       const rows = find.all(name, name, name) as { id: number; byCode: number }[]
       if (!rows.length) result.unmatched.push(name)
       else if (!rows[0].byCode && rows.length > 1) result.ambiguous.push(name)
       else {
-        if (root.run(iso, iso, rows[0].id).changes) markRooted(db, { col: 'box_id', id: rows[0].id })
+        if (root.run(rows[0].id).changes) markRooted(db, { col: 'box_id', id: rows[0].id })
         result.matched.push(name)
       }
     }
