@@ -1,6 +1,6 @@
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import MarkdownIt from 'markdown-it'
-import type { Attachment, Context, Step, WorkItem } from '../../../shared/types'
+import { AD_TAG, PHASES, type Attachment, type Context, type Step, type WorkItem } from '../../../shared/types'
 import { substitute } from '../../../shared/placeholders'
 import { slugger } from '../../../shared/slug'
 import { api, upload } from '../api'
@@ -106,7 +106,7 @@ export function StepSection({ step, item, mode, ordinal, insert, onInserted, onU
   const label = `${step.phase} ${ordinal} writeup`
   const labelRef = useRef(label) // the unmount flush outlives the render; report under the latest label
   labelRef.current = label
-  const send = (key: string) => (v: string) => api('PATCH', `/api/steps/${step.id}`, { [key]: v }).then(() => { reload(); statsChanged() }) // the toolbox reads item.steps; the writeups count includes loop lines
+  const send = (key: string) => (v: string) => api('PATCH', `/api/steps/${step.id}`, { [key]: v }).then(() => { reload(); if (!step[key as 'saw'].trim() !== !v.trim()) statsChanged() }) // reload: the toolbox reads item.steps; the writeups count only changes when a line goes between blank and filled
   const lines = [
     useAutosave(step.saw, send('saw'), `Saw of ${step.phase} ${ordinal}`),
     useAutosave(step.think, send('think'), `Think of ${step.phase} ${ordinal}`),
@@ -198,19 +198,23 @@ export function StepSection({ step, item, mode, ordinal, insert, onInserted, onU
           <input type="checkbox" checked={step.dead} aria-label={`${step.phase} ${ordinal} dead end`} onChange={(e) => act(() => api('PATCH', `/api/steps/${step.id}`, { dead: e.target.checked }))} />
           Dead end
         </label>
+        <select aria-label={`Phase of ${step.phase} ${ordinal}`} value={step.phase}
+          onChange={(e) => act(() => api('PATCH', `/api/steps/${step.id}`, { phase: e.target.value }).then(statsChanged))}>
+          {PHASES.filter((p) => p !== 'Persistence' || step.phase === p || item.tags.includes(AD_TAG)).map((p) => <option key={p}>{p}</option>)}
+        </select>
         <span className={`save ${shown === 'Not saved' ? 'bad' : ''}`} role="status">{shown}</span>
         <div className="ctl">
           <label className="ghost">Attach image<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Attach image" className="vh" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) attach(f) }} /></label>
           <button className="ghost" onClick={() => act(async () => {
-            clearTimeout(timer.current) // the copy must carry the text typed in the last 800 ms
+            clearTimeout(timer.current) // save the text typed in the last 800 ms before the list reloads
             const err = dirty.current && await save(bodyRef.current, seq.current)
             if (err) {
               timer.current = setTimeout(() => save(bodyRef.current, seq.current), SAVE_DELAY) // keep trying to save the text
-              throw new Error(err) // no copy without the text
+              throw new Error(err) // no new step until the text is saved
             }
             await api('POST', `/api/steps/${step.id}/duplicate`)
             statsChanged()
-          })}>Duplicate</button>
+          })}>Repeat phase</button>
           <button className="ghost" aria-label="Move up" title="Move up" disabled={!onUp} onClick={() => onUp?.()}>↑</button>
           <button className="ghost" aria-label="Move down" title="Move down" disabled={!onDown} onClick={() => onDown?.()}>↓</button>
           <button

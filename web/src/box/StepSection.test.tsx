@@ -278,11 +278,11 @@ test('adopting a newer server body does not save it back', async () => {
   expect(patches()).toEqual([])
 })
 
-test('Duplicate does not copy when its pre-save fails', async () => {
+test('Repeat phase does not copy when its pre-save fails', async () => {
   patchStatus = 500
   render(section({ mode: 'markdown' }))
   await userEvent.type(editorOf(), ' -sV')
-  await userEvent.click(screen.getByText('Duplicate'))
+  await userEvent.click(screen.getByText('Repeat phase'))
   expect(await screen.findByText('boom')).toBeTruthy()
   expect(fetchMock.mock.calls.some(([u]) => u === '/api/steps/5/duplicate')).toBe(false)
   patchStatus = 200
@@ -290,10 +290,10 @@ test('Duplicate does not copy when its pre-save fails', async () => {
   expect(JSON.parse(patches().at(-1)![1].body)).toEqual({ body: 'nmap {{TARGET}} -sV' })
 })
 
-test('Duplicate saves pending text first', async () => {
+test('Repeat phase saves pending text first', async () => {
   render(section({ mode: 'markdown' }))
   await userEvent.type(editorOf(), ' -sV')
-  await userEvent.click(screen.getByText('Duplicate'))
+  await userEvent.click(screen.getByText('Repeat phase'))
   await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => u === '/api/steps/5/duplicate')).toBe(true))
   const calls = fetchMock.mock.calls.map(([u, i]) => `${i?.method} ${u}`)
   expect(calls.indexOf('PATCH /api/steps/5')).toBeGreaterThanOrEqual(0)
@@ -403,4 +403,54 @@ test('shows the upload error', async () => {
   setup()
   fireEvent.change(screen.getByLabelText('Attach image'), { target: { files: [png()] } })
   expect((await screen.findByRole('alert')).textContent).toContain('not a png image')
+})
+
+const phaseSelect = () => screen.getByLabelText('Phase of Recon 1') as HTMLSelectElement
+const optionsOf = (sel: HTMLSelectElement) => [...sel.options].map((o) => o.value)
+
+test('the phase select PATCHes the step phase', async () => {
+  render(section())
+  await userEvent.selectOptions(phaseSelect(), 'PrivEsc')
+  expect(patches()[0][0]).toBe('/api/steps/5')
+  expect(JSON.parse(patches()[0][1].body)).toEqual({ phase: 'PrivEsc' })
+})
+
+test('the phase select shows a server refusal', async () => {
+  patchStatus = 400
+  render(section())
+  await userEvent.selectOptions(phaseSelect(), 'Root')
+  expect(await screen.findByText('boom')).toBeTruthy()
+})
+
+test('Persistence is offered only with the Active Directory tag, or when the step already has it', () => {
+  const base = ['Recon', 'Initial Access', 'PrivEsc', 'Lateral Movement', 'Root']
+  render(section())
+  expect(optionsOf(phaseSelect())).toEqual(base)
+  cleanup()
+  render(section({ item: { ...box, tags: ['Active Directory'] } as BoxDetail }))
+  expect(optionsOf(phaseSelect())).toEqual([...base, 'Persistence'])
+  cleanup()
+  render(section({ step: { ...step, phase: 'Persistence' } }))
+  const sel = screen.getByLabelText('Phase of Persistence 1') as HTMLSelectElement
+  expect(optionsOf(sel)).toEqual([...base, 'Persistence'])
+  expect(sel.value).toBe('Persistence')
+})
+
+test('a loop-line save announces a stats change only when the line goes between empty and filled', async () => {
+  const stats = vi.fn()
+  addEventListener('slingsh0t:stats', stats)
+  onTestFinished(() => removeEventListener('slingsh0t:stats', stats))
+  const { unmount } = render(section({ step: { ...step, saw: 'a' } }))
+  await userEvent.type(screen.getByRole('textbox', { name: 'Saw of Recon 1' }), 'b')
+  await userEvent.tab()
+  await waitFor(() => expect(patches()).toHaveLength(1))
+  expect(JSON.parse(patches()[0][1].body)).toEqual({ saw: 'ab' })
+  await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Saved'))
+  expect(stats).not.toHaveBeenCalled()
+  unmount()
+  render(section())
+  await userEvent.type(screen.getByRole('textbox', { name: 'Saw of Recon 1' }), 'a')
+  await userEvent.tab()
+  await waitFor(() => expect(patches()).toHaveLength(2))
+  await waitFor(() => expect(stats).toHaveBeenCalledTimes(1))
 })
