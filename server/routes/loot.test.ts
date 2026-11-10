@@ -18,6 +18,12 @@ const setup = () => {
 }
 
 describe('loot api', () => {
+  it('has no /api/loot and no pivot PATCH', async () => {
+    const { call } = setup()
+    expect((await call('GET', '/api/loot')).body.message).toBe('Route GET:/api/loot not found')
+    expect((await call('PATCH', '/api/pivots/1', { note: 'x' })).body.message).toBe('Route PATCH:/api/pivots/1 not found')
+  })
+
   it('creates subnets and pivots, validating input', async () => {
     const { call, net, h1 } = setup()
     expect((await call('POST', `/api/networks/${net}/subnets`, { cidr: '10.0.0.0/33' })).code).toBe(400)
@@ -26,7 +32,6 @@ describe('loot api', () => {
     expect((await call('POST', `/api/networks/${net}/subnets`, { cidr: '10.10.110.0/24' })).code).toBe(409)
     const p = await call('POST', '/api/pivots', { fromHostId: h1, subnetId: s.body.id, method: 'ligolo' })
     expect(p.body).toMatchObject({ fromHostId: h1, method: 'ligolo', note: '' })
-    expect((await call('PATCH', `/api/pivots/${p.body.id}`, { note: 'n' })).body.note).toBe('n')
     expect((await call('DELETE', `/api/pivots/${p.body.id}`)).code).toBe(200)
     expect((await call('DELETE', `/api/pivots/${p.body.id}`)).code).toBe(404)
     expect((await call('DELETE', `/api/subnets/${s.body.id}`)).code).toBe(200)
@@ -68,13 +73,11 @@ describe('loot api', () => {
     const rdp = (await call('POST', '/api/credentials', { boxId: box, kind: 'password', secret: 'p', worksOn: ['rdp'] })).body
     expect(rdp.worksOn).toEqual(['rdp'])
     await call('DELETE', `/api/credentials/${rdp.id}`)
-    const loot = (await call('GET', '/api/loot')).body
-    expect(loot.map((l: any) => l.scopeName)).toEqual(['Lab', 'Box'])
     expect((await call('GET', '/api/credentials?all=1')).body).toHaveLength(2)
     expect((await call('PATCH', `/api/credentials/${b.id}`, { username: 'bob' })).body.username).toBe('bob')
     expect((await call('PATCH', `/api/credentials/${b.id}`, { secret: '' })).code).toBe(400)
     expect((await call('DELETE', `/api/credentials/${b.id}`)).code).toBe(200)
-    expect((await call('GET', '/api/loot')).body).toHaveLength(1)
+    expect((await call('GET', '/api/credentials?all=1')).body).toHaveLength(1)
   })
 
   it('keeps host ids inside the scope network', async () => {

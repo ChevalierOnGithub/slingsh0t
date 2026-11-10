@@ -91,14 +91,6 @@ export const lootRoutes: FastifyPluginAsync<{ db: Database }> = async (app, { db
     const pid = db.prepare('INSERT INTO pivots (from_host_id, subnet_id, method, note) VALUES (?, ?, ?, ?)').run(b.fromHostId, b.subnetId, b.method ?? '', b.note ?? '').lastInsertRowid as number
     return reply.code(201).send(pivot(pid))
   })
-  app.patch<{ Params: { id: string }; Body: Row }>('/api/pivots/:id', async (req, reply) => {
-    const pid = Number(req.params.id)
-    if (!pivot(pid)) return reply.code(404).send({ error: 'not found' })
-    const { method, note } = req.body ?? {}
-    if ((method !== undefined && !isStr(method)) || (note !== undefined && !isStr(note))) return reply.code(400).send({ error: 'invalid method or note' })
-    patch('pivots', pid, { method, note })
-    return pivot(pid)
-  })
   app.delete('/api/pivots/:id', del('pivots'))
 
   // --- credentials ---
@@ -210,5 +202,4 @@ export const lootRoutes: FastifyPluginAsync<{ db: Database }> = async (app, { db
   })
   app.delete('/api/flags/:id', del('flags'))
 
-  app.get('/api/loot', async () => credentials('', []))
 }
