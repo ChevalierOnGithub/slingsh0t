@@ -266,3 +266,24 @@ test('Edit details patches name, OS, difficulty and the AD tag, then closes', as
   expect(JSON.parse(patch[1]!.body as string)).toEqual({ name: 'Box 1', os: 'Windows', difficulty: 'Hard', tags: ['Active Directory'] })
   await waitFor(() => expect(screen.queryByRole('form', { name: 'Box details' })).toBeNull())
 })
+
+test('Edit details saves a box that has no OS', async () => {
+  const noOs = { ...boxOf(1, 5), os: '' }
+  const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => json(init?.method === 'PATCH' ? {} : noOs))
+  vi.stubGlobal('fetch', fetchMock)
+  render(<BoxPage id={1} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Edit details' }))
+  expect((screen.getByRole('textbox', { name: 'OS' }) as HTMLInputElement).required).toBe(false)
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Active Directory' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+  const patch = fetchMock.mock.calls.find(([, i]) => i?.method === 'PATCH')!
+  expect(patch[0]).toBe('/api/boxes/1')
+  expect(JSON.parse(patch[1]!.body as string)).toEqual({ name: 'Box 1', os: '', difficulty: 'Easy', tags: ['Active Directory'] })
+})
+
+test('a rooted box with no start date does not say "Not started yet"', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json({ ...boxOf(1, 5), status: 'rooted', startedAt: null })))
+  render(<BoxPage id={1} />)
+  await screen.findByText('Box 1')
+  expect(screen.queryByText('Not started yet')).toBeNull()
+})

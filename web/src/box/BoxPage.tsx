@@ -68,14 +68,14 @@ function BoxView({ box, error, reload, change }: { box: BoxDetail; error: string
           <span>{box.os}</span>
           <span><span className="dot" style={{ '--c': `var(--${box.difficulty.toLowerCase()})` } as React.CSSProperties} />{box.difficulty}</span>
           {box.tags.map((t) => <span key={t} className="tag">{t}</span>)}
-          <span>{box.startedAt ? `Started ${new Date(box.startedAt).toLocaleDateString()}` : 'Not started yet'}</span>
+          {(box.startedAt || box.status === 'not_started') && <span>{box.startedAt ? `Started ${new Date(box.startedAt).toLocaleDateString()}` : 'Not started yet'}</span>}
           {!editing && <button type="button" className="ghost" onClick={() => setEditing(true)}>Edit details</button>}
           <button type="button" className="ghost bad" onClick={remove}>Delete box</button>
         </div>
         {editing && (
           <form className="add edit" aria-label="Box details" onSubmit={saveDetails}>
             <label>Name <input type="text" name="name" required defaultValue={box.name} /></label>
-            <label>OS <input type="text" name="os" required defaultValue={box.os} /></label>
+            <label>OS <input type="text" name="os" defaultValue={box.os} /></label>
             <label>Difficulty <select name="difficulty" defaultValue={box.difficulty}>{DIFFICULTIES.map((d) => <option key={d}>{d}</option>)}</select></label>
             <label className="chk"><input type="checkbox" name="ad" defaultChecked={box.tags.includes(AD_TAG)} /> Active Directory</label>
             <button className="btn primary" type="submit">Save</button>
