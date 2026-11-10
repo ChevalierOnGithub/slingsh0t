@@ -21,6 +21,9 @@ import { homeRoutes } from './routes/home'
 import { searchRoutes } from './routes/search'
 import { statsRoutes } from './routes/stats'
 
+// The page holds the API token and every stored credential: no inline script, no third-party origin.
+const PAGE_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+
 export async function startServer(opts: { dataDir?: string; port?: number; webDir?: string; env?: Record<string, string | undefined> } = {}): Promise<FastifyInstance> {
   const dataDir = opts.dataDir ?? defaultDataDir()
   const webDir = resolve(opts.webDir ?? 'dist/web')
@@ -51,7 +54,7 @@ export async function startServer(opts: { dataDir?: string; port?: number; webDi
     if ((req.method !== 'GET' && req.method !== 'HEAD') || path === '/api' || path.startsWith('/api/'))
       return reply.code(404).send({ error: 'not found' })
     // Re-read per request so a rebuild is picked up without restart.
-    reply.headers({ 'x-frame-options': 'DENY', 'content-security-policy': "frame-ancestors 'none'; img-src 'self' data:" })
+    reply.headers({ 'x-frame-options': 'DENY', 'content-security-policy': PAGE_CSP })
     if (!existsSync(indexFile)) return reply.code(503).type('text/plain; charset=utf-8').send('The web app is not built yet: run npm run build.')
     const html = readFileSync(indexFile, 'utf8').replace('</head>', `<meta name="slingsh0t-token" content="${token}"></head>`)
     return reply.type('text/html; charset=utf-8').send(html)

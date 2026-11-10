@@ -33,7 +33,7 @@ describe('startServer', () => {
     expect((await get('/boxes/whatever')).body).toContain(meta)
     expect((await get('/assets/a.js')).body).toBe('console.log(1)')
     expect(res.headers['x-frame-options']).toBe('DENY')
-    expect(res.headers['content-security-policy']).toBe("frame-ancestors 'none'; img-src 'self' data:")
+    expect(res.headers['content-security-policy']).toBe("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
   })
 
   it('reuses the token on restart', async () => {
@@ -108,7 +108,7 @@ describe('startServer', () => {
     expect(res.body).not.toContain(webDir)
     expect(res.body).not.toContain('index.html')
     expect(res.headers['x-frame-options']).toBe('DENY')
-    expect(res.headers['content-security-policy']).toBe("frame-ancestors 'none'; img-src 'self' data:")
+    expect(res.headers['content-security-policy']).toBe("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
   })
 
   it('regenerates an empty install-token instead of disabling auth', async () => {
