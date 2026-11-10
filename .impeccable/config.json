@@ -101,6 +101,24 @@
         ],
         "createdAt": "2026-11-06T22:51:32.802Z",
         "reason": "Claude's call: throwaway brainstorm wireframe drawn at reduced scale; not shipped UI"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "web/src/box/toolbox.css"
+        ],
+        "createdAt": "2026-11-10T11:36:42.571Z",
+        "reason": "agent: both hits (L22, L65) are CSS triangles for disclosure chevrons (border-left on a zero-size ::before and <i>), not a card accent border; lines unchanged since the initial commit"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "web/src/box/Toolbox.css"
+        ],
+        "createdAt": "2026-11-10T11:36:42.688Z",
+        "reason": "agent: both hits (L22, L65) are CSS triangles for disclosure chevrons (border-left on a zero-size ::before and <i>), not a card accent border; lines unchanged since the initial commit"
       }
     ]
   }
