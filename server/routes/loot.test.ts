@@ -73,7 +73,7 @@ describe('loot api', () => {
     const rdp = (await call('POST', '/api/credentials', { boxId: box, kind: 'password', secret: 'p', worksOn: ['rdp'] })).body
     expect(rdp.worksOn).toEqual(['rdp'])
     await call('DELETE', `/api/credentials/${rdp.id}`)
-    expect((await call('GET', '/api/credentials?all=1')).body).toHaveLength(2)
+    expect((await call('GET', '/api/credentials?all=1')).body.map((c: any) => c.scopeName)).toEqual(['Lab', 'Box'])
     expect((await call('PATCH', `/api/credentials/${b.id}`, { username: 'bob' })).body.username).toBe('bob')
     expect((await call('PATCH', `/api/credentials/${b.id}`, { secret: '' })).code).toBe(400)
     expect((await call('DELETE', `/api/credentials/${b.id}`)).code).toBe(200)

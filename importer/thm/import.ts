@@ -14,9 +14,9 @@ import { fetchChallengeRooms, fetchCompletedRooms, type ThmNetwork, type ThmRoom
  */
 export function importThmCatalog(db: Database.Database, rooms: ThmRoom[]): { inserted: number; updated: number; skipped: number } {
   const stats = { inserted: 0, updated: 0, skipped: 0 }
-  type Row = { id: number; name: string; os: string; difficulty: string; source_id: string | null; url: string; release_date: string | null }
-  const find = db.prepare('SELECT id, name, os, difficulty, source_id, url, release_date FROM boxes WHERE source_id = ?')
-  const manual = db.prepare("SELECT id, name, os, difficulty, source_id, url, release_date FROM boxes WHERE platform = 'THM' AND source_id IS NULL AND norm_name(name) = norm_name(?) ORDER BY id LIMIT 1")
+  type Row = { id: number; os: string; source_id: string | null; url: string; release_date: string | null }
+  const find = db.prepare('SELECT id, os, source_id, url, release_date FROM boxes WHERE source_id = ?')
+  const manual = db.prepare("SELECT id, os, source_id, url, release_date FROM boxes WHERE platform = 'THM' AND source_id IS NULL AND norm_name(name) = norm_name(?) ORDER BY id LIMIT 1")
   const insert = db.prepare("INSERT INTO boxes (short_id, platform, name, os, difficulty, source_id, source, url, release_date) VALUES (?, 'THM', ?, ?, ?, ?, 'thm', ?, ?)")
   const update = db.prepare("UPDATE boxes SET os = ?, source_id = ?, source = 'thm', url = CASE WHEN url = '' THEN ? ELSE url END, release_date = ? WHERE id = ?")
   db.transaction(() => {

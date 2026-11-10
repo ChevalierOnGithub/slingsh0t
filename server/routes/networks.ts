@@ -63,7 +63,7 @@ export const networksRoutes: FastifyPluginAsync<{ db: Database.Database; now?: (
     const set = networkFields(b, false)
     // A preset-made network carries the preset id as source_id, so the import recognises it.
     const preset = b.presetId === undefined ? undefined : PRESETS.find((p) => p.id === b.presetId) ?? fail('unknown preset')
-    if (preset) set.url ??= preset.url
+    if (preset) set.url ??= preset.url ?? ''
     const nid = tx(() => {
       if (preset && db.prepare('SELECT 1 FROM networks WHERE source_id = ?').get(preset.id)) fail('this lab is already in your networks', 409)
       const row = { ...set, ...(preset && { source_id: preset.id }), short_id: nextShortId(db, 'N') }

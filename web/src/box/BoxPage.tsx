@@ -38,7 +38,7 @@ function BoxView({ box, error, reload, change }: { box: BoxDetail; error: string
       setEditError((err as Error).message)
     }
   }
-  useEffect(() => recordRecent('box', box.id, box.name), [box.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => recordRecent('box', box.id, box.name), [box.id, box.name])
   const remove = async () => {
     if (!confirm(`Delete ${box.name} with its steps, notes, credentials and flags? This can't be undone.`)) return
     try {

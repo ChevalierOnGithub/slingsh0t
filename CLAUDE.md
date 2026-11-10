@@ -49,6 +49,7 @@ A new top-level runtime folder must be added to the `Dockerfile` (it copies fold
 - The server injects the token into `index.html` as a `<meta>` tag per request; `web/src/api.ts` reads it.
 - Each `server/routes/*.ts` exports a `FastifyPluginAsync<{ db }>` and uses synchronous `better-sqlite3` calls directly; there is no ORM or repository layer. Row-to-type mappers (`toStep`, `toSummary`, ...) sit beside the routes. Validation is hand-written guards in `server/validate.ts`; `fail(msg, status)` throws the HTTP error.
 - Routes that need the time take an injectable `now` option. Units differ: boxes and networks use epoch seconds, home uses milliseconds.
+- The page (and its 503 fallback) is served with a strict `content-security-policy` held in one constant in `server/index.ts`: scripts and connections from the app's own origin only, no inline script. A feature that needs an inline script, a worker, or a third-party origin must change that constant and its two tests in `server/index.test.ts`.
 
 ### Database
 
@@ -56,6 +57,7 @@ A new top-level runtime folder must be added to the `Dockerfile` (it copies fold
 - Shipped history is frozen too: never edit an existing `MIGRATIONS` entry or a tuple it interpolates (`INDEXED`, `STEP`, `HOST`, ...). A changed index definition gets a new tuple and a new migration, as `STEP_V2` did.
 - A table rebuild uses the `{ sql, foreignKeysOff: true }` form; the runner checks it introduced no new foreign-key violations.
 - `openDb` copies an existing db to `data/backups/pre-migration-v<n>-<stamp>.db` before migrating.
+- `backupDb` prunes `data/backups` to the newest 10 `slingsh0t-*.db` files after each backup (never the file just written, never `pre-migration-*` or `pre-restore-*`). The download route and `scripts/restore.ts` pass `keep = Infinity`, so they never prune.
 - `server/db.migrate.test.ts` asserts the migration count and checks some entries by array position, so a new migration needs that test updated.
 - Search is one FTS5 table, `search_index`, kept current by triggers generated in `db.ts` from `[kind, table, title, body, box_id]` tuples. A new searchable column or table means a migration that drops and regenerates the triggers and backfills. Update triggers are scoped (`AFTER UPDATE OF ...`) so reorders and status changes do not reindex.
 - Credential secrets and flag values are stored unencrypted and must never be indexed or logged.
@@ -67,7 +69,7 @@ A new top-level runtime folder must be added to the `Dockerfile` (it copies fold
 - A step belongs to exactly one box or one host (`Owner` in `server/routes/boxes.ts`; CHECK constraint in the db). Box and host pages share the same step, toolbox and report code through the `WorkItem` type; a host inherits its network's tags.
 - The six phases live in `PHASES` (`shared/types.ts`). Persistence is offered only when the owner has the `Active Directory` tag. The list is interpolated into CHECK constraints in `schema.sql` and the networks migration, so existing databases keep the old list: changing a phase needs a table-rebuild migration.
 - The target context is a single `context` row (`server/routes/context.ts`): active box or host, LHOST, LPORT. `{{TARGET}}`, `{{LHOST}}`, `{{LPORT}}`, `{{DNS}}` are substituted at render time by `shared/placeholders.ts`; stored text always keeps the placeholders.
-- Imports add new boxes and fill in a missing OS, link or release date. They never change a box's name, difficulty, notes, steps, tags or target IP, never lower a status, and set no dates.
+- Imports add new boxes, fill in a missing OS or link, and refresh the release date. They can move a status forward (never back); a box they mark rooted gets every step ticked. They never change a box's name, difficulty, notes, step text, tags or target IP, and set no start or rooted date.
 
 ### Library seed
 

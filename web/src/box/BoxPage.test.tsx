@@ -175,6 +175,19 @@ test('window focus reloads the item', async () => {
   await waitFor(() => expect(gets()).toBe(before + 1))
 })
 
+test('a rename recorded on reload updates the recent label', async () => {
+  let name = 'Box 1'
+  const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => init?.method === 'POST' ? json({}) : json({ ...boxOf(1, 5), name }))
+  vi.stubGlobal('fetch', fetchMock)
+  const labels = () => fetchMock.mock.calls.filter(([u, i]) => u === '/api/recents' && i?.method === 'POST').map(([, i]) => JSON.parse(String(i!.body)).label)
+  render(<BoxPage id={1} />)
+  await screen.findByText('Box 1')
+  await waitFor(() => expect(labels()).toContain('Box 1'))
+  name = 'Renamed'
+  act(() => { dispatchEvent(new Event('focus')) })
+  await waitFor(() => expect(labels()).toContain('Renamed'))
+})
+
 test('the DNS name beside the box name autosaves on blur', async () => {
   const calls: [string, RequestInit | undefined][] = []
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => { calls.push([url, init]); return json(init?.method === 'PATCH' ? { ...boxOf(1, 5), dns: 'lame.htb' } : boxOf(1, 5)) }))

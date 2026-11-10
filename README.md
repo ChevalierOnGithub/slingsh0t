@@ -51,13 +51,13 @@ Everything lives in `data/` (override with `SLINGSH0T_DATA_DIR`): `slingsh0t.db`
 
 Before a schema upgrade, an existing database is copied to `data/backups/pre-migration-v<old version>-<timestamp>.db`.
 
-`data/backups` keeps the 10 newest `slingsh0t-*.db` copies; `pre-migration-*` and `pre-restore-*` files are never removed automatically. A downloaded backup is not kept on disk.
+`data/backups` keeps the 10 newest `slingsh0t-*.db` copies; `pre-migration-*` and `pre-restore-*` files are never removed automatically. A downloaded backup is not kept on disk. The copy made before a restore or a library seed is one of those `slingsh0t-*.db` files, so it is pruned like any other; rename a copy you want to keep. The first backup or seed after upgrading removes every `slingsh0t-*.db` beyond the newest 10.
 
 **Warning: `data/slingsh0t.db` stores credentials and hashes unencrypted. Keep it out of shared folders and backups you don't control.**
 
 ## Importing boxes
 
-Use the Import screen in the app, or the commands. Imports add new boxes and fill in a missing OS, link or release date. They never change a box's name, difficulty, notes, steps, tags or target IP, never lower a status, and set no dates.
+Use the Import screen in the app, or the commands. Imports add new boxes, fill in a missing OS or link, and refresh the release date. They can move a status forward (never back); a box they mark rooted gets every step ticked. They never change a box's name, difficulty, notes, step text, tags or target IP, and set no start or rooted date.
 
 ```
 npm run import:htb    # HTB active + retired machines and your progress

@@ -106,12 +106,13 @@ describe('reportOf', () => {
   it('secrets print in code spans so Markdown cannot change them', () => {
     const box = seedBox()
     const ins = db.prepare("INSERT INTO credentials (box_id, username, kind, secret) VALUES (?, 'u', 'password', ?)")
-    for (const s of ['Summer*2024*!', 'a`b', '`x`', 'p|q']) ins.run(box, s)
+    for (const s of ['Summer*2024*!', 'a`b', '`x`', 'p|q', ' lead and trail ']) ins.run(box, s)
     const { markdown } = reportOf(db, { col: 'box_id', id: box }, today)
     expect(markdown).toContain('| u | password | `Summer*2024*!` |')
     expect(markdown).toContain('| u | password | ``a`b`` |')
     expect(markdown).toContain('| u | password | `` `x` `` |')
     expect(markdown).toContain('| u | password | `p\\|q` |')
+    expect(markdown).toContain('| u | password | `  lead and trail  ` |')
   })
 
   it('a flag value in a credential note is redacted', () => {

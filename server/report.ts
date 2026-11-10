@@ -17,10 +17,10 @@ const day = (s?: string | null) => (s ? localDay(new Date(s.includes('T') ? s : 
 const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
 const table = (head: string[], rows: string[][]) =>
   [head, head.map(() => '---'), ...rows].map((r) => `| ${r.map(cell).join(' | ')} |`).join('\n')
-/** An inline code span that shows `s` exactly: a fence one longer than its longest backtick run, padded when it starts or ends with a backtick. */
+/** An inline code span that shows `s` exactly: a fence one longer than its longest backtick run, padded when it starts or ends with a backtick or a space. */
 const code = (s: string) => {
   const fence = '`'.repeat(Math.max(0, ...(s.match(/`+/g) ?? []).map((r) => r.length)) + 1)
-  const pad = /^`|`$/.test(s) ? ' ' : ''
+  const pad = /^[` ]|[` ]$/.test(s) ? ' ' : ''
   return `${fence}${pad}${s}${pad}${fence}`
 }
 /** Replaces every flag value of 6+ characters (trimmed) in a text. */
