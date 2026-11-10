@@ -61,6 +61,13 @@ test('unsorted items list and delete', async () => {
   expect(fetchMock.mock.calls.some(([u, i]) => u === '/api/unsorted/3' && i.method === 'DELETE')).toBe(true)
 })
 
+test('the Backup hint says nothing is kept on the server', () => {
+  fetchMock.mockImplementation(async () => reply([]))
+  render(<ImportPage />)
+  expect(screen.getByLabelText('Backup').textContent).toContain('Nothing is kept on the server; run npm run backup for a copy in the data folder.')
+  expect(screen.queryByText(/A copy also stays/)).toBeNull()
+})
+
 test('a file over 20 MB is rejected without reading or posting', async () => {
   fetchMock.mockImplementation(async () => reply([]))
   render(<ImportPage />)

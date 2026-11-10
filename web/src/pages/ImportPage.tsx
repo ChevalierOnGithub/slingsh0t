@@ -84,7 +84,7 @@ function BackupPanel() {
   return (
     <section className="ipanel" aria-label="Backup">
       <h2>Backup</h2>
-      <p className="hint">Downloads a copy of the database: boxes, writeups, screenshots, loot. Credentials are stored in plain text, so keep the file private. A copy also stays in the data folder under backups.</p>
+      <p className="hint">Downloads a copy of the database: boxes, writeups, screenshots, loot. Credentials are stored in plain text, so keep the file private. Nothing is kept on the server; run <code>npm run backup</code> for a copy in the data folder.</p>
       <div className="irow">
         <button className="btn primary" disabled={busy} onClick={download}>
           Download backup
