@@ -26,7 +26,7 @@ export function NetworkForm({ initial, presets, submitLabel, onSubmit, onCancel 
   const choose = (id: string) => {
     const p = presets?.find((x) => x.id === id)
     setPreset(id)
-    if (p) setForm({ ...form, platform: p.platform, name: p.name, hostsInScope: String(p.hostsInScope ?? ''), flagsInScope: String(p.flagsInScope ?? '') })
+    if (p) setForm({ ...form, platform: p.platform, name: p.name, hostsInScope: String(p.hostsInScope ?? ''), flagsInScope: String(p.flagsInScope ?? ''), ad: !!p.tags?.includes(AD_TAG) })
   }
   const count = (v: string) => (v === '' ? null : Number(v))
   const submit = async (e: FormEvent) => {
@@ -36,7 +36,7 @@ export function NetworkForm({ initial, presets, submitLabel, onSubmit, onCancel 
     setBusy(true)
     try {
       const tags = [...(form.ad ? [AD_TAG] : []), ...form.tags.split(',').map((t) => t.trim()).filter((t) => t && t !== AD_TAG)]
-      await onSubmit({ platform: form.platform, name: form.name.trim(), hostsInScope: count(form.hostsInScope), flagsInScope: count(form.flagsInScope), tags: [...new Set(tags)], entry: form.entry })
+      await onSubmit({ platform: form.platform, name: form.name.trim(), hostsInScope: count(form.hostsInScope), flagsInScope: count(form.flagsInScope), tags: [...new Set(tags)], entry: form.entry, ...(preset && { presetId: preset }) })
     } finally {
       inFlight.current = false
       setBusy(false)

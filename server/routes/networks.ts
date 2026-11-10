@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import type { NetworkDetail, NetworkSummary } from '../../shared/types'
 import { updateRow } from '../db'
 import { nextShortId } from '../ids'
+import { PRESETS } from '../presets'
 import { hostIps, localDay, networkReportOf } from '../report'
 import { fail, isHostOrEmpty, isStr, isTags, isUrlOrEmpty } from '../validate'
 import { addDefaultSteps, checkAdRemoval, hostDetail, markRooted, ownerSet } from './boxes'
@@ -58,9 +59,14 @@ export const networksRoutes: FastifyPluginAsync<{ db: Database.Database; now?: (
   app.get('/api/networks', async () => (db.prepare(`${SUMMARY} ORDER BY n.created_at DESC, n.id DESC`).all() as Row[]).map(toSummary))
 
   app.post('/api/networks', async (req, reply) => {
-    const set = networkFields((req.body ?? {}) as Row, false)
+    const b = (req.body ?? {}) as Row
+    const set = networkFields(b, false)
+    // A preset-made network carries the preset id as source_id, so the import recognises it.
+    const preset = b.presetId === undefined ? undefined : PRESETS.find((p) => p.id === b.presetId) ?? fail('unknown preset')
+    if (preset) set.url ??= preset.url
     const nid = tx(() => {
-      const row = { ...set, short_id: nextShortId(db, 'N') }
+      if (preset && db.prepare('SELECT 1 FROM networks WHERE source_id = ?').get(preset.id)) fail('this lab is already in your networks', 409)
+      const row = { ...set, ...(preset && { source_id: preset.id }), short_id: nextShortId(db, 'N') }
       const cols = Object.keys(row)
       return Number(db.prepare(`INSERT INTO networks (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`).run(...Object.values(row)).lastInsertRowid)
     })

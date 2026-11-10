@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { openDb } from '../db'
+import { importNetworkPresets } from '../../importer/networks/import'
 import { boxRoutes } from './boxes'
 import { libraryRoutes } from './library'
 import { networksRoutes } from './networks'
@@ -61,6 +62,16 @@ describe('networks', () => {
     expect((await call('POST', '/api/networks', { platform: 'HTB', name: 'x', hostsInScope: -1 })).statusCode).toBe(400)
     expect((await call('GET', '/api/networks/9')).statusCode).toBe(404)
     expect(count('SELECT count(*) n FROM networks')).toBe(0)
+  })
+
+  it('a network created from a preset is the one the import recognises', async () => {
+    const body = { platform: 'HTB', name: 'Dante', hostsInScope: 14, flagsInScope: 26, tags: ['Active Directory'], entry: '', presetId: 'htb-dante' }
+    const r = await call('POST', '/api/networks', body)
+    expect(r.statusCode).toBe(201)
+    expect(r.json().url).toBe('https://app.hackthebox.com/prolabs/overview/dante')
+    expect(importNetworkPresets(db, 'HTB')).toEqual({ inserted: 5, skipped: 1 })
+    expect((await call('POST', '/api/networks', body)).statusCode).toBe(409)
+    expect((await call('POST', '/api/networks', { ...body, presetId: 'nope' })).statusCode).toBe(400)
   })
 
   it('delete network cascades hosts, steps and their search rows', async () => {

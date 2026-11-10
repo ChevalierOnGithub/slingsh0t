@@ -8,7 +8,7 @@ let fetchMock: ReturnType<typeof vi.fn>
 beforeEach(() => {
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => new Response(JSON.stringify(
     init?.method === 'POST' ? { id: 7 }
-      : url === '/api/network-presets' ? [{ id: 'htb-dante', platform: 'HTB', name: 'Dante', hostsInScope: 14, flagsInScope: 26, source: 'x' },
+      : url === '/api/network-presets' ? [{ id: 'htb-dante', platform: 'HTB', name: 'Dante', hostsInScope: 14, flagsInScope: 26, source: 'x', tags: ['Active Directory'], url: 'https://app.hackthebox.com/prolabs/overview/dante' },
         { id: 'thm-holo', platform: 'THM', name: 'Holo', hostsInScope: null, flagsInScope: null, source: 'y' }]
       : [{ id: 2, shortId: 'N-002', platform: 'THM', name: 'Wreath', hostsInScope: null, flagsInScope: null, hostsFound: 3, hostsOwned: 1, flagsCaptured: 2, credentials: 0 }],
   ), { status: init?.method === 'POST' ? 201 : 200 }))
@@ -34,7 +34,17 @@ test('a preset fills the form; the owner can still edit it before adding', async
   await waitFor(() => expect(location.hash).toBe('#/networks/7'))
   const post = fetchMock.mock.calls.find(([, i]) => i?.method === 'POST')!
   expect(post[0]).toBe('/api/networks')
-  expect(JSON.parse(post[1].body)).toEqual({ platform: 'THM', name: 'Holo', hostsInScope: 9, flagsInScope: null, tags: [], entry: '' })
+  expect(JSON.parse(post[1].body)).toEqual({ platform: 'THM', name: 'Holo', hostsInScope: 9, flagsInScope: null, tags: [], entry: '', presetId: 'thm-holo' })
+})
+
+test('a preset ticks Active Directory and sends its id', async () => {
+  render(<NetworksPage />)
+  await userEvent.selectOptions(await screen.findByLabelText('Preset'), 'Dante')
+  expect((screen.getByLabelText('Active Directory') as HTMLInputElement).checked).toBe(true)
+  await userEvent.click(screen.getByRole('button', { name: 'Add network' }))
+  await waitFor(() => expect(location.hash).toBe('#/networks/7'))
+  const post = fetchMock.mock.calls.find(([, i]) => i?.method === 'POST')!
+  expect(JSON.parse(post[1].body)).toEqual({ platform: 'HTB', name: 'Dante', hostsInScope: 14, flagsInScope: 26, tags: ['Active Directory'], entry: '', presetId: 'htb-dante' })
 })
 
 test('Manual entry keeps typed fields; tags and the Active Directory box are sent', async () => {
@@ -44,12 +54,13 @@ test('Manual entry keeps typed fields; tags and the Active Directory box are sen
   await userEvent.selectOptions(screen.getByLabelText('Preset'), 'Manual entry')
   expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('Dante')
   expect((screen.getByLabelText('Flags in scope') as HTMLInputElement).value).toBe('267')
-  await userEvent.click(screen.getByLabelText('Active Directory'))
+  expect((screen.getByLabelText('Active Directory') as HTMLInputElement).checked).toBe(true) // kept from the Dante preset
   await userEvent.type(screen.getByLabelText('Other tags'), 'Pro Lab, , pivoting')
   await userEvent.click(screen.getByRole('button', { name: 'Add network' }))
   await waitFor(() => expect(location.hash).toBe('#/networks/7'))
   const post = fetchMock.mock.calls.find(([, i]) => i?.method === 'POST')!
   expect(JSON.parse(post[1].body).tags).toEqual(['Active Directory', 'Pro Lab', 'pivoting'])
+  expect(JSON.parse(post[1].body)).not.toHaveProperty('presetId')
 })
 
 test('double-clicking Add network posts once', async () => {
