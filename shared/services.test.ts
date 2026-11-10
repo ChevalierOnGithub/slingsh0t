@@ -51,4 +51,10 @@ describe('servicesInText', () => {
     // Windows answers msrpc on every ephemeral port; only the endpoint mapper is the RPC service
     expect(servicesInText('135/tcp open msrpc\n49664/tcp open msrpc\n49665/tcp open msrpc')).toEqual([{ name: 'rpc', port: 135 }])
   })
+
+  it('a protocol version is not a port', () => {
+    expect(servicesInText('HTTP/1.1 200 OK')).toEqual([{ name: 'http', port: null }])
+    expect(servicesInText('GET / HTTP/2 200')).toEqual([{ name: 'http', port: null }])
+    expect(servicesInText('ftp:21 and ssh/22')).toEqual([{ name: 'ftp', port: 21 }, { name: 'ssh', port: 22 }])
+  })
 })

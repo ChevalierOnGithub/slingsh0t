@@ -31,7 +31,7 @@ export function servicesInText(text: string): BoxService[] {
   for (const m of t.matchAll(/(?<![\d.])(\d{1,5})\/(?:tcp|udp)\s+(?:open\s+)?((?:ssl\/)?[a-z][a-z0-9-]*)/g)) add(m[2], m[1])
   // below 20 it's a count in prose (`found 3 smb shares`), not a port
   for (const m of t.matchAll(/(?<![\d.])(\d{1,5})\s+([a-z][a-z0-9-]*)/g)) add(m[2], m[1], 20)
-  for (const m of t.matchAll(/([a-z][a-z0-9-]*)[:/](\d{1,5})(?!\d)/g)) add(m[1], m[2])
+  for (const m of t.matchAll(/([a-z][a-z0-9-]*)[:/](\d{1,5})(?!\d)/g)) add(m[1], m[2], 20)
   // a bare word counts only as a whole slug (not `https`, `smb2`, `ssh-hostkey`) and only when no port was found for it
   for (const name of SERVICES)
     if (!found.some((s) => s.name === name) && !parsed.has(name) && new RegExp(`(?<![a-z0-9-])${name}(?![a-z0-9-])`).test(t)) found.push({ name, port: null })
