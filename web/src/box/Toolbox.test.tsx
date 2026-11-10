@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -585,6 +585,23 @@ test('the placeholder stays when nothing is active and the box has no IP', async
   withContext({ activeBoxId: null, target: '' })
   setup({ item: { ...box, targetIp: null } as BoxDetail })
   expect((await row('nmap -p- --min-rate 1400')).textContent).toContain('{{TARGET}}')
+})
+
+test('Copy on a rooted box copies and leaves Tried alone', async () => {
+  const { user, writeText } = setup({ item: { ...box, status: 'rooted' } as BoxDetail })
+  await user.click(within(await row('nmap -p- --min-rate 1400')).getByRole('button', { name: /^Copy/ }))
+  expect(writeText).toHaveBeenCalled()
+  expect(posts('/api/steps/12/tried')).toEqual([])
+})
+
+test('the toolbox reloads when a step is deleted or the Active Directory tag changes', async () => {
+  const loads = () => fetchMock.mock.calls.filter(([u]) => u === '/api/toolbox?boxId=7').length
+  const { rerender } = setup()
+  await waitFor(() => expect(loads()).toBe(1))
+  rerender({ item: { ...box, steps: box.steps.slice(0, 1) } as BoxDetail })
+  await waitFor(() => expect(loads()).toBe(2))
+  rerender({ item: { ...box, steps: box.steps.slice(0, 1), tags: [AD_TAG] } as BoxDetail })
+  await waitFor(() => expect(loads()).toBe(3))
 })
 
 test('a failed Tried append on Copy still copies and shows the error', async () => {
