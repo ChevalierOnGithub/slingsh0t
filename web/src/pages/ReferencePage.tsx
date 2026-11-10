@@ -80,6 +80,7 @@ function View({ page, onSaved }: { page: Page; onSaved(p: Page): void }) {
     return p
   }
   const save = async () => {
+    if (!dirty()) return cancel()
     try {
       await put()
       setError(null)

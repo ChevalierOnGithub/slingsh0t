@@ -172,3 +172,17 @@ test('a newer copy that arrived while editing is adopted once editing ends clean
   await user.click(screen.getByRole('button', { name: 'Edit' }))
   expect((screen.getByLabelText('Kerberos markdown') as HTMLTextAreaElement).value).toBe('Newer text')
 })
+
+test('Save with nothing changed sends no PUT and adopts the newer copy', async () => {
+  const user = userEvent.setup()
+  render(<ReferencePage id={2} />)
+  await user.click(await screen.findByRole('button', { name: 'Edit' }))
+  pages[0] = { ...pages[0], body: 'Newer text' }
+  dispatchEvent(new Event('focus'))
+  await waitFor(() => expect(fetchMock.mock.calls.filter(([u]) => u === '/api/reference')).toHaveLength(2))
+  await fetchMock.mock.results.at(-1)!.value
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  expect(fetchMock.mock.calls.filter(([, i]) => i?.method === 'PUT')).toHaveLength(0)
+  await user.click(screen.getByRole('button', { name: 'Edit' }))
+  expect((screen.getByLabelText('Kerberos markdown') as HTMLTextAreaElement).value).toBe('Newer text')
+})
