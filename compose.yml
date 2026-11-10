@@ -14,9 +14,11 @@ services:
       - no-new-privileges:true
     environment:
       SLINGSH0T_HOST: 0.0.0.0
-    # Compose reads .env for interpolation; only these two reach the container.
+    # Compose reads .env for interpolation; only these three reach the container.
       HTB_APP_TOKEN: ${HTB_APP_TOKEN:-}
       THM_USERNAME: ${THM_USERNAME:-}
+      # report dates use the container's local day; set TZ in .env (for example Europe/Bucharest)
+      TZ: ${TZ:-UTC}
     # Loopback only, and host port must stay 4317: the server rejects any other Host header.
     ports:
       - 127.0.0.1:4317:4317

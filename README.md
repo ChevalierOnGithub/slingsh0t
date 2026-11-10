@@ -29,7 +29,7 @@ docker compose build --pull && docker compose up -d   # pick up base-image secur
 The container runs as a non-root user with a read-only filesystem and no Linux capabilities; only `/app/data` and `/tmp` are writable.
 
 - Published on `127.0.0.1` only, and the host port must stay `4317`: the server rejects any other Host header.
-- `HTB_APP_TOKEN` and `THM_USERNAME` from `.env` are passed in at start (nothing else from `.env`); restart the container after editing them.
+- `HTB_APP_TOKEN`, `THM_USERNAME` and `TZ` from `.env` are passed in at start (nothing else from `.env`); restart the container after editing them. `TZ` sets the container's time zone (default UTC); report dates use it.
 - Data lives in the named volume `slingsh0t_slingsh0t-data`, not `./data` (SQLite's WAL locking is unreliable on Docker Desktop bind mounts). `docker compose down -v` deletes it.
 - Use either Docker or `npm start`, not both: they keep separate databases.
 
