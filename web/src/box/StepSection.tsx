@@ -1,6 +1,6 @@
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import MarkdownIt from 'markdown-it'
-import type { Attachment, Step, WorkItem } from '../../../shared/types'
+import type { Attachment, Context, Step, WorkItem } from '../../../shared/types'
 import { substitute } from '../../../shared/placeholders'
 import { slugger } from '../../../shared/slug'
 import { api, upload } from '../api'
@@ -67,6 +67,10 @@ const LOOP = [
 export const statsChanged = () => dispatchEvent(new Event('slingsh0t:stats'))
 /** API base for a box or host: /api/boxes/1, /api/hosts/3. */
 export const ownerPath = (item: WorkItem) => `/api/${item.kind === 'box' ? 'boxes' : 'hosts'}/${item.id}`
+
+/** The bar's TARGET for the active box or host, else the item's own stored IP. */
+export const targetOf = (item: Pick<WorkItem, 'id' | 'kind' | 'targetIp'>, ctx: Pick<Context, 'target' | 'activeBoxId' | 'activeHostId'>) =>
+  (item.kind === 'box' ? ctx.activeBoxId : ctx.activeHostId) === item.id ? ctx.target : (item.targetIp ?? '')
 
 export const imageMarkdown = (a: { key: string; name: string }) => `![${a.name.replace(/[[\]()]/g, '')}](/api/files/${a.key})`
 
@@ -165,8 +169,7 @@ export function StepSection({ step, item, mode, ordinal, insert, onInserted, onU
   }, [insert])
 
   // The bar's TARGET is fresher than item.targetIp, which only updates on the next reload.
-  const active = item.kind === 'box' ? ctx.activeBoxId : ctx.activeHostId
-  const target = active === item.id ? ctx.target : (item.targetIp ?? '')
+  const target = targetOf(item, ctx)
   const html = useMemo(() => md.render(substitute(body, { TARGET: target, LHOST: ctx.lhost, LPORT: ctx.lport, DNS: item.dns })), [body, target, ctx.lhost, ctx.lport, item.dns])
   const preview = (
     <div className="md" onClick={jump} dangerouslySetInnerHTML={{ __html: html || '<p class="blank">Nothing written yet.</p>' }} />

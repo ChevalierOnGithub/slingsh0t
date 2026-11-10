@@ -7,7 +7,7 @@ import { api } from '../api'
 import { useAutosave } from '../autosave'
 import { CommandRow, cmdName } from '../library/CommandRow'
 import { useTargetContext } from '../shell/TargetBar'
-import { ownerPath } from './StepSection'
+import { ownerPath, targetOf } from './StepSection'
 import './toolbox.css'
 
 type Run = (f: () => Promise<unknown>) => Promise<void>
@@ -19,7 +19,7 @@ export function Toolbox({ item, currentStepId, onInsert, onChanged }: {
   onChanged(): void
 }) {
   const { ctx } = useTargetContext()
-  const vars: Vars = { TARGET: ctx.target, LHOST: ctx.lhost, LPORT: ctx.lport, DNS: item.dns }
+  const vars: Vars = { TARGET: targetOf(item, ctx), LHOST: ctx.lhost, LPORT: ctx.lport, DNS: item.dns }
   const [data, setData] = useState<ToolboxData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')

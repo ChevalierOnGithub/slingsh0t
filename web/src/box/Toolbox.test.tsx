@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -71,7 +71,8 @@ const setup = (props: Partial<Parameters<typeof Toolbox>[0]> = {}) => {
   return { user, writeText, onInsert, onChanged, rerender: (p: typeof props) => rerender(ui(p)) }
 }
 
-const row = async (template: string) => (await screen.findByText(template, { exact: false })).closest('li') as HTMLElement
+// A command can show in Next up and on its shelf; take the first.
+const row = async (template: string) => (await screen.findAllByText(template, { exact: false }))[0].closest('li') as HTMLElement
 const posts = (url: string) => fetchMock.mock.calls.filter(([u, i]) => u === url && i?.method === 'POST').map(([, i]) => JSON.parse(i.body))
 const patches = () => fetchMock.mock.calls.filter(([u, i]) => u === '/api/boxes/7' && i?.method === 'PATCH').map(([, i]) => JSON.parse(i.body))
 const serve = (data: ToolboxData) => fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
@@ -567,6 +568,23 @@ test('CommandRow without onCopy only copies', async () => {
   await user.click(screen.getByRole('button', { name: 'Copy Scan' }))
   expect(writeText).toHaveBeenCalledWith('nmap x')
   expect(fetchMock).not.toHaveBeenCalled()
+})
+
+const withContext = (ctx: object) => fetchMock.mockImplementation(async (url: string) =>
+  url === '/api/context' ? json(200, { target: '10.10.11.35', lhost: '10.10.14.7', lport: '4444', activeBoxId: 7, ...ctx }) : url === '/api/toolbox?boxId=7' ? json(200, fixture) : json(200, {}))
+
+test('commands use the open box\'s own IP when another box is active', async () => {
+  withContext({ activeBoxId: 9 })
+  setup({ item: { ...box, targetIp: '10.10.10.3' } as BoxDetail })
+  const li = await row('nmap -p- --min-rate 1400')
+  await waitFor(() => expect(li.textContent).toContain('nmap -p- --min-rate 1400 10.10.10.3'))
+  expect(li.textContent).not.toContain('10.10.11.35')
+})
+
+test('the placeholder stays when nothing is active and the box has no IP', async () => {
+  withContext({ activeBoxId: null, target: '' })
+  setup({ item: { ...box, targetIp: null } as BoxDetail })
+  expect((await row('nmap -p- --min-rate 1400')).textContent).toContain('{{TARGET}}')
 })
 
 test('a failed Tried append on Copy still copies and shows the error', async () => {
