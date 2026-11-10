@@ -98,9 +98,29 @@ describe('reportOf', () => {
     const box = seedBox()
     db.prepare("UPDATE steps SET body = 'a | b' WHERE phase = 'Root'").run()
     const { markdown } = reportOf(db, { col: 'box_id', id: box }, today)
-    expect(markdown).toContain('| svc\\|user | password | P@ss\\|word | found in db |')
+    expect(markdown).toContain('| svc\\|user | password | `P@ss\\|word` | found in db |')
     expect(markdown).toContain('a | b')
     expect(markdown).not.toContain('a \\| b')
+  })
+
+  it('secrets print in code spans so Markdown cannot change them', () => {
+    const box = seedBox()
+    const ins = db.prepare("INSERT INTO credentials (box_id, username, kind, secret) VALUES (?, 'u', 'password', ?)")
+    for (const s of ['Summer*2024*!', 'a`b', '`x`', 'p|q']) ins.run(box, s)
+    const { markdown } = reportOf(db, { col: 'box_id', id: box }, today)
+    expect(markdown).toContain('| u | password | `Summer*2024*!` |')
+    expect(markdown).toContain('| u | password | ``a`b`` |')
+    expect(markdown).toContain('| u | password | `` `x` `` |')
+    expect(markdown).toContain('| u | password | `p\\|q` |')
+  })
+
+  it('a flag value in a credential note is redacted', () => {
+    const box = seedBox()
+    db.prepare("INSERT INTO flags (box_id, label, value) VALUES (?, 'root', 'HTB{s3cr3t_fl4g}')").run(box)
+    db.prepare("UPDATE credentials SET found_note = 'read next to HTB{s3cr3t_fl4g}' WHERE box_id = ?").run(box)
+    const { markdown } = reportOf(db, { col: 'box_id', id: box }, today)
+    expect(markdown).toContain('read next to [flag redacted]')
+    expect(markdown).not.toContain('s3cr3t')
   })
 
   it('flag values never appear', () => {
@@ -289,7 +309,7 @@ describe('networkReportOf', () => {
     flag(net, 'f', 'HTB{abcdef}')
     const { markdown } = networkReportOf(db, net, today)
     expect(markdown).toContain('## Credentials')
-    expect(markdown).toContain('| svc | password | P@ss | DB01 |')
+    expect(markdown).toContain('| svc | password | `P@ss` | DB01 |')
     const notes = markdown.slice(markdown.indexOf('## Notes'))
     expect(notes).toContain('use [flag redacted] on DC01 {{TARGET}}')
     expect(markdown).not.toContain('HTB{abcdef}')

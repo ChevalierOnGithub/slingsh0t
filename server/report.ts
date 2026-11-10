@@ -17,6 +17,12 @@ const day = (s?: string | null) => (s ? localDay(new Date(s.includes('T') ? s : 
 const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
 const table = (head: string[], rows: string[][]) =>
   [head, head.map(() => '---'), ...rows].map((r) => `| ${r.map(cell).join(' | ')} |`).join('\n')
+/** An inline code span that shows `s` exactly: a fence one longer than its longest backtick run, padded when it starts or ends with a backtick. */
+const code = (s: string) => {
+  const fence = '`'.repeat(Math.max(0, ...(s.match(/`+/g) ?? []).map((r) => r.length)) + 1)
+  const pad = /^`|`$/.test(s) ? ' ' : ''
+  return `${fence}${pad}${s}${pad}${fence}`
+}
 /** Replaces every flag value of 6+ characters (trimmed) in a text. */
 const redactor = (values: string[]) => {
   const secrets = values.map((v) => v.trim()).filter((v) => v.length >= 6)
@@ -108,7 +114,7 @@ export const reportOf = (db: Database.Database, o: Owner, today: string, { chapt
     const creds = db.prepare(`SELECT username, kind, secret, found_note FROM credentials WHERE ${credWhere} ORDER BY id`).all(...args) as Row[]
     const flags = db.prepare(`SELECT f.label, f.captured_at, h.name AS host FROM flags f LEFT JOIN hosts h ON h.id = f.host_id WHERE ${flagWhere} AND f.value <> '' ORDER BY f.id`).all(...args) as Row[]
     if (creds.length || flags.length) out.push('## Loot')
-    if (creds.length) out.push('### Credentials', table(['User', 'Kind', 'Secret', 'Note'], creds.map((c) => [c.username, c.kind, c.secret, c.found_note])))
+    if (creds.length) out.push('### Credentials', table(['User', 'Kind', 'Secret', 'Note'], creds.map((c) => [c.username, c.kind, code(c.secret), redact(c.found_note)])))
     if (flags.length) out.push('### Flags', table(['Flag', 'Host', 'Captured'], flags.map((f) => [`${f.label || 'flag'} (value redacted)`, f.host ?? '', day(f.captured_at)!])))
   }
 
@@ -152,7 +158,7 @@ export const networkReportOf = (db: Database.Database, nid: number, today: strin
   if (hosts.length) out.push('## Machines', table(['Machine', 'OS', 'IP', 'Owned'], hosts.map((h, i) => [`[${h.name}](#${anchors[i]})`, h.os, h.ip ?? '', h.status === 'rooted' ? 'Yes' : ''])))
   out.push(...chapters.map((c) => `${c}\n\n[Back to Machines](#${machinesSlug})\n\n---`))
   if (creds.length) out.push('## Credentials', table(['User', 'Kind', 'Secret', 'Works on'],
-    creds.map((c) => [c.username, c.kind, c.secret, (worksOn.all(c.id) as Row[]).map((h) => h.name).join(', ')])))
+    creds.map((c) => [c.username, c.kind, code(c.secret), (worksOn.all(c.id) as Row[]).map((h) => h.name).join(', ')])))
   // Network notes have no single TARGET, so placeholders stay as typed.
   if (n.notes.trim()) out.push('## Notes', closeFence(redactor(flags.map((f) => String(f.value)))(n.notes)))
   return { frontmatter: fm.join('\n'), markdown: out.join('\n\n') + '\n' }
