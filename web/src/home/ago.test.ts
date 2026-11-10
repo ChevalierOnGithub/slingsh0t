@@ -16,7 +16,7 @@ test.each([
   [3 * HOUR, '3h ago'],
   [23 * HOUR + 59 * MIN, '23h ago'],
   [DAY, 'yesterday'],
-  [2 * DAY - 1, 'yesterday'],
+  [2 * DAY - 1, '2 days ago'],
   [2 * DAY, '2 days ago'],
   [4 * DAY, '4 days ago'],
   [13 * DAY, '13 days ago'],
@@ -28,6 +28,16 @@ test.each([
   [400 * DAY, '13 months ago'],
 ])('%i ms ago reads %s', (ms, label) => {
   expect(ago(before(ms), now)).toBe(label)
+})
+
+// Local-time dates, so the cases hold in any time zone.
+test.each([
+  [new Date(2026, 10, 8, 18, 43), '2 days ago'], // 47h back, but two calendar days
+  [new Date(2026, 10, 9, 17, 0), 'yesterday'],
+  [new Date(2026, 10, 9, 0, 5), 'yesterday'],
+  [new Date(2026, 10, 9, 23, 0), '18h ago'],
+])('past a day, counts calendar days: %s reads %s', (then, label) => {
+  expect(ago(then.toISOString(), new Date(2026, 10, 10, 17, 42).getTime())).toBe(label)
 })
 
 test('defaults to the current time', () => {
