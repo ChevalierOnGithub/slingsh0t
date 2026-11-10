@@ -249,3 +249,20 @@ test('No writeup on the Writeup tab patches the box and shows the saved state', 
   expect(JSON.parse(patch[1]!.body as string)).toEqual({ noWriteup: true })
   await waitFor(() => expect((screen.getByRole('checkbox', { name: 'No writeup' }) as HTMLInputElement).checked).toBe(true))
 })
+
+test('Edit details patches name, OS, difficulty and the AD tag, then closes', async () => {
+  const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => json(init?.method === 'PATCH' ? {} : boxOf(1, 5)))
+  vi.stubGlobal('fetch', fetchMock)
+  render(<BoxPage id={1} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Edit details' }))
+  const os = screen.getByRole('textbox', { name: 'OS' })
+  await userEvent.clear(os)
+  await userEvent.type(os, 'Windows')
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Difficulty' }), 'Hard')
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Active Directory' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+  const patch = fetchMock.mock.calls.find(([, i]) => i?.method === 'PATCH')!
+  expect(patch[0]).toBe('/api/boxes/1')
+  expect(JSON.parse(patch[1]!.body as string)).toEqual({ name: 'Box 1', os: 'Windows', difficulty: 'Hard', tags: ['Active Directory'] })
+  await waitFor(() => expect(screen.queryByRole('form', { name: 'Box details' })).toBeNull())
+})

@@ -47,6 +47,60 @@
         ],
         "createdAt": "2026-11-01T00:06:17.964Z",
         "reason": "agent: rejected direction sketch from a closed decision round (user chose Night Topo); throwaway, will not be built"
+      },
+      {
+        "rule": "tiny-text",
+        "value": "*",
+        "files": [
+          ".superpowers/brainstorm/1893-1794005246/content/dashboard-layouts.html"
+        ],
+        "createdAt": "2026-11-06T22:49:11.295Z",
+        "reason": "Claude's call: throwaway brainstorm wireframe drawn at reduced scale to fit four layouts on one screen; not shipped UI"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          ".superpowers/brainstorm/1893-1794005246/content/dashboard-layouts.html"
+        ],
+        "createdAt": "2026-11-06T22:49:11.411Z",
+        "reason": "Claude's call: throwaway brainstorm wireframe drawn at reduced scale to fit four layouts on one screen; not shipped UI"
+      },
+      {
+        "rule": "undersized-ui-text",
+        "value": "*",
+        "files": [
+          ".superpowers/brainstorm/1893-1794005246/content/dashboard-layouts.html"
+        ],
+        "createdAt": "2026-11-06T22:49:27.514Z",
+        "reason": "Claude's call: throwaway brainstorm wireframe drawn at reduced scale to fit four layouts on one screen; not shipped UI"
+      },
+      {
+        "rule": "tiny-text",
+        "value": "*",
+        "files": [
+          ".superpowers/brainstorm/1893-1794005246/content/dashboard-combo.html"
+        ],
+        "createdAt": "2026-11-06T22:51:32.566Z",
+        "reason": "Claude's call: throwaway brainstorm wireframe drawn at reduced scale; not shipped UI"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          ".superpowers/brainstorm/1893-1794005246/content/dashboard-combo.html"
+        ],
+        "createdAt": "2026-11-06T22:51:32.683Z",
+        "reason": "Claude's call: throwaway brainstorm wireframe drawn at reduced scale; not shipped UI"
+      },
+      {
+        "rule": "undersized-ui-text",
+        "value": "*",
+        "files": [
+          ".superpowers/brainstorm/1893-1794005246/content/dashboard-combo.html"
+        ],
+        "createdAt": "2026-11-06T22:51:32.802Z",
+        "reason": "Claude's call: throwaway brainstorm wireframe drawn at reduced scale; not shipped UI"
       }
     ]
   }

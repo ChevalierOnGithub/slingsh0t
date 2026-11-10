@@ -155,7 +155,7 @@ select, input[type='text'] { background: var(--ground); border: 1px solid var(--
 .pcount small { font: 11px var(--mono); color: var(--muted); }
 
 /* Home dashboard: resume card, rooted tally, search line, Next / Learned / Recently opened */
-.home { display: grid; gap: 16px; max-width: 1400px; }
+.home { display: grid; gap: 16px; }
 .home-top { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .home-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .home-stack, .home-lane { display: grid; gap: 16px; align-content: start; min-width: 0; }
