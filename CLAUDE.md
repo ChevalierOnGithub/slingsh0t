@@ -57,7 +57,7 @@ A new top-level runtime folder must be added to the `Dockerfile` (it copies fold
 - A table rebuild uses the `{ sql, foreignKeysOff: true }` form; the runner checks it introduced no new foreign-key violations.
 - `openDb` copies an existing db to `data/backups/pre-migration-v<n>-<stamp>.db` before migrating.
 - `server/db.migrate.test.ts` asserts the migration count and checks some entries by array position, so a new migration needs that test updated.
-- Search is one FTS5 table, `search_index`, kept current by triggers generated in `db.ts` from `[kind, table, title, body, box_id]` tuples. A new searchable column or table means a migration that drops and regenerates the triggers and backfills. Update triggers are scoped (`AFTER UPDATE OF ...`) so timer ticks do not reindex.
+- Search is one FTS5 table, `search_index`, kept current by triggers generated in `db.ts` from `[kind, table, title, body, box_id]` tuples. A new searchable column or table means a migration that drops and regenerates the triggers and backfills. Update triggers are scoped (`AFTER UPDATE OF ...`) so reorders and status changes do not reindex.
 - Credential secrets and flag values are stored unencrypted and must never be indexed or logged.
 - Lists (tags, services, haves, needs, yields) are JSON in TEXT columns.
 - Short ids (`H-0001`, `TQ-001`, ...) come from `nextShortId` in `server/ids.ts`.
