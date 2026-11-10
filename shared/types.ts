@@ -81,7 +81,6 @@ export interface WriteupListItem {
   filledSteps: number; totalSteps: number; updatedAt: string
 }
 export interface ReferencePage { id: number; title: string; body: string }
-export interface UnsortedItem { id: number; sourcePage: string; content: string }
 
 export type CredentialKind = 'password' | 'ntlm' | 'kerberos' | 'ssh_key' | 'other'
 export type CredentialScope = { networkId: number } | { boxId: number }

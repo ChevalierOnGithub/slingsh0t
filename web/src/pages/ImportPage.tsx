@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { UnsortedItem } from '../../../shared/types'
+import { useRef, useState, type ReactNode } from 'react'
 import { api } from '../api'
 import { apiDownload } from '../download'
 import './import.css'
@@ -148,13 +147,7 @@ const saveNote = (url: string, perPage: number) => (
 )
 
 export function ImportPage() {
-  const [unsorted, setUnsorted] = useState<UnsortedItem[]>([])
   const [names, setNames] = useState('')
-  const [unsortedError, setUnsortedError] = useState('')
-  const load = useCallback(() => {
-    api<UnsortedItem[]>('GET', '/api/unsorted').then(setUnsorted, (e) => setUnsortedError(e.message))
-  }, [])
-  useEffect(load, [load])
   const button = (run: Run, busy: boolean, label: string, path: string, body?: Body, primary = true) => (
     <button className={primary ? 'btn primary' : 'btn'} disabled={busy} onClick={() => run(path, body)}>
       {label}
@@ -205,32 +198,6 @@ export function ImportPage() {
           )}
         </Panel>
       </div>
-      <h2 className="uh">Unsorted ({unsorted.length})</h2>
-      {unsortedError && <p className="err" role="alert">{unsortedError}</p>}
-      {unsorted.length === 0 ? (
-        <p className="empty">Nothing unsorted.</p>
-      ) : (
-        <ul className="unsorted">
-          {unsorted.map((u) => (
-            <li key={u.id}>
-              <span className="mono">{u.sourcePage}</span>
-              <span>{u.content}</span>
-              <button
-                className="btn"
-                aria-label={`Delete ${u.sourcePage}`}
-                onClick={() =>
-                  api('DELETE', `/api/unsorted/${u.id}`).then(
-                    () => setUnsorted((l) => l.filter((x) => x.id !== u.id)),
-                    (e) => setUnsortedError(e.message),
-                  )
-                }
-              >
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </section>
   )
 }

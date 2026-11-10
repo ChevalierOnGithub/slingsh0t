@@ -50,15 +50,12 @@ test('saved JSON file posts as {json}; invalid JSON shows an error without posti
   expect(JSON.parse(posts()[0][1].body)).toEqual({ json: { rooms: [1] } })
 })
 
-test('unsorted items list and delete', async () => {
-  fetchMock.mockImplementation(async (_url: string, i: RequestInit) =>
-    i.method === 'GET' ? reply([{ id: 3, sourcePage: 'Misc', content: 'stray note' }]) : reply(null, 204),
-  )
+test('the page has no Unsorted panel and never asks for that list', async () => {
+  fetchMock.mockImplementation(async () => reply([]))
   render(<ImportPage />)
-  await screen.findByText('stray note')
-  fireEvent.click(screen.getByLabelText('Delete Misc'))
-  await waitFor(() => expect(screen.queryByText('stray note')).toBeNull())
-  expect(fetchMock.mock.calls.some(([u, i]) => u === '/api/unsorted/3' && i.method === 'DELETE')).toBe(true)
+  await screen.findByText('Import / Backup')
+  expect(screen.queryByRole('heading', { name: /Unsorted/i })).toBeNull()
+  expect(fetchMock.mock.calls.some(([u]) => /Unsorted/i.test(String(u)))).toBe(false)
 })
 
 test('the Backup hint says nothing is kept on the server', () => {
@@ -83,7 +80,7 @@ test('a second trigger while one import is pending does not post twice', async (
   fetchMock.mockImplementation(async (_url: string, i: RequestInit) => {
     if (i.method === 'GET') return reply([])
     await new Promise<void>((r) => (release = r))
-    return reply({ inserted: 0, skipped: 0, unsorted: 0 })
+    return reply({ inserted: 0, skipped: 0, rejected: 0 })
   })
   render(<ImportPage />)
   const btn = screen.getByText('Import HTB Pro Labs')
@@ -91,7 +88,7 @@ test('a second trigger while one import is pending does not post twice', async (
   fireEvent.click(btn)
   await waitFor(() => expect(posts()).toHaveLength(1))
   release()
-  await screen.findByText('Inserted 0, skipped 0, unsorted 0')
+  await screen.findByText('Inserted 0, skipped 0, rejected 0')
   expect(posts()).toHaveLength(1)
 })
 

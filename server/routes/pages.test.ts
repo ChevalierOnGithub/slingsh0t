@@ -159,12 +159,9 @@ describe('pages api', () => {
     expect((await call('GET', '/api/reference/99')).statusCode).toBe(404)
   })
 
-  it('unsorted list and delete', async () => {
-    db.prepare("INSERT INTO unsorted (source_page, content) VALUES ('Page', 'x')").run()
-    expect((await call('GET', '/api/unsorted')).json()).toEqual([{ id: 1, sourcePage: 'Page', content: 'x' }])
-    expect((await call('DELETE', '/api/unsorted/1')).statusCode).toBe(204)
-    expect((await call('GET', '/api/unsorted')).json()).toEqual([])
-    expect((await call('DELETE', '/api/unsorted/1')).statusCode).toBe(404)
+  it('has no unsorted routes', async () => {
+    expect((await call('GET', '/api/unsorted')).json().message).toBe('Route GET:/api/unsorted not found')
+    expect((await call('DELETE', '/api/unsorted/1')).json().message).toBe('Route DELETE:/api/unsorted/1 not found')
   })
 })
 

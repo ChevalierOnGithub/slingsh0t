@@ -1,9 +1,6 @@
 .ipanels { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin-bottom: 24px; align-items: start; }
 .ipanel { background: var(--rail); border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: grid; gap: 10px; }
-.ipanel h2, .uh { font: 600 20px/1.2 var(--cond); }
+.ipanel h2 { font: 600 20px/1.2 var(--cond); }
 .irow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .ipanel textarea { width: 100%; background: var(--ground); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font: 13px var(--mono); color: var(--text); resize: vertical; }
-.uh { margin-bottom: 10px; }
-.unsorted { list-style: none; display: grid; gap: 6px; }
-.unsorted li { display: grid; grid-template-columns: 140px 1fr auto; align-items: center; gap: 12px; background: var(--raised); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
 .ipanel .url { overflow-wrap: anywhere; }

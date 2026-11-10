@@ -7,7 +7,7 @@ import { fileSlug } from '../../shared/slug'
 import { nextShortId } from '../ids'
 import { cmd, shelf, shelfInput } from './library'
 import { APPLIES, INTENTS, PHASES } from '../../shared/types'
-import type { ReferencePage, TechniqueListItem, ToolListItem, UnsortedItem, WriteupListItem } from '../../shared/types'
+import type { ReferencePage, TechniqueListItem, ToolListItem, WriteupListItem } from '../../shared/types'
 
 const nonEmpty = (v: unknown): v is string => isStr(v) && v.trim() !== ''
 const page = (r: any): ReferencePage => ({ id: r.id, title: r.title, body: r.body })
@@ -201,16 +201,5 @@ export const pagesRoutes: FastifyPluginAsync<{ db: Database.Database }> = async 
     if (!nonEmpty(title) || !isStr(body)) return bad(reply, 'title and body required')
     const r = db.prepare('UPDATE reference_pages SET title = ?, body = ? WHERE id = ? RETURNING *').get(title.trim(), body, id)
     return r ? page(r) : gone(reply, 'reference page')
-  })
-
-  app.get('/api/unsorted', async () => (db.prepare('SELECT * FROM unsorted ORDER BY id').all() as any[])
-    .map((r): UnsortedItem => ({ id: r.id, sourcePage: r.source_page, content: r.content })))
-
-  app.delete('/api/unsorted/:id', async (req, reply) => {
-    const id = idOf(req)
-    if (!isId(id)) return bad(reply, 'invalid id')
-    const deleted = db.prepare('DELETE FROM unsorted WHERE id = ?').run(id).changes
-    if (!deleted) return gone(reply, 'unsorted item')
-    return reply.code(204).send()
   })
 }
