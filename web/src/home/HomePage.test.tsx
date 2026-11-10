@@ -18,7 +18,7 @@ const stats: Stats = {
 const full: Home = {
   working: {
     kind: 'box', id: 7, name: 'Lanternfish', status: 'in_progress', platform: 'HTB', difficulty: 'Medium', os: 'Linux',
-    network: null, totalSeconds: 8040, lastWorked: recent, currentPhase: 'Initial Access', persistence: false, stepNumber: 4,
+    network: null, lastWorked: recent, currentPhase: 'Initial Access', persistence: false, stepNumber: 4,
     step: { saw: 'Login page on 8080', think: 'Known issue for 2.3?', tried: 'default creds', got: '' },
     openThreads: 'backup.zip in /static',
   },
@@ -63,7 +63,7 @@ test('full dashboard: working box, rooted tally, next, learned and recents', asy
   const work = (await screen.findByRole('heading', { name: 'Working on' })).closest('section')!
   expect(within(work).getByRole('heading', { name: 'Lanternfish' })).toBeTruthy()
   expect(within(work).getByText('Medium')).toBeTruthy()
-  expect(within(work).getByText(/Initial Access · step 4 · 2h 14m spent · last worked 3h ago/)).toBeTruthy()
+  expect(within(work).getByText(/Initial Access · step 4 · last worked 3h ago/)).toBeTruthy()
   const phases = within(work).getByRole('list', { name: 'Phase: Initial Access' }).children
   expect([...phases].map((li) => `${li.textContent}:${li.className}`)).toEqual(['Recon:done', 'Initial Access:now', 'PrivEsc:', 'Lateral Movement:', 'Root:'])
   for (const [k, v] of [['Saw', 'Login page on 8080'], ['Think', 'Known issue for 2.3?'], ['Tried', 'default creds'], ['Got', 'nothing yet']]) {

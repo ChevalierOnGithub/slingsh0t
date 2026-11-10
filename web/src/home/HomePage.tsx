@@ -1,6 +1,5 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { PHASES, type Difficulty, type Home, type HomeUnfinished, type HomeWork, type Phase, type Stats } from '../../../shared/types'
-import { fmtTime } from '../../../shared/steps'
 import { api } from '../api'
 import { STATUS_LABEL } from '../status'
 import { ago } from './ago'
@@ -141,7 +140,7 @@ function Working({ work }: { work: HomeWork | null }) {
     )
   }
   const path = `#/${work.kind === 'box' ? 'boxes' : 'hosts'}/${work.id}`
-  const facts = [work.currentPhase, work.stepNumber && `step ${work.stepNumber}`, work.totalSeconds > 0 && `${fmtTime(work.totalSeconds)} spent`,
+  const facts = [work.currentPhase, work.stepNumber && `step ${work.stepNumber}`,
     work.lastWorked && `last worked ${ago(work.lastWorked)}`].filter(Boolean)
   return (
     <Panel title="Working on" className="home-work">

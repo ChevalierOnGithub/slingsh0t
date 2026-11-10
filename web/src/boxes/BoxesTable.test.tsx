@@ -8,7 +8,7 @@ import { BoxesTable } from './BoxesTable'
 
 const box = (id: number, difficulty: Difficulty = 'Easy'): BoxSummary => ({
   id, shortId: `H-${String(id).padStart(4, '0')}`, platform: 'HTB', name: `Box ${id}`, os: 'Linux',
-  difficulty, status: 'not_started', targetIp: null, totalSeconds: 0, releaseDate: null, startedAt: null, dns: '', url: '',
+  difficulty, status: 'not_started', targetIp: null, releaseDate: null, startedAt: null, dns: '', url: '',
 })
 const bodyRows = () => screen.getAllByRole('row').slice(1)
 

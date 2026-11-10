@@ -33,7 +33,6 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
       cur: idx < 0 ? null : steps[idx],
       stepNumber: idx < 0 ? null : idx + 1,
       persistence: steps.some((s) => s.phase === 'Persistence'),
-      seconds: steps.reduce((a, s) => a + s.seconds, 0),
       updated: steps.reduce<string | null>((m, s) => (s.updated_at && (!m || s.updated_at > m) ? s.updated_at : m), null),
     }
   }
@@ -41,7 +40,7 @@ export const homeRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () =>
     const p = progress(kind === 'box' ? 'box_id' : 'host_id', r.id)
     return {
       kind, id: r.id, name: r.name, status: r.status, platform: r.platform, difficulty: r.difficulty ?? null, os: r.os,
-      network: r.network ?? null, totalSeconds: p.seconds, lastWorked: p.updated ?? r.started_at ?? null,
+      network: r.network ?? null, lastWorked: p.updated ?? r.started_at ?? null,
       currentPhase: (p.cur?.phase as Phase) ?? null, persistence: p.persistence, stepNumber: p.stepNumber,
       step: p.cur ? { saw: p.cur.saw, think: p.cur.think, tried: p.cur.tried, got: p.cur.got } : null,
       openThreads: r.next_step,

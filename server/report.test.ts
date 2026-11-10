@@ -14,12 +14,12 @@ const seedBox = (targetIp: string | null = '10.10.10.3', name = 'Lame', loops: R
   const box = Number(db.prepare(`INSERT INTO boxes (short_id, platform, name, os, difficulty, status, target_ip, tags, started_at, rooted_at, foothold, notes)
     VALUES ('H-0001', 'HTB', ?, 'Linux', 'Easy', 'rooted', ?, '["Active Directory"]', '2026-10-30T10:00:00.000Z', '2026-10-31T09:00:00.000Z', 'anon FTP', 'creds in {{TARGET}} notes')`).run(name, targetIp).lastInsertRowid)
   db.prepare("UPDATE context SET lhost = '10.10.14.2', lport = '4444' WHERE id = 1").run()
-  const step = (phase: string, position: number, body: string, seconds = 0, l: Loop = loops[phase] ?? {}) =>
-    Number(db.prepare('INSERT INTO steps (box_id, phase, position, body, seconds, saw, think, tried, got, dead) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(box, phase, position, body, seconds, l.saw ?? '', l.think ?? '', l.tried ?? '', l.got ?? '', l.dead ?? 0).lastInsertRowid)
-  const s0 = step('Recon', 0, 'nmap {{TARGET}}', 600)
+  const step = (phase: string, position: number, body: string, l: Loop = loops[phase] ?? {}) =>
+    Number(db.prepare('INSERT INTO steps (box_id, phase, position, body, saw, think, tried, got, dead) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(box, phase, position, body, l.saw ?? '', l.think ?? '', l.tried ?? '', l.got ?? '', l.dead ?? 0).lastInsertRowid)
+  const s0 = step('Recon', 0, 'nmap {{TARGET}}')
   step('Recon', 1, '')
-  step('Initial Access', 2, 'nc {{LHOST}} {{LPORT}}', 900)
+  step('Initial Access', 2, 'nc {{LHOST}} {{LPORT}}')
   step('PrivEsc', 3, '  ')
   step('Root', 4, 'got it')
   db.prepare("INSERT INTO tools (short_id, name) VALUES ('TL-0001', 'Rubeus'), ('TL-0002', 'Impacket')").run()
@@ -48,7 +48,7 @@ describe('reportOf', () => {
       'started: "2026-10-30"', 'rooted: "2026-10-31"', 'tags: ["Active Directory"]', 'exported: "2026-11-01"']) expect(lines).toContain(l)
     expect(markdown.startsWith('# Lame\n')).toBe(true)
     const sub = (s: string) => expect(markdown).toContain(s)
-    sub('| ID | H-0001 |'); sub('| Status | Rooted |'); sub('| Target | 10.10.10.3 |'); sub('| Time spent | 25m |')
+    sub('| ID | H-0001 |'); sub('| Status | Rooted |'); sub('| Target | 10.10.10.3 |')
     sub('**Foothold:** anon FTP'); sub('**Privilege escalation:** not recorded')
   })
 
@@ -180,7 +180,6 @@ describe('reportOf', () => {
     expect(markdown).not.toContain('## Summary')
     expect(markdown).not.toContain('## Loot')
     expect(markdown).not.toContain('## Notes')
-    expect(markdown).not.toContain('Time spent')
     expect(markdown).toContain('## Recon\n')
   })
 

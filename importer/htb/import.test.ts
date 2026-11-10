@@ -90,18 +90,6 @@ describe('htb importer', () => {
     expect(db.prepare('SELECT status FROM boxes').pluck().get()).toBe('user_flag')
   })
 
-  it('stops running step timers when the import roots a box', () => {
-    const db = openDb(':memory:')
-    importHtb(db, [quarry])
-    const boxId = box(db).id
-    const started = Math.floor(Date.now() / 1000) - 100
-    db.prepare("INSERT INTO steps (box_id, phase, position, seconds, timer_started_at) VALUES (?, 'Recon', 0, 5, ?)").run(boxId, started)
-    importHtb(db, [{ ...quarry, rootOwned: true }])
-    const step = db.prepare('SELECT seconds, timer_started_at FROM steps').get() as { seconds: number; timer_started_at: number | null }
-    expect(step.timer_started_at).toBeNull()
-    expect(step.seconds).toBeGreaterThanOrEqual(105)
-  })
-
   it('stamps started_at and rooted_at only when the import moves status forward', () => {
     const db = openDb(':memory:')
     importHtb(db, [quarry])

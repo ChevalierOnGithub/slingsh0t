@@ -9,7 +9,7 @@ vi.mock('../shell/TargetBar', () => ({ useTargetContext: () => ({ ctx, update: v
 
 const box = (id: number, status: BoxSummary['status'], startedAt: string | null, extra: Partial<BoxSummary> = {}): BoxSummary => ({
   id, shortId: `H-000${id}`, platform: 'HTB', name: `Box${id}`, os: 'Linux', difficulty: 'Easy', status,
-  targetIp: null, totalSeconds: 0, releaseDate: null, dns: '', url: '', startedAt, ...extra,
+  targetIp: null, releaseDate: null, dns: '', url: '', startedAt, ...extra,
 })
 
 test('continueList puts the active box first, then in-progress by startedAt, max 4', () => {
@@ -29,10 +29,10 @@ test('renders nothing when there is nothing to continue', () => {
   expect(container.firstChild).toBeNull()
 })
 
-test('renders links with id, name, status and time', () => {
+test('renders links with id, name, status', () => {
   ctx.activeBoxId = null
-  render(<Continue boxes={[box(4, 'in_progress', '2026-01-01', { name: 'Lame', shortId: 'H-0004', totalSeconds: 3900 })]} />)
+  render(<Continue boxes={[box(4, 'in_progress', '2026-01-01', { name: 'Lame', shortId: 'H-0004' })]} />)
   const link = screen.getByRole('navigation', { name: 'Continue' }).querySelector('a')!
   expect(link.getAttribute('href')).toBe('#/boxes/4')
-  for (const t of ['H-0004', 'Lame', 'In progress', '1h 5m']) expect(link.textContent).toContain(t)
+  for (const t of ['H-0004', 'Lame', 'In progress']) expect(link.textContent).toContain(t)
 })

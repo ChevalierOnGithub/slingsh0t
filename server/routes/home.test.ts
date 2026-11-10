@@ -47,13 +47,13 @@ test('empty database', async () => {
 test('working: active box, its current step and open threads', async () => {
   const { db, home } = await setup()
   const b = box(db, { name: 'Lantern', status: 'in_progress', next_step: 'try the cron', started_at: ago(5), os: 'Linux' })
-  step(db, { box_id: b, position: 0, done: 1, seconds: 60, updated_at: ago(2) })
-  step(db, { box_id: b, phase: 'Initial Access', position: 1, saw: 's', think: 't', tried: 'r', got: 'g', seconds: 90, updated_at: ago(1) })
+  step(db, { box_id: b, position: 0, done: 1, updated_at: ago(2) })
+  step(db, { box_id: b, phase: 'Initial Access', position: 1, saw: 's', think: 't', tried: 'r', got: 'g', updated_at: ago(1) })
   step(db, { box_id: b, phase: 'Persistence', position: 2, updated_at: ago(3) })
   db.prepare('UPDATE context SET active_box_id = ? WHERE id = 1').run(b)
   const w = (await home()).working!
   expect(w).toMatchObject({
-    kind: 'box', id: b, name: 'Lantern', currentPhase: 'Initial Access', stepNumber: 2, persistence: true, totalSeconds: 150,
+    kind: 'box', id: b, name: 'Lantern', currentPhase: 'Initial Access', stepNumber: 2, persistence: true,
     lastWorked: ago(1), openThreads: 'try the cron', network: null, difficulty: 'Easy', os: 'Linux',
     step: { saw: 's', think: 't', tried: 'r', got: 'g' },
   })

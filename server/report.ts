@@ -2,7 +2,6 @@ import type Database from 'better-sqlite3'
 import { substitute } from '../shared/placeholders'
 import { STATUS_LABEL } from '../shared/status'
 import { slugger } from '../shared/slug'
-import { fmtTime } from '../shared/steps'
 import type { BoxStatus } from '../shared/types'
 import type { Owner } from './routes/boxes'
 import { fail } from './validate'
@@ -63,7 +62,6 @@ export const reportOf = (db: Database.Database, o: Owner, today: string, { chapt
   const steps = db.prepare(`SELECT * FROM steps WHERE ${o.col} = ? ORDER BY position, id`).all(o.id) as Row[]
   const redact = redactor((db.prepare(`SELECT value FROM flags WHERE ${isBox ? 'box_id' : 'network_id'} = ?`).all(isBox ? o.id : r.network_id) as Row[])
     .map((f) => String(f.value)))
-  const seconds = steps.reduce((n, s) => n + s.seconds, 0)
 
   const fm = ([['title', r.name], ['id', r.short_id], isBox ? ['platform', r.platform] : ['network', r.network], ['os', r.os],
     ['difficulty', isBox ? r.difficulty : null], ['status', STATUS_LABEL[r.status as BoxStatus]], ['target', targets],
@@ -74,7 +72,7 @@ export const reportOf = (db: Database.Database, o: Owner, today: string, { chapt
 
   const facts = ([['ID', r.short_id], isBox ? ['Platform', r.platform] : ['Network', r.network], ['OS', r.os || 'not set'],
     ['Difficulty', isBox ? r.difficulty : null], ['Status', STATUS_LABEL[r.status as BoxStatus]], ['Target', targets ?? 'not set'],
-    ['Started', day(r.started_at)], ['Rooted', day(r.rooted_at)], ['Time spent', seconds ? fmtTime(seconds) : null]] as [string, string | null][])
+    ['Started', day(r.started_at)], ['Rooted', day(r.rooted_at)]] as [string, string | null][])
     .filter((f): f is [string, string] => f[1] != null)
   const out = chapter ? [`# ${r.name}`] : [`# ${r.name}`, table(['Field', 'Value'], facts)]
 

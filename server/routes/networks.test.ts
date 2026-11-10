@@ -108,14 +108,10 @@ describe('hosts', () => {
     expect((await call('GET', `/api/hosts/${h.id}`)).json<HostDetail>().targetIp).toBe('10.0.0.1')
   })
 
-  it('patches fields; rooted stops the running timer', async () => {
+  it('patches fields', async () => {
     const h = await host((await net()).id)
-    t = 100
-    await call('POST', `/api/steps/${h.steps[0].id}/timer`, { action: 'start' })
-    t = 130
     const r = (await call('PATCH', `/api/hosts/${h.id}`, { status: 'rooted', os: 'Linux', nextStep: 'n' })).json<HostDetail>()
     expect(r).toMatchObject({ status: 'rooted', os: 'Linux', nextStep: 'n' })
-    expect(r.steps[0]).toMatchObject({ seconds: 30, timerStartedAt: null })
     expect((await call('PATCH', `/api/hosts/${h.id}`, { status: 'pwned' })).statusCode).toBe(400)
   })
 
@@ -154,15 +150,9 @@ describe('hosts', () => {
 })
 
 describe('host steps', () => {
-  it('timer starts host, duplicates, adds, reorders, keeps one', async () => {
+  it('duplicates, adds, reorders, keeps one', async () => {
     const h = await host((await net()).id)
-    const [A, B] = h.steps
-    t = 100
-    const r1 = (await call('POST', `/api/steps/${A.id}/timer`, { action: 'start' })).json<HostDetail>()
-    expect(r1).toMatchObject({ kind: 'host', status: 'in_progress' })
-    t = 160
-    const r2 = (await call('POST', `/api/steps/${B.id}/timer`, { action: 'start' })).json<HostDetail>()
-    expect(r2.steps[0]).toMatchObject({ seconds: 60, timerStartedAt: null })
+    const [A] = h.steps
     expect((await call('POST', `/api/steps/${A.id}/duplicate`)).statusCode).toBe(201)
     expect((await call('POST', `/api/hosts/${h.id}/steps`, { phase: 'Root', afterStepId: A.id })).statusCode).toBe(201)
     expect(await phases(h.id)).toEqual(['Recon', 'Root', 'Recon', 'Initial Access', 'PrivEsc', 'Lateral Movement', 'Root'])

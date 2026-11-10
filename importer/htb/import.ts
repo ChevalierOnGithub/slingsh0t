@@ -46,7 +46,7 @@ export function importHtb(db: Database.Database, machines: HtbMachine[] & { unkn
         insert.run({ ...values, shortId: nextShortId(db, 'H') })
         stats.inserted++
       } else if (update.run({ ...values, id: row.id }).changes) {
-        if (moved && status === 'rooted') markRooted(db, { col: 'box_id', id: row.id }, secs) // same as PATCH status=rooted
+        if (moved && status === 'rooted') markRooted(db, { col: 'box_id', id: row.id }) // same as PATCH status=rooted
         stats.updated++
       } else stats.skipped++
     }

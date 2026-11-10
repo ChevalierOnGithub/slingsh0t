@@ -14,7 +14,7 @@ const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200
 const host: HostDetail = {
   id: 3, kind: 'host', shortId: 'HS-003', networkId: 2, name: 'DC01', os: 'Windows', status: 'in_progress', tags: [], nextStep: '', notes: '', foothold: '', privesc: '', rating: '', dns: '',
   targetIp: '10.10.110.5', ips: [{ id: 1, ip: '10.10.110.5', primary: true }, { id: 2, ip: '172.16.1.5', primary: false }], uses: [], services: [], haves: [],
-  steps: [{ id: 21, boxId: null, hostId: 3, phase: 'Recon', position: 0, body: 'nmap {{TARGET}}', seconds: 0, timerStartedAt: null, done: false, saw: '', think: '', tried: '', got: '', dead: false }],
+  steps: [{ id: 21, boxId: null, hostId: 3, phase: 'Recon', position: 0, body: 'nmap {{TARGET}}', done: false, saw: '', think: '', tried: '', got: '', dead: false }],
 }
 let fetchMock: ReturnType<typeof vi.fn>
 beforeEach(() => {

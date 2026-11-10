@@ -154,16 +154,11 @@ describe('markThmCompleted', () => {
     expect(db.prepare("SELECT status FROM boxes WHERE source_id = 'thm:FixtureMixed'").get()).toEqual({ status: 'rooted' })
   })
 
-  it('stops running timers and sets started_at like PATCH status=rooted', async () => {
+  it('sets started_at like PATCH status=rooted', async () => {
     const db = openDb(':memory:')
     importThmCatalog(db, await fetchChallengeRooms(fakeFetch))
     const box = db.prepare("SELECT id FROM boxes WHERE source_id = 'thm:relevant'").pluck().get() as number
-    const startedAt = Math.floor(Date.now() / 1000) - 100
-    db.prepare("INSERT INTO steps (box_id, phase, position, seconds, timer_started_at) VALUES (?, 'Recon', 0, 5, ?)").run(box, startedAt)
     markThmCompleted(db, ['relevant'])
-    const step = db.prepare('SELECT seconds, timer_started_at FROM steps WHERE box_id = ?').get(box) as { seconds: number; timer_started_at: number | null }
-    expect(step.timer_started_at).toBeNull()
-    expect(step.seconds).toBeGreaterThanOrEqual(105)
     expect(db.prepare('SELECT started_at FROM boxes WHERE id = ?').pluck().get(box)).toMatch(/T.*Z$/)
   })
 

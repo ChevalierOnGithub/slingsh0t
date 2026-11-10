@@ -116,7 +116,7 @@ export const networksRoutes: FastifyPluginAsync<{ db: Database.Database; now?: (
     const set = ownerSet(b)
     return tx(() => {
       hostDetail(db, hid)
-      if (b.status === 'rooted') markRooted(db, { col: 'host_id', id: hid }, now())
+      if (b.status === 'rooted') markRooted(db, { col: 'host_id', id: hid })
       updateRow(db, 'hosts', hid, set)
       return hostDetail(db, hid)
     })

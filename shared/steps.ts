@@ -6,12 +6,6 @@ export function currentStepId(steps: Step[]): number | null {
   return cur?.id ?? null
 }
 
-export const fmtTime = (s: number) => {
-  if (s > 0 && s < 60) return '<1m'
-  const m = Math.floor(s / 60)
-  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`
-}
-
 /** The tool a pasted command runs: skips sudo and VAR=val prefixes, drops any path (/ or \) and a Windows .exe. */
 export const toolOf = (cmd: string): string => {
   const t = cmd.trim().split(/\s+/).filter(Boolean)

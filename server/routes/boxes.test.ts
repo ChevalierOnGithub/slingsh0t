@@ -124,14 +124,17 @@ describe('boxes', () => {
     expect((await call('PATCH', `/api/boxes/${b.id}`, { tags: [] })).json<BoxDetail>().tags).toEqual([])
   })
 
-  it('status rooted stops running timer and sets rootedAt', async () => {
+  it('status rooted sets rootedAt', async () => {
     const b = await mk()
-    t = 100
-    await call('POST', `/api/steps/${b.steps[0].id}/timer`, { action: 'start' })
-    t = 130
     const r = (await call('PATCH', `/api/boxes/${b.id}`, { status: 'rooted' })).json<BoxDetail>()
     expect(r.rootedAt).toBeTruthy()
-    expect(r.steps[0]).toMatchObject({ seconds: 30, timerStartedAt: null })
+  })
+  it('has no timer route and steps carry no time fields', async () => {
+    const b = await mk()
+    expect((await call('POST', `/api/steps/${b.steps[0].id}/timer`, { action: 'start' })).statusCode).toBe(404)
+    expect(b.steps[0]).not.toHaveProperty('seconds')
+    expect(b.steps[0]).not.toHaveProperty('timerStartedAt')
+    expect((await call('GET', '/api/boxes')).json<object[]>()[0]).not.toHaveProperty('totalSeconds')
   })
   it('status rooted ticks every step done', async () => {
     const b = await mk()
@@ -174,22 +177,16 @@ describe('boxes', () => {
     for (const [at, send] of [
       [2000, () => call('PATCH', `/api/steps/${a.id}`, { body: 'x' })],
       [3000, () => call('POST', `/api/steps/${a.id}/tried`, { name: 'nmap' })],
-      [4000, () => call('POST', `/api/steps/${a.id}/timer`, { action: 'start' })],
-      [5000, () => call('POST', `/api/steps/${a.id}/timer`, { action: 'stop' })],
     ] as const) {
       t = at
       expect((await send()).statusCode).toBe(200)
       expect(stamp(a.id), String(at)).toBe(iso(at))
     }
-    // starting another step's timer stops (and stamps) the one running
-    t = 6000; await call('POST', `/api/steps/${a.id}/timer`, { action: 'start' })
-    t = 7000; await call('POST', `/api/steps/${c.id}/timer`, { action: 'start' })
-    expect(stamp(a.id)).toBe(iso(7000))
     // reorder leaves it alone
     t = 8000
     const ids = b.steps.map((s) => s.id).reverse()
     expect((await call('PUT', `/api/boxes/${b.id}/step-order`, { stepIds: ids })).statusCode).toBe(200)
-    expect(stamp(a.id)).toBe(iso(7000))
+    expect(stamp(a.id)).toBe(iso(3000))
   })
   it('newlines in a field are flattened', async () => {
     const b = await mk()
@@ -247,10 +244,9 @@ describe('steps', () => {
     expect(await order(b.id)).toEqual(['Recon', 'Initial Access', 'PrivEsc', 'Lateral Movement', 'PrivEsc', 'Root'])
     const p = await call('PATCH', `/api/steps/${b.steps[0].id}`, { body: 'hi' })
     expect(p.json<Step>().body).toBe('hi')
-    db.prepare('UPDATE steps SET seconds = 42 WHERE id = ?').run(b.steps[0].id)
     const d = await call('POST', `/api/steps/${b.steps[0].id}/duplicate`)
     expect(d.statusCode).toBe(201)
-    expect(d.json<Step>()).toMatchObject({ phase: 'Recon', position: 1, body: '', seconds: 0, timerStartedAt: null })
+    expect(d.json<Step>()).toMatchObject({ phase: 'Recon', position: 1, body: '' })
     expect((await order(b.id))[1]).toBe('Recon')
   })
 
@@ -295,32 +291,11 @@ describe('steps', () => {
   })
 })
 
-describe('timers', () => {
-  it('start/stop accumulates and switches', async () => {
-    const b = await mk()
-    const [A, B] = b.steps
-    t = 100
-    await call('POST', `/api/steps/${A.id}/timer`, { action: 'start' })
-    t = 160
-    const r1 = (await call('POST', `/api/steps/${B.id}/timer`, { action: 'start' })).json<BoxDetail>()
-    expect(r1.steps[0]).toMatchObject({ seconds: 60, timerStartedAt: null })
-    expect(r1.steps[1].timerStartedAt).toBe(160)
-    expect(r1.status).toBe('in_progress')
-    expect(r1.startedAt).toBeTruthy()
-    t = 190
-    const r2 = (await call('POST', `/api/steps/${B.id}/timer`, { action: 'stop' })).json<BoxDetail>()
-    expect(r2.steps[1]).toMatchObject({ seconds: 30, timerStartedAt: null })
-    expect((await call('GET', '/api/boxes')).json<{ totalSeconds: number }[]>()[0].totalSeconds).toBe(90)
+describe('box list', () => {
+  it('serves releaseDate', async () => {
+    await mk()
     db.prepare("UPDATE boxes SET release_date = '2024-09-28T19:00:00Z'").run()
     expect((await call('GET', '/api/boxes')).json<{ releaseDate: string }[]>()[0].releaseDate).toBe('2024-09-28T19:00:00Z')
-  })
-  it('a clock that moved back never stores negative seconds', async () => {
-    const b = await mk()
-    t = 5000
-    await call('POST', `/api/steps/${b.steps[0].id}/timer`, { action: 'start' })
-    t = 100
-    const r = (await call('POST', `/api/steps/${b.steps[0].id}/timer`, { action: 'stop' })).json<BoxDetail>()
-    expect(r.steps[0]).toMatchObject({ seconds: 0, timerStartedAt: null })
   })
 })
 

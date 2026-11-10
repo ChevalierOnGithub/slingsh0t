@@ -7,7 +7,7 @@ import { Pyramid } from './Pyramid'
 
 const box = (id: number, difficulty: Difficulty, status: BoxStatus): BoxSummary => ({
   id, shortId: `H-${id}`, platform: 'HTB', name: `Box ${id}`, os: 'Linux',
-  difficulty, status, targetIp: null, totalSeconds: 0, releaseDate: null, startedAt: null, dns: '', url: '',
+  difficulty, status, targetIp: null, releaseDate: null, startedAt: null, dns: '', url: '',
 })
 
 test('renders 3 filled + 1 outlined cell for fixture', () => {

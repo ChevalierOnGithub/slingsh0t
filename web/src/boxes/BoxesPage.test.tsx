@@ -32,7 +32,7 @@ test('empty list shows empty state; submitting form posts the box and navigates'
 
 test('board status select patches the box and reverts when the server refuses', async () => {
   location.hash = '#/boxes?view=board'
-  const box = { id: 3, shortId: 'H-0003', platform: 'HTB', name: 'Sea', os: 'Linux', difficulty: 'Easy', status: 'in_progress', targetIp: null, totalSeconds: 0, releaseDate: null }
+  const box = { id: 3, shortId: 'H-0003', platform: 'HTB', name: 'Sea', os: 'Linux', difficulty: 'Easy', status: 'in_progress', targetIp: null, releaseDate: null }
   const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
     init?.method === 'PATCH' ? json(500, { error: 'disk full' }) : json(200, [box]),
   )
@@ -51,7 +51,7 @@ test('board status select patches the box and reverts when the server refuses', 
 
 test('a board move keeps focus on the card select, keeps it visible in a collapsed column, and refreshes stats', async () => {
   location.hash = '#/boxes?view=board'
-  const mk = (id: number, status: string) => ({ id, shortId: `H-${id}`, platform: 'HTB', name: `Box ${id}`, os: 'Linux', difficulty: 'Easy', status, targetIp: null, totalSeconds: 0, releaseDate: null })
+  const mk = (id: number, status: string) => ({ id, shortId: `H-${id}`, platform: 'HTB', name: `Box ${id}`, os: 'Linux', difficulty: 'Easy', status, targetIp: null, releaseDate: null })
   const boxes = [...Array.from({ length: 13 }, (_, i) => mk(i + 1, 'not_started')), mk(99, 'in_progress')]
   vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => json(200, init?.method === 'PATCH' ? {} : boxes)))
   const onStats = vi.fn()
@@ -73,7 +73,7 @@ test('a board move keeps focus on the card select, keeps it visible in a collaps
   location.hash = ''
 })
 
-const mk = (id: number, extra: object = {}) => ({ id, shortId: `H-${id}`, platform: 'HTB', name: `Box ${id}`, os: 'Linux', difficulty: 'Easy', status: 'not_started', targetIp: null, totalSeconds: 0, releaseDate: null, ...extra })
+const mk = (id: number, extra: object = {}) => ({ id, shortId: `H-${id}`, platform: 'HTB', name: `Box ${id}`, os: 'Linux', difficulty: 'Easy', status: 'not_started', targetIp: null, releaseDate: null, ...extra })
 
 test('shows a loading line until the list arrives', async () => {
   let done!: (r: Response) => void

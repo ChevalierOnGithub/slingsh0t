@@ -1,5 +1,4 @@
 import type { BoxSummary } from '../../../shared/types'
-import { fmtTime } from '../../../shared/steps'
 import { useTargetContext } from '../shell/TargetBar'
 import { STATUS_LABEL } from '../status'
 
@@ -21,7 +20,6 @@ export function Continue({ boxes }: { boxes: BoxSummary[] }) {
       {list.map((b) => (
         <a key={b.id} href={`#/boxes/${b.id}`}>
           <span className="sid">{b.shortId}</span> <b>{b.name}</b> <span>{STATUS_LABEL[b.status]}</span>
-          {b.totalSeconds > 0 && <span className="mono">{fmtTime(b.totalSeconds)}</span>}
         </a>
       ))}
     </nav>

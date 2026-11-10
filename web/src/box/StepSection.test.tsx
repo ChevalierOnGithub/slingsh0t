@@ -18,10 +18,10 @@ const ctx = vi.hoisted(() => ({ target: '', lhost: '10.10.14.7', lport: '4444', 
 vi.mock('../shell/TargetBar', () => ({ useTargetContext: () => ({ ctx, update: vi.fn(), error: null }) }))
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status })
-const step: Step = { id: 5, boxId: 1, hostId: null, phase: 'Recon', position: 0, body: 'nmap {{TARGET}}', seconds: 0, timerStartedAt: null, done: false, saw: '', think: '', tried: '', got: '', dead: false }
+const step: Step = { id: 5, boxId: 1, hostId: null, phase: 'Recon', position: 0, body: 'nmap {{TARGET}}', done: false, saw: '', think: '', tried: '', got: '', dead: false }
 const box = {
   id: 1, kind: 'box', shortId: 'H-0001', platform: 'HTB', name: 'Cicada', os: 'Windows', difficulty: 'Easy', status: 'in_progress',
-  targetIp: '10.10.11.35', totalSeconds: 0, releaseDate: null, tags: [], nextStep: '', notes: '', foothold: '', privesc: '', rating: '', noWriteup: false, dns: '', url: '', startedAt: null, rootedAt: null, steps: [step], uses: [], services: [], haves: [],
+  targetIp: '10.10.11.35', releaseDate: null, tags: [], nextStep: '', notes: '', foothold: '', privesc: '', rating: '', noWriteup: false, dns: '', url: '', startedAt: null, rootedAt: null, steps: [step], uses: [], services: [], haves: [],
 } as BoxDetail
 
 let fetchMock: ReturnType<typeof vi.fn>

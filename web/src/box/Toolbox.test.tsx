@@ -36,8 +36,8 @@ const box = {
   id: 7, kind: 'box', status: 'in_progress', nextStep: '', uses: [], tags: [], os: 'Linux', haves: [],
   services: [{ name: 'http', port: 80 }, { name: 'smb', port: 445 }, { name: 'ssh', port: 22 }],
   steps: [
-    { id: 11, boxId: 7, phase: 'Recon', position: 1, body: 'done', seconds: 0, timerStartedAt: null, done: false, saw: '', think: '', tried: '', got: '', dead: false },
-    { id: 12, boxId: 7, phase: 'PrivEsc', position: 2, body: '', seconds: 0, timerStartedAt: null, done: false, saw: '', think: '', tried: '', got: '', dead: false },
+    { id: 11, boxId: 7, phase: 'Recon', position: 1, body: 'done', done: false, saw: '', think: '', tried: '', got: '', dead: false },
+    { id: 12, boxId: 7, phase: 'PrivEsc', position: 2, body: '', done: false, saw: '', think: '', tried: '', got: '', dead: false },
   ],
 } as unknown as BoxDetail
 
@@ -370,7 +370,7 @@ test('a later good load clears an earlier load error', async () => {
 test('a repeated phase numbers its steps in position order', async () => {
   fetchMock.mockImplementation(async (url: string) =>
     url === '/api/toolbox?boxId=7' ? json(200, withUse) : url === '/api/context' ? json(200, { target: '', lhost: '', lport: '', activeBoxId: 7 }) : json(200, {}))
-  const twice = { ...box, steps: [...box.steps, { id: 13, boxId: 7, phase: 'PrivEsc', position: 0, body: '', seconds: 0, timerStartedAt: null, done: false, saw: '', think: '', tried: '', got: '', dead: false }] } as BoxDetail
+  const twice = { ...box, steps: [...box.steps, { id: 13, boxId: 7, phase: 'PrivEsc', position: 0, body: '', done: false, saw: '', think: '', tried: '', got: '', dead: false }] } as BoxDetail
   const { user } = setup({ item: twice, currentStepId: 11 })
   expect(await screen.findByText('used · PrivEsc 2')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'SeBackupPrivilege abuse' }))
@@ -379,7 +379,7 @@ test('a repeated phase numbers its steps in position order', async () => {
 })
 
 test('lists dead ends with links to their steps', async () => {
-  const mk = (id: number, position: number, o: object) => ({ id, boxId: 7, phase: 'PrivEsc', position, body: '', seconds: 0, timerStartedAt: null, done: false, saw: '', think: '', tried: '', got: '', dead: false, ...o })
+  const mk = (id: number, position: number, o: object) => ({ id, boxId: 7, phase: 'PrivEsc', position, body: '', done: false, saw: '', think: '', tried: '', got: '', dead: false, ...o })
   const item = { ...box, steps: [box.steps[0], mk(13, 3, { dead: true, tried: 'defaults' }), mk(12, 2, { dead: true, saw: 'login page' })] } as unknown as BoxDetail
   setup({ item })
   const region = await screen.findByRole('region', { name: 'Dead ends' })

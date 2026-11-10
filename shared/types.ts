@@ -25,14 +25,13 @@ export interface Context {
 
 export interface BoxSummary {
   id: number; shortId: string; platform: Platform; name: string; os: string
-  difficulty: Difficulty; status: BoxStatus; targetIp: string | null; totalSeconds: number
+  difficulty: Difficulty; status: BoxStatus; targetIp: string | null
   releaseDate: string | null; dns: string; url: string; startedAt: string | null
 }
 
-/** timerStartedAt is epoch seconds */
 export interface Step {
   id: number; boxId: number | null; hostId: number | null; phase: Phase; position: number; body: string
-  seconds: number; timerStartedAt: number | null; done: boolean
+  done: boolean
   saw: string; think: string; tried: string; got: string; dead: boolean
 }
 
@@ -140,7 +139,7 @@ export interface Recent { kind: RecentKind; ref: string; label: string; openedAt
 export interface HomeWork {
   kind: 'box' | 'host'; id: number; name: string; status: BoxStatus
   platform: Platform | null; difficulty: Difficulty | null; os: string; network: string | null
-  totalSeconds: number; lastWorked: string | null
+  lastWorked: string | null
   currentPhase: Phase | null; persistence: boolean; stepNumber: number | null
   step: { saw: string; think: string; tried: string; got: string } | null
   openThreads: string

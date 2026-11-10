@@ -51,14 +51,13 @@ export function markThmCompleted(db: Database.Database, codesOrTitles: string[])
   const root = db.prepare("UPDATE boxes SET status = 'rooted', rooted_at = coalesce(rooted_at, ?), started_at = coalesce(started_at, ?) WHERE id = ? AND status <> 'rooted'")
   const now = new Date()
   const iso = now.toISOString()
-  const secs = Math.floor(now.getTime() / 1000) // steps.timer_started_at is epoch seconds
   db.transaction(() => {
     for (const name of codesOrTitles.map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean)) {
       const rows = find.all(name, name, name) as { id: number; byCode: number }[]
       if (!rows.length) result.unmatched.push(name)
       else if (!rows[0].byCode && rows.length > 1) result.ambiguous.push(name)
       else {
-        if (root.run(iso, iso, rows[0].id).changes) markRooted(db, { col: 'box_id', id: rows[0].id }, secs)
+        if (root.run(iso, iso, rows[0].id).changes) markRooted(db, { col: 'box_id', id: rows[0].id })
         result.matched.push(name)
       }
     }

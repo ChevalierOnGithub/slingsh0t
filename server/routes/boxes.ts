@@ -17,8 +17,8 @@ const isPhase = (v: unknown): v is Phase => (PHASES as readonly unknown[]).inclu
 
 type Row = Record<string, any>
 type Db = Database.Database
-const toStep = (r: Row): Step => ({ id: r.id, boxId: r.box_id, hostId: r.host_id, phase: r.phase, position: r.position, body: r.body, seconds: r.seconds, timerStartedAt: r.timer_started_at, done: r.done === 1, saw: r.saw, think: r.think, tried: r.tried, got: r.got, dead: r.dead === 1 })
-const toSummary = (r: Row): BoxSummary => ({ id: r.id, shortId: r.short_id, platform: r.platform, name: r.name, os: r.os, difficulty: r.difficulty, status: r.status, targetIp: r.target_ip, totalSeconds: r.total_seconds, releaseDate: r.release_date, dns: r.dns, url: r.url, startedAt: r.started_at })
+const toStep = (r: Row): Step => ({ id: r.id, boxId: r.box_id, hostId: r.host_id, phase: r.phase, position: r.position, body: r.body, done: r.done === 1, saw: r.saw, think: r.think, tried: r.tried, got: r.got, dead: r.dead === 1 })
+const toSummary = (r: Row): BoxSummary => ({ id: r.id, shortId: r.short_id, platform: r.platform, name: r.name, os: r.os, difficulty: r.difficulty, status: r.status, targetIp: r.target_ip, releaseDate: r.release_date, dns: r.dns, url: r.url, startedAt: r.started_at })
 
 /** A step belongs to exactly one box or one host. */
 export type Owner = { col: 'box_id' | 'host_id'; id: number }
@@ -42,12 +42,8 @@ const insertStep = (db: Db, o: Owner, phase: Phase, pos: number, at: number): St
   return toStep(db.prepare('SELECT * FROM steps WHERE id = ?').get(lastInsertRowid) as Row)
 }
 export const addDefaultSteps = (db: Db, o: Owner, tags: string[], at: number) => (tags.includes(AD_TAG) ? PHASES : BASE_PHASES).forEach((p, i) => insertStep(db, o, p, i, at))
-const STOP_TIMER = 'UPDATE steps SET seconds = seconds + MAX(0, ? - timer_started_at), timer_started_at = NULL, updated_at = ? WHERE timer_started_at IS NOT NULL AND'
-export const stopTimers = (db: Db, o: Owner, at: number, exceptStepId = -1) =>
-  db.prepare(`${STOP_TIMER} ${o.col} = ? AND id != ?`).run(at, isoAt(at), o.id, exceptStepId)
-/** Rooted, however it was set: timers stop and every step is behind you. Box callers also stamp rooted_at/started_at. */
-export const markRooted = (db: Db, o: Owner, at: number) => {
-  stopTimers(db, o, at)
+/** Rooted, however it was set: every step is behind you. Box callers also stamp rooted_at/started_at. */
+export const markRooted = (db: Db, o: Owner) => {
   db.prepare(`UPDATE steps SET done = 1 WHERE ${o.col} = ?`).run(o.id)
 }
 /** Dropping the AD tag would strand Persistence steps that the phase check no longer allows. */
@@ -87,7 +83,7 @@ export const hostDetail = (db: Db, id: number): HostDetail => {
 
 export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => number }> = async (app, { db, now = () => (Date.now() / 1000) | 0 }) => {
   const tx = <T>(f: () => T): T => db.transaction(f)()
-  const SUMMARY = 'SELECT b.*, COALESCE((SELECT SUM(seconds) FROM steps WHERE box_id = b.id), 0) AS total_seconds FROM boxes b'
+  const SUMMARY = 'SELECT b.* FROM boxes b'
 
   const boxRow = (id: number): Row => (db.prepare(`${SUMMARY} WHERE b.id = ?`).get(id) as Row) ?? fail('box not found', 404)
   const stepRow = (id: number): Row => (db.prepare('SELECT * FROM steps WHERE id = ?').get(id) as Row) ?? fail('step not found', 404)
@@ -151,7 +147,7 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
       if (b.status === 'rooted') {
         set.rooted_at = cur.rooted_at ?? iso()
         set.started_at = cur.started_at ?? iso()
-        markRooted(db, box(boxId), now())
+        markRooted(db, box(boxId))
       } else if (b.status !== undefined) {
         set.rooted_at = null
         if (b.status !== 'not_started') set.started_at = cur.started_at ?? iso()
@@ -259,23 +255,5 @@ export const boxRoutes: FastifyPluginAsync<{ db: Database.Database; now?: () => 
       db.prepare(`UPDATE steps SET position = position - 1 WHERE ${o.col} = ? AND position > ?`).run(o.id, s.position)
     })
     return reply.code(204).send()
-  })
-
-  app.post('/api/steps/:id/timer', async (req) => {
-    const { action } = (req.body ?? {}) as Row
-    if (action !== 'start' && action !== 'stop') fail('invalid action')
-    return tx(() => {
-      const s = stepRow(id(req.params))
-      const o = ownerOf(s)
-      if (action === 'stop') db.prepare(`${STOP_TIMER} id = ?`).run(now(), iso(), s.id)
-      else {
-        stopTimers(db, o, now(), s.id)
-        db.prepare('UPDATE steps SET timer_started_at = COALESCE(timer_started_at, ?), updated_at = ? WHERE id = ?').run(now(), iso(), s.id)
-        // Hosts have no started_at column.
-        if (o.col === 'box_id') db.prepare("UPDATE boxes SET status = 'in_progress', started_at = ? WHERE id = ? AND status = 'not_started'").run(iso(), o.id)
-        else db.prepare("UPDATE hosts SET status = 'in_progress' WHERE id = ? AND status = 'not_started'").run(o.id)
-      }
-      return ownerDetail(o)
-    })
   })
 }

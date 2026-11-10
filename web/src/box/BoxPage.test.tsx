@@ -16,8 +16,8 @@ vi.mock('../shell/TargetBar', () => ({
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 })
 const boxOf = (id: number, stepId: number) => ({
   id, kind: 'box', shortId: 'H-0001', platform: 'HTB', name: `Box ${id}`, os: 'Linux', difficulty: 'Easy', status: 'in_progress',
-  targetIp: null, totalSeconds: 0, releaseDate: null, dns: '', url: '', tags: [], nextStep: '', notes: '', foothold: '', privesc: '', rating: '', noWriteup: false, startedAt: null, rootedAt: null, uses: [], services: [], haves: [],
-  steps: [{ id: stepId, boxId: id, hostId: null, phase: 'Recon', position: 0, body: '', seconds: 0, timerStartedAt: null, done: false, saw: '', think: '', tried: '', got: '', dead: false }],
+  targetIp: null, releaseDate: null, dns: '', url: '', tags: [], nextStep: '', notes: '', foothold: '', privesc: '', rating: '', noWriteup: false, startedAt: null, rootedAt: null, uses: [], services: [], haves: [],
+  steps: [{ id: stepId, boxId: id, hostId: null, phase: 'Recon', position: 0, body: '', done: false, saw: '', think: '', tried: '', got: '', dead: false }],
 }) as BoxDetail
 
 test('a toolbox insert is applied exactly once, even after the box remounts', async () => {
