@@ -19,7 +19,15 @@ test('code blocks get a Copy button that copies their text and does not bubble',
   const outer = vi.fn()
   render(<div onClick={outer}><div className="md" onClick={jump} dangerouslySetInnerHTML={{ __html: html }} /></div>)
   fireEvent.click(screen.getByRole('button', { name: 'Copy code block' }))
-  expect(writeText).toHaveBeenCalledWith('grep -RIn "eval" .\n')
+  expect(writeText).toHaveBeenCalledWith('grep -RIn "eval" .')
   expect(outer).not.toHaveBeenCalled()
   await waitFor(() => expect(screen.getByRole('button', { name: 'Copy code block' }).textContent).toBe('Copied'))
+})
+
+test('raw HTML and script or data links never come out live', () => {
+  const html = md.render('<img src=x onerror=alert(1)>\n\n<script>alert(1)</script>\n\n[a](javascript:alert(1)) ![b](javascript:alert(1)) [c](data:text/html,x)')
+  expect(html).not.toContain('<img')
+  expect(html).not.toContain('<script')
+  expect(html).not.toMatch(/href="javascript:/i)
+  expect(html).not.toMatch(/href="data:/i)
 })

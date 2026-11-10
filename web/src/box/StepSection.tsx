@@ -40,7 +40,7 @@ export const jump = (e: MouseEvent<HTMLElement>) => {
   const copy = (e.target as Element).closest('button.copycode')
   if (copy && e.currentTarget.contains(copy)) {
     e.stopPropagation() // a live-mode preview opens the editor on click; copying is not editing
-    const text = copy.parentElement?.querySelector('pre')?.textContent ?? ''
+    const text = copy.parentElement?.querySelector('pre')?.textContent?.replace(/\n$/, '') ?? ''
     navigator.clipboard.writeText(text).then(() => {
       copy.textContent = 'Copied'
       setTimeout(() => { copy.textContent = 'Copy' }, 1500)

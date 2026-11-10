@@ -150,7 +150,7 @@ test('live preview: clicking a code block Copy button copies without opening the
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
   render(section({ step: { ...step, body: '```bash\nid\n```\n\nhello there' } }))
   await userEvent.click(screen.getByRole('button', { name: 'Copy code block' }))
-  expect(writeText).toHaveBeenCalledWith('id\n')
+  expect(writeText).toHaveBeenCalledWith('id')
   expect(screen.queryByLabelText('Recon 1 writeup')).toBeNull()
   await userEvent.click(screen.getByText('hello there'))
   expect(screen.getByLabelText('Recon 1 writeup')).toBeTruthy()
