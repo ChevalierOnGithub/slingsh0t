@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PHASES } from '../shared/types'
 
@@ -346,7 +346,11 @@ export async function backupDb(db: Database.Database, dir: string, now = new Dat
     .map((name) => ({ name, m: OWN_BACKUP.exec(name) }))
     .filter((f) => f.m)
     .sort((a, b) => b.m![1].localeCompare(a.m![1]) || Number(b.m![2] ?? 1) - Number(a.m![2] ?? 1))
-  for (const f of own.slice(keep)) rmSync(join(dir, f.name), { force: true })
+  // keep: anything but a number >= 1 counts as 1; the file just written is never a target, whatever its position.
+  for (const f of own.slice(keep >= 1 ? keep : 1)) {
+    if (f.name === basename(path)) continue
+    try { rmSync(join(dir, f.name), { force: true }) } catch { /* locked or busy: a leftover old backup beats failing a good one */ }
+  }
   return path
 }
 

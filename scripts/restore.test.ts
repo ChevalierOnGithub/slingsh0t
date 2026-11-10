@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import Database from 'better-sqlite3'
@@ -131,4 +131,25 @@ it('keeps the WAL with the raw copy of a current database it cannot back up, and
   const out = new Database(file, { readonly: true })
   expect(out.prepare('SELECT v FROM t').pluck().all()).toEqual(['good'])
   out.close()
+})
+
+it('never prunes the backup it restores from, even when it is the oldest of 10', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sl-res-'))
+  openDb(join(dir, 'slingsh0t.db')).close()
+  const backups = join(dir, 'backups')
+  mkdirSync(backups)
+  for (let i = 0; i < 10; i++) {
+    const f = new Database(join(backups, `slingsh0t-2026010${i < 9 ? 1 : 2}-00000${i % 9}.db`))
+    f.exec(`CREATE TABLE t (v TEXT); INSERT INTO t VALUES ('b${i}')`)
+    f.close()
+  }
+  const before = readdirSync(backups).sort()
+  const oldest = join(backups, before[0])
+
+  await restore(oldest, dir, { probe: stopped })
+
+  expect(existsSync(oldest)).toBe(true)
+  const after = readdirSync(backups).filter((f) => f.endsWith('.db'))
+  expect(after).toHaveLength(11)
+  expect(after).toEqual(expect.arrayContaining(before))
 })

@@ -16,7 +16,7 @@ export async function restore(src: string, dir = dataDir(), { probe = fetchProbe
   if (!existsSync(src)) throw new Error(`No database at ${src}; nothing to restore.`)
   const dest = join(dir, 'slingsh0t.db')
   if (existsSync(dest)) {
-    try { await backup(dir) } catch (e) { // an unreadable current db must not block restoring over it: keep its bytes
+    try { await backup(dir, Infinity) } catch (e) { // an unreadable current db must not block restoring over it: keep its bytes
       const backups = join(dir, 'backups')
       mkdirSync(backups, { recursive: true })
       const kept = join(backups, `pre-restore-${Date.now()}.db`)
