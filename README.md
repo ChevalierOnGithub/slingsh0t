@@ -51,6 +51,8 @@ Everything lives in `data/` (override with `SLINGSH0T_DATA_DIR`): `slingsh0t.db`
 
 Before a schema upgrade, an existing database is copied to `data/backups/pre-migration-v<old version>-<timestamp>.db`.
 
+`data/backups` keeps the 10 newest `slingsh0t-*.db` copies; `pre-migration-*` and `pre-restore-*` files are never removed automatically. A downloaded backup is not kept on disk.
+
 **Warning: `data/slingsh0t.db` stores credentials and hashes unencrypted. Keep it out of shared folders and backups you don't control.**
 
 ## Importing boxes

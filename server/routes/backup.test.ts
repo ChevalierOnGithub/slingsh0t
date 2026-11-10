@@ -1,9 +1,9 @@
-import { mkdtempSync, existsSync, rmSync } from 'node:fs'
+import { mkdtempSync, existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import Database from 'better-sqlite3'
 import Fastify, { type FastifyInstance } from 'fastify'
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { openDb } from '../db'
 import { backupRoutes } from './backup'
 import { boxRoutes } from './boxes'
@@ -23,7 +23,7 @@ afterEach(async () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-it('POST /api/backup streams a copy of the database and keeps it in dir', async () => {
+it('POST /api/backup streams a copy of the database and removes it afterwards', async () => {
   const r = await app.inject({ method: 'POST', url: '/api/backup' })
   expect(r.statusCode).toBe(200)
   expect(r.headers['content-type']).toBe('application/vnd.sqlite3')
@@ -31,10 +31,19 @@ it('POST /api/backup streams a copy of the database and keeps it in dir', async 
   expect(name).toBeTruthy()
   expect(r.rawPayload.length).toBeGreaterThan(0)
   const file = join(dir, name!)
-  expect(existsSync(file)).toBe(true)
-  const copy = new Database(file, { readonly: true })
+  const received = join(dir, 'received.sqlite')
+  writeFileSync(received, r.rawPayload)
+  const copy = new Database(received, { readonly: true })
   expect((copy.prepare('SELECT COUNT(*) AS n FROM boxes').get() as { n: number }).n).toBe(1)
   copy.close()
+  await vi.waitFor(() => expect(existsSync(file)).toBe(false))
+})
+
+it('a download never removes a kept backup', async () => {
+  const kept = Array.from({ length: 10 }, (_, i) => `slingsh0t-20260101-0000${String(i).padStart(2, '0')}.db`)
+  for (const n of kept) writeFileSync(join(dir, n), 'x')
+  await app.inject({ method: 'POST', url: '/api/backup' })
+  await vi.waitFor(() => expect(readdirSync(dir).sort()).toEqual(kept))
 })
 
 it('GET /api/backup is 404', async () => {

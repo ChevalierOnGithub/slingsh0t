@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PHASES } from '../shared/types'
@@ -334,10 +334,19 @@ const freePath = (dir: string, base: string) => {
   return path
 }
 
-export async function backupDb(db: Database.Database, dir: string, now = new Date()): Promise<string> {
+const OWN_BACKUP = /^slingsh0t-(\d{8}-\d{6})(?:-(\d+))?\.db$/
+
+/** Writes a timestamped copy, then deletes all but the newest `keep` of its own `slingsh0t-*.db` files (nothing else). */
+export async function backupDb(db: Database.Database, dir: string, now = new Date(), keep = 10): Promise<string> {
   mkdirSync(dir, { recursive: true })
   const path = freePath(dir, `slingsh0t-${stamp(now)}`)
   await db.backup(path)
+  // Sort by stamp, then by -N (bare = 1) numerically: plain name order puts -10 before -2.
+  const own = readdirSync(dir)
+    .map((name) => ({ name, m: OWN_BACKUP.exec(name) }))
+    .filter((f) => f.m)
+    .sort((a, b) => b.m![1].localeCompare(a.m![1]) || Number(b.m![2] ?? 1) - Number(a.m![2] ?? 1))
+  for (const f of own.slice(keep)) rmSync(join(dir, f.name), { force: true })
   return path
 }
 
