@@ -2,6 +2,32 @@
 
 SlingSh0t is a local-only CTF and pentest tracker: boxes, phase-by-phase steps, notes, and a toolbox of techniques and commands with live target substitution. It listens on `127.0.0.1` only and keeps everything in one SQLite file.
 
+![Home: resume the box you were working on](screenshots/1-home.png)
+
+*All screenshots use fictional demo data (invented boxes, `10.10.x.x` addresses, `DEMO{...}` flags).*
+
+## What it does
+
+- **Resume first.** Home shows the box you were on, its current step, your open threads, what you rooted this week and which difficulty tier to fill next.
+- **Boxes** from HTB and THM on a table, board or pyramid, with Continue shortcuts. Import your existing progress.
+- **Hypothesis loop.** Every step records Saw / Think / Tried / Got above a Markdown body, plus a Dead end tick. Dead ends are kept and end up in the write-up.
+- **Toolbox beside the steps.** Techniques grouped by the services the box exposes, a "Next up" list of what your current haves unlock, and copy-ready commands with `{{TARGET}}`, `{{LHOST}}` and `{{LPORT}}` filled in.
+- **One target context.** Set TARGET, LHOST and LPORT once; write-ups, commands and reverse shells all use them.
+- **Write-ups for free.** A report is composed from your steps, loot and notes (flag values redacted) and exports as Markdown, self-contained HTML or one zip for everything.
+- **Networks.** Pro-Lab style networks with multi-IP hosts, subnets, pivots, credentials with a per-host works/failed result, and expected flags.
+- **Reverse shells and msfvenom builder** with listeners, encodings and shell stabilisation.
+- **Search** across boxes, write-ups, techniques, tools, commands and loot (Ctrl K).
+- **Yours alone.** One SQLite file, no accounts, no cloud, automatic backups before upgrades.
+
+| | |
+|---|---|
+| ![Boxes board](screenshots/2-boxes.png) | ![Box page with the toolbox](screenshots/3-box.png) |
+| Board view with a Continue strip | Step loop, services and the toolbox on a box page |
+| ![Generated write-up](screenshots/4-writeup.png) | ![Network map](screenshots/5-network.png) |
+| Write-up report with raw and live preview | Network map, pivots and credentials |
+
+![Reverse shells](screenshots/6-shells.png)
+
 ## Use
 
 ```
